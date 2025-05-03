@@ -28,13 +28,13 @@
     <link rel="icon" type="image/png" sizes="16x16" href="./resources/favicon-66x66-k.png">
     <meta name="theme-color" content="#8ABC3F">
     
-    <script src="./multiplayer.js"></script>
+    <script src="/js/multiplayer.js" type="module""></script>
     <script>
         const isLocal = true//window.location.hostname === "localhost";
         const isBeta = window.location.hostname === "beta.woomy.app";
         const isEvent = window.location.hostname === "event.woomy.app";
     </script>
-    <script src="./app.js" defer></script>
+    <script src="/js/app.js" type="module" defer></script>
     <link rel="stylesheet" href="./menu.css">
     <!-- Eval packet thing-->
     <script>
@@ -351,40 +351,10 @@
                     setInterval(adjust, 25);
                     adjust();
 
-                    // Load ads
-                    (adsbygoogle = window.adsbygoogle || []).push({});
                 } catch (e) {
                     console.log("Error with preloads!");
                     console.error(e)
                 }
-
-                // Load ad
-                const googleAdUrl = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js'
-                try {
-                    fetch(new Request(googleAdUrl)).catch(_ => window.adBlockEnabled = true)
-                } catch (e) {
-                    window.adBlockEnabled = true
-                }
-
-                let adInterval = setInterval(() => {
-                    let adBox = document.getElementById("bottomPageAd")
-                    if (!adBox) {
-                        clearInterval(adInterval)
-                        return
-                    }
-                    if (adBox.getAttribute("data-ad-status") !== "filled" || adBox.getAttribute("data-ad-status") !== "done") {
-                        adBox.style.backgroundImage = "url('./resources/ULTRAKILL.gif')"
-                        adBox.title = "Advertisement"
-                        adBox.onclick = () => {
-                            window.open("https://store.steampowered.com/app/1229490/ULTRAKILL/", "_blank")
-                        }
-                    } else {
-                        adBox.style.backgroundImage = ""
-                        adBox.style.onclick = () => { }
-                        clearInterval(adInterval)
-                        return
-                    }
-                }, 300)
 
                 /// Discord sign in ///
                 // Register token

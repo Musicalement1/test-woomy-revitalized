@@ -1,8 +1,4 @@
-window.global = window
-
-global.utility = {
-    log: (e)=>{console.log("[LOG]",e)}
-};
+import { global } from "/js/global.js"
 
 (function(){
 const u32 = new Uint32Array(1),
@@ -311,7 +307,7 @@ window.roomManager = new WebSocket((window.location.protocol.includes("s")?"wss"
 window.roomManager.onopen = ()=>{
   window.roomManager.binaryType = "arraybuffer"
   window.connectedToWRM = true
-  global.utility.log("Connected to WRM")
+  console.log("Connected to WRM")
   setInterval(()=>{
     let data = new Uint8Array(2);
     data[0] = 0;
@@ -328,8 +324,8 @@ window.serverWorkerSetup = function () {
   window.serverWorker.postMessage({
     type: "startServer",
     server: {
-      suffix: window.servers[window._global._selectedServer].rivetGamemode,
-      gamemode: window.servers[window._global._selectedServer].serverGamemode,
+      suffix: window.servers[global._selectedServer].rivetGamemode,
+      gamemode: window.servers[global._selectedServer].serverGamemode,
     }
   });
   window.serverWorker.onmessage = function (msgEvent) {

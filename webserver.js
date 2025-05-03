@@ -2,11 +2,12 @@ const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(handleReq);
+function handleReq(req, res) {
   // Construct the file path relative to the script's directory (__dirname)
   const requestedUrl = decodeURIComponent(req.url);
   // If the requested URL is '/', serve index.html or default file
-  const filePath = path.join(__dirname, requestedUrl === '/' ? 'index.html' : requestedUrl);
+  const filePath = path.join(__dirname, (requestedUrl === '/' ? '/client/index.html' : requestedUrl));
 
   // Basic security check: prevent directory traversal
   if (!filePath.startsWith(__dirname)) {
@@ -19,9 +20,13 @@ const server = http.createServer((req, res) => {
   fs.readFile(filePath, (err, data) => {
     if (err) {
       if (err.code === 'ENOENT') {
+        if(req.modified !== false){;
+          req.modified = true;
+          req.url = "/client/"+req.url
+          return handleReq(req, res)
+        }
         res.writeHead(404, { 'Content-Type': 'text/plain' });
         res.end('File Not Found\n');
-        console.log(filePath)
       } else {
         res.writeHead(500, { 'Content-Type': 'text/plain' });
         res.end(`Internal Server Error: ${err.message}\n`);
@@ -45,7 +50,7 @@ const server = http.createServer((req, res) => {
       res.end(data);
     }
   });
-});
+}
 
 const port = 3000;
 server.listen(port, () => {

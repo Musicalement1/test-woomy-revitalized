@@ -1,476 +1,55 @@
 "use strict";
+import { global } from "./global.js";
+import { logger } from "/js/debug.js"
+import { loadImage, imageCache } from "/js/assets.js"
+import { color, setColor, themes, mixColors, getColor, getColorDark, getZoneColor, setColors, setColorsUnmix, setColorsUnmixB, hslToColor } from "/js/colors.js";
+import { config } from "/js/config.js"
+import { fasttalk } from "/js/fasttalk.js"
 
-window.partyTime = false
+document.getElementById("specialRoomToken").value = localStorage.getItem("specialRoomToken")||""
 
-// Ad stuff
-let adStatus = true;
-const _displayAds = function (toggle) {
+// HTML display on death
+let displayStatus = true;
+const _displayDeathHTML = function (toggle) {
     try {
-        if(adStatus === toggle){
+        if(displayStatus === toggle){
             return
         }
-        adStatus = toggle
+        displayStatus = toggle
 
         let wrapperWrapper = document.getElementById("wrapperWrapper")
         wrapperWrapper.style.justifyContent = "flex-start"
-        //let bottomPageAd = document.getElementById("bottomPageAd")
 
         if (toggle === true) {
             wrapperWrapper.style.zIndex = 100
-            //bottomPageAd.style.display = "inline-block"
             return
         }
 
         wrapperWrapper.style.zIndex = -100
-        //bottomPageAd.style.display = "none"
     } catch (e) {
         console.error(e)
     }
 }
 
-document.getElementById("specialRoomToken").value = localStorage.getItem("specialRoomToken")||""
-
 // App.js
 function RememberScriptingIsBannable() {
     window.didMainLoad = true
-    const _logger = {
-        _norm: function (text) {
-            console.log(text);
-        },
-        _info: function (text) {
-            console.log("[INFO] " + text);
-        },
-        _warn: function (text) {
-            console.log("[WARN] " + text);
-        },
-        _error: function (text) {
-            console.log("[ERROR] " + text);
-        }
-    };
-
+    
     "use strict";
-    function _loadImage(image, cache) {
-        const img = new Image();
-        img.src = image[0];
-        img.ready = false;
-        img.onload = function () {
-            img.ready = true;
-            //console.log(`Image "${image[1]} loaded."`);
-            cache[image[1]] = img;
-        };
-    }
-    const _imageCache = (function loadImages() {
-        const cache = {};
-        let i = 0;
-        for (let image of [ // MUST BE PNG
-            ["./resources/IED.png", "ied"],
-            ["./resources/danksGun.png", "danksGun"],
-            ["./resources/hotwheels.png", "hotWheels"],
-            ["./resources/ned.png", "ned"],
-            ["./resources/omega.png", "omega"],
-            ["./resources/do_not_open_at_any_cost.jpg", "do_not_open_at_any_cost"],
-            ["./resources/speedy.bmp", "speedy"],
-            ["./resources/missingno.bmp", "missingno"],
-            ["./resources/ice_hue.png", "ice_hue"],
-            ["./resources/poison_hue.png", "poison_hue"],
-            ["./resources/emp_hue.png", "emp_hue"],
-            ["./resources/par_hue.png", "par_hue"],
-            ["./resources/YGlitch250.png", "fourFour"],
-            ["./resources/MarbleDecoration.png", "marble_swirl"],
-            ["//media.discordapp.net/attachments/995124277521166356/998978430068605058/magma.png", "fillygroove_badge"],
-            ["./resources/soccerballs.png", "soccerballs"],
-            ["./resources/ooooo_youre_a_boy_kisser.png", "boyKisser"],
-            ["./resources/tonk.png", "tonk"],
-            ["./resources/rollfac.png", "rollfac"],
-            ["./resources/fordf150.png", "f150", 2],
-            ["./resources/fordf150Flipped.png", "f150Flipped", 2],
-            ["./resources/treadmarks.png", "treadmarks"],
-            ["./resources/seniorpentagon.png", "seniorpentagon"],
-            ["https://cdn.glitch.global/6025d4c0-5676-447d-89f7-6cce3e3787a7/stars2.png?v=1745457944163", "starbackground"],
-            ["https://cdn.glitch.global/6025d4c0-5676-447d-89f7-6cce3e3787a7/stars2Inverted.png?v=1745466334169", "starbackgroundInverted"]
-        ]) {
-            setTimeout(() => {
-                if (image[2]) {
-                    let file = image[0].split(".png")[0]
-                    for (let i = 0; i < image[2]; i++) {
-                        _loadImage([`${file}-${i}.png`, `${image[1]}-${i}`], cache)
-                    }
-                } else {
-                    _loadImage(image, cache)
-                }
-            }, 5 * i++);
-        };
-        return (cache);
-    })();
-    let _getSearchFromUrl = (thing) => {
-        const url = new URL(window.location)
-        return url.searchParams.get(thing)
-    }
-    let _decodeHash = () => {
-        let json;
-        try {
-            json = JSON.parse(atob(window.location.hash.substring(1)))
-        } catch (err) {
-            json = {}
-        }
-        return json
-    }
-    let _encodeHash = () => {
-        return window.location.hash = btoa(JSON.stringify({
-            server: _global._windowSearch.server,
-            lobby: _global._windowSearch.lobby,
-            party: _global._windowSearch.party
-        }))
-    }
-    window._global = {
-        _selectedServer: 0,
-        _windowSearch: {
-            _server: _decodeHash().server,
-            _lobby: _decodeHash().lobby,
-            _party: _decodeHash().party,
-            set server(v) {
-                this._server = v
-                _encodeHash()
-            },
-            get server() {
-                return this._server
-            },
-            set lobby(v) {
-                this._lobby = v
-                _encodeHash()
-            },
-            get lobby() {
-                return this._lobby
-            },
-            set party(v) {
-                this._party = v
-                _encodeHash()
-            },
-            get party() {
-                return this._party
-            }
-        },
-        mobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|android|mobi/i.test(navigator.userAgent),
-        guiMouse: {
-            x: 0,
-            y: 0
-        },
-        _localmotion: {
-            x: 0,
-            y: 0,
-            rx: 0,
-            ry: 0,
-        },
-        _sendMessageToClient: (text) => { },
-        _mapType: 0,
-        _killTracker: 0,
-        _forceTwiggle: false,
-        KEY_ESC: 27,
-        KEY_ENTER: 13,
-        _canvas: null,
-        KEY_CHAT: 13,
-        KEY_FIREFOOD: 119,
-        KEY_SPLIT: 32,
-        KEY_LEFT: 65,
-        KEY_UP: 87,
-        KEY_RIGHT: 68,
-        KEY_DOWN: 83,
-        KEY_LEFT_ARROW: 37,
-        KEY_UP_ARROW: 38,
-        KEY_RIGHT_ARROW: 39,
-        KEY_DOWN_ARROW: 40,
-        KEY_AUTO_SPIN: 67,
-        KEY_AUTO_FIRE: 69,
-        KEY_OVER_RIDE: 82,
-        KEY_UPGRADE_ATK: 49,
-        KEY_UPGRADE_HTL: 50,
-        KEY_UPGRADE_SPD: 51,
-        KEY_UPGRADE_STR: 52,
-        KEY_UPGRADE_PEN: 53,
-        _diedAt: 0,
-        KEY_UPGRADE_DAM: 54,
-        KEY_UPGRADE_RLD: 55,
-        KEY_UPGRADE_MOB: 56,
-        KEY_UPGRADE_RGN: 57,
-        KEY_UPGRADE_SHI: 48,
-        KEY_MOUSE_0: 32,
-        //KEY_MOUSE_1: 86,
-        KEY_MOUSE_2: 16,
-        KEY_LEVEL_UP: 78,
-        KEY_TESTBED: 191,
-        KEY_TESTBED_FIREFOX: 111,
-        KEY_TESTBED_ALT: 192,
-        KEY_RESET_BASIC_TANK: 80,
-        KEY_CHANGE_TO_BASIC: 85,
-        KEY_SUICIDE: 75,
-        KEY_MAX_STATS: 77,
-        KEY_GODMODE: 186,
-        KEY_GODMODE_2: 59,
-        KEY_COLOR_CHANGE: 66,
-        KEY_SPAWN_SHAPES: 70,
-        KEY_TELEPORT: 84,
-        KEY_POWER_CYCLE: 222,
-        KEY_POWER_CYCLE_FIREFOX: 165,
-        KEY_BAN_PLAYER: 190,
-        KEY_PASSIVE_MODE: 88,
-        KEY_RAINBOW: 187,
-        KEY_RAINBOW_2: 61,
-        KEY_DEBUG: 76,
-        KEY_CLASS_TREE: -69, //85, Disabled for now due to new mockup system
-        KEY_TIER_SWITCH: 79,
-        KEY_TIER_SWITCH_2: 81,
-        KEY_OVERRIDE_ENTITY: 86,
-        KEY_INFECT_MINION: 73,
-        KEY_RESET_COLOR: 89,
-        KEY_CONTROL_DOM: 72,
-        KEY_TANK_JOURNEY: 220,
-        KEY_KILL_WITH_MOUSE: 71,
-        KEY_STEALTH: 74,
-        KEY_DRAG: 90,
-        DEV_KEY_1: 35,
-        DEV_KEY_2: 40,
-        DEV_KEY_3: 34,
-        DEV_KEY_4: 37,
-        DEV_KEY_5: 12,
-        DEV_KEY_6: 49,
-        DEV_KEY_7: 36,
-        DEV_KEY_8: 38,
-        DEV_KEY_9: 33,
-        _screenWidth: 0,
-        _screenHeight: 0,
-        _gameWidth: 0,
-        _gameHeight: 0,
-        _gameStart: false,
-        _disconnected: false,
-        _died: false,
-        _deathScreenState: 1, // 0 = on | 1 = off
-        _loadingMockups: true,
-        _debug: 1,
-        _showTree: false,
-        _scrollX: 0,
-        _realScrollX: 0,
-        _disconnectReason: "The connection was lost for an unknown reason.\nPlease press F12 or ctrl+shift+i then click on the console tab and take a screenshot, then send it in the discord.",
-        _disableEnter: false,
-        _seeInvisible: false,
-        _tipSplash: [
-            "Press the E key to enable autofire.",
-            "Press the C key to enable autospin.",
-            "Press the R key to disable drone and auto turret AI.",
-            "Hold the N key to level up.",
-            "Hold the Z key to change the color of the upgrade menu.",
-            "Press the U key to show the class tree.",
-            "Hold the M key and press a number stat to instantly max out that stat.",
-            "Hold the L key to show extra debug stuff above the minimap.",
-            "If you have a low frame rate, you can try enabling Low Graphics in the options menu, which removes death fade.",
-            "Don't like seeing a lot of messages? Or maybe they cause you lag? Consider enabling the Disable Messages option.",
-            "The Four Upgrade Rows option may make the upgrade menu look and fit on the screen better.",
-            "Don't like the rounded edges look of Arras? Try the Use Miter Edges option.",
-            "Begging for beta-tester on this server is like digging your own grave.",
-            "Naming yourself Trans Rights makes your name have the colors of the Transgender Pride Flag.",
-            "Don't get salty just because someone kills you; it's just a game, after all.",
-            "Bosses are spawned by a randomizer; they may spawn every 8 to 15 minutes.",
-            "The Password is 4NAX.",
-            "The Password is Silvy.",
-            "The password is SkuTsu.",
-            "The Password is Trans Rights.",
-            "Sanctuaries are spawned by a randomizer; they may spawn every 2 to 10 minutes.",
-            "Sometimes, it helps to press Ctrl+R if your UI is bugged out.",
-            "The first thing you should try if the client or in-game UI is bugged out is Ctrl+R.",
-            "The first thing you should try if the client or in-game UI is bugged out is Ctrl+R.", // Duplicated on purpose // Jekyll - I might just automate this at some point /shrug
-            "Sanctuaries can be seen on the minimap, and will spawn a boss when killed.",
-            "Hitting the enemy deals more damage than not hitting them.",
-            "If you can't take a joke, press Alt+F4 for godmode.",
-            "Developers are marked by their badges next to their names.",
-            "Developers typically have very fancy names.",
-            'Import "Secret5"...',
-            'Import "Pixel Mode"...',
-            'Import "delete woomy"...',
-            'Import "token"...',
-            'Import "randomize"...'
-        ],
-        _deathSplash: [
-            "You are dead, not big surprise.",
-            "All things must come to an end eventually.",
-            "That's unfortunate...",
-            "Your score was not in vain.",
-            "Everyone falls to death; the destroyer of worlds.",
-            "Tanks for playing!",
-            "Don't be mad because you died; Be happy that you got the score you did.",
-            "We interrupt this program to bring you this death screen.",
-            "ZZAZZ Corruption will get to this world if you won't hurry and respawn!",
-            "Success is not final, failure is not fatal: it is the courage to continue that counts.",
-            "Dread it. Run from it. Destiny arrives all the same.",
-            "F in the chat.",
-            "Going to suggest a nerf again?",
-            "Here lies your grave.",
-            "Game over.",
-            "Don't get mad, get even.",
-            "Try, try again!",
-            "OOF",
-            "How much wood would a woodchuck chuck?",
-            "Did you really think that through?",
-            "Please refrain from abusing your computer.",
-            "Ouch. Just ouch.",
-            "Did you get a world record score?",
-            "Try another tank, maybe it'll work out.",
-            "Press Alt+F4 for godmode.",
-            "L",
-            "Cope",
-            "Seethe",
-            "Mald",
-            "YO WE GOT THAT IN VIDEOOOOOOOO"
-        ],
-        _deathSplashOverride: 0,
-        _deathSplashChoice: 0,
-        _tankMenuColor: 0,
-        _tankMenuColorReal: 100 + Math.round(Math.random() * 70),
-        searchName: "Basic",
-        _arenaClosed: false,
-        _ratio: window.devicePixelRatio,
-        _fps: 60,
-        _fpsc: 0,
-        _fpscap: 1000 / 60,
-        _oldFpsCap: 1000 / 60,
-        _bandwidth: {
-            _outbound: 0,
-            _inbound: 0,
-            _out: 0,
-            _in: 0
-        },
-        _sentPackets: 80085,
-        _receivedPackets: 80085,
-        displayTextUI: {
-            enabled: false,
-            text: "",
-            color: "#FFFFFF"
-        },
-        _waterAnimation: .5,
-        _waterDirection: 1,
-        _target: {
-            _x: 0,
-            _y: 0
-        },
-        _screenSize: Math.min(1920, Math.max(window.innerWidth, 1280)),
-        _mobileOptions: false,
-        _mobileFiring: [4, false],
-        _mobileChatText: "Chat",
-        _standalone: window.navigator.standalone || (window.matchMedia && window.matchMedia("(display-mode: fullscreen), (display-mode: standalone), (display-mode: minimal-ui)").matches),
-        _nameGradient: (function getGradient() {
-            const gradients = [
-                ["#FF0000", "#FFBE00", "#FFFF00", "#BEFF00", "#00FF00", "#00FFBE", "#00FFFF", "#00BEFF", "#0000FF", "#BE00FF", "#FF00FF", "#FF00BE"], // 0 - Rainbow
-                ["#000000", "#0000BE", "#0000FF", "#00BEFF", "#00FFFF", "#00FFBE"], // 1 - Classic Oblivion
-                ["#000000", "#BE0000", "#FF0000", "#FFBE00", "#FFFF00"], // 2 - Red
-                ["#FF0000", "#FF00BE", "#FF00FF", "#BE00FF", "#0000FF"], // 3 - Red to Blue
-                ["#000000", "#AAAAAA", "#BBBBBB", "#CCCCCC", "#DDDDDD", "#EEEEEE", "#FFFFFF"], // 4 - Greyscale
-                ["#BEFF00", "#00FF00", "#00FFBE"], // 5 - Greenscale
-                ["#000428", "#004E92"], // 6 - Frost
-                ["#FF512F", "#DD2476"], // 7 - Bloody Mary
-                ["#4568DC", "#B06AB3"], // 8 - Me and my boyfriend <3
-                ["#FFD89B", "#19547B"], // 9 - Dusk
-                ["#3A1C71", "#D76D77", "#FFAf7B"], // 10 - Relay
-                ["#FF0000", "#FFFFFF", "#0000FF"], // 11 - AMERICA FUCK YEAH
-                ["#34e89e", "#0f3443"], // 12 - Pacific dream
-            ];
-            const index = Math.random() * (gradients.length + 1) | 0;
-            if (index === gradients.length) {
-                let index = 0;
-                setInterval(function updateRainbowGradient() {
-                    index++;
-                    index %= 85;
-                    _global._nameGradient = [getColor(100 + index), getColor(100 + ((index + 10) % 85))];
-                }, 50);
-            }
-            return gradients[index];
-        })(),
-    };
-    _global.doParseTree = function parseTree(mockups) {
-        let tiles = [],
-            branches = [],
-            measureSize = (x, y, colorIndex, {
-                index,
-                tier = 0
-            }, lTier = 0) => {
-                tier < 0 && (tier = 0);
-                lTier > tier && (tier = lTier + 1);
-                tiles.push({
-                    x,
-                    y,
-                    colorIndex,
-                    index
-                });
-                let upgrades = mockups[index].upgrades || [];
-                switch (tier) {
-                    case 5:
-                        return {
-                            width: 1,
-                            height: 1
-                        };
-                    case 4:
-                        upgrades.forEach((u, i) => measureSize(x, y + 2 + i, i, u, tier));
-                        if (upgrades.length) branches.push([{
-                            x,
-                            y
-                        }, {
-                            x,
-                            y: y + 1 + upgrades.length
-                        }]);
-                        return {
-                            width: 1,
-                            height: 2 + (upgrades.length || 0)
-                        };
-                    case 3:
-                    case 2:
-                    case 1:
-                    case 0: {
-                        let xStart = x,
-                            us = upgrades.map((u, i) => {
-                                let uTier = u.tier <= tier ? tier + 1 : u.tier,
-                                    spacing = 2 * (uTier - tier),
-                                    measure = measureSize(x, y + spacing, i, u, tier);
-                                if (upgrades.length) branches.push([{
-                                    x,
-                                    y: y + (i === 0 ? 0 : 1)
-                                }, {
-                                    x,
-                                    y: y + spacing
-                                }]);
-                                if (i + 1 === upgrades.length) branches.push([{
-                                    x: xStart,
-                                    y: y + 1
-                                }, {
-                                    x,
-                                    y: y + 1
-                                }]);
-                                x += measure.width
-                                return measure
-                            });
-                        return {
-                            width: us.map(r => r.width).reduce((a, b) => a + b, 0) || 1,
-                            height: 2 + Math.max(0, ...us.map(r => r.height || 1)),
-                        }
-                    }
-                }
-            },
-            full = measureSize(0, 0, 0, {
-                index: _mockups.find(r => r.name === _global.searchName).index
-            });
-        _global.parsedTreeData = [tiles, branches, full];
-        console.log("Upgrade tree has been parsed and is ready to be rendered.");
-    };
-    _global.parsedTreeData = null;
+    
     var _socket = null;
-    _global.mobileClickables = [function () { // Toggle menu
-        let clickdata = _global.clickables.mobileClicks.get()
-        if(!_global._mobileOptions){
+    global.mobileClickables = [function () { // Toggle menu
+        let clickdata = global.clickables.mobileClicks.get()
+        if(!global._mobileOptions){
             for (let i = 1; i < clickdata.length; i++) {
                 clickdata[i].setActive(i<=6?1:0)
             }
-            _global._mobileOptions = true;
+            global._mobileOptions = true;
         }else{
             for (let i = 1; i < clickdata.length; i++) {
                 clickdata[i].setActive(i>=7?1:0)
             }
-            _global._mobileOptions = false;
+            global._mobileOptions = false;
         }
     }, function () { // Level Up
         for (let i = 0; i < 75; i++) {
@@ -487,26 +66,26 @@ function RememberScriptingIsBannable() {
     }, function () { // Chat
         let chatbox = document.getElementById("chatBox")
         if(!chatbox){
-            _global._mobileChatText = "Chat"
-            _global._canvas._cv.dispatchEvent(new KeyboardEvent('keydown', {
-                'keyCode': _global.KEY_CHAT
+            global._mobileChatText = "Chat"
+            global._canvas._cv.dispatchEvent(new KeyboardEvent('keydown', {
+                'keyCode': global.KEY_CHAT
             }));
         }else{
-            _global._mobileChatText = "Chat"
+            global._mobileChatText = "Chat"
             chatbox.dispatchEvent(new KeyboardEvent('keydown', {
                 'keyCode': 13
             }));
         }
 
     }, function(){ // Firing modes
-        _socket.cmd.set(_global._mobileFiring[0], false);
-        if(_global._mobileFiring[0] === 4){
-            _global._mobileFiring[0] = 6
-            if(_global._mobileFiring[1])_socket.cmd.set(_global._mobileFiring[0], true);
+        _socket.cmd.set(global._mobileFiring[0], false);
+        if(global._mobileFiring[0] === 4){
+            global._mobileFiring[0] = 6
+            if(global._mobileFiring[1])_socket.cmd.set(global._mobileFiring[0], true);
             return
         }
-        _global._mobileFiring[0] = 4
-        if (_global._mobileFiring[1]) _socket.cmd.set(_global._mobileFiring[0], true);
+        global._mobileFiring[0] = 4
+        if (global._mobileFiring[1]) _socket.cmd.set(global._mobileFiring[0], true);
     }, function(){
         _socket.talk("X");
     }];
@@ -525,18 +104,6 @@ function RememberScriptingIsBannable() {
         }
         return 0;
     };
-    _util._HSL2COLOR = (function () {
-        return function (h,s,l) {
-  l /= 100;
-  const a = s * Math.min(l, 1 - l) / 100;
-  const f = n => {
-    const k = (n + h / 30) % 12;
-    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-    return Math.round(255 * color).toString(16).padStart(2, '0');   // convert to Hex and prefix "0" if needed
-  };
-  return `#${f(0)}${f(8)}${f(4)}`;
-        };
-    })();
     _util._handleLargeNumber = function (x, giveZero = false) {
         let cullZeroes = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
         if (cullZeroes && x == 0) return giveZero ? "0" : "";
@@ -597,29 +164,29 @@ function RememberScriptingIsBannable() {
     };
     _util._pullJSON = async function (filename, responseType = "json", filetypeOverride) {
         let request = new XMLHttpRequest(),
-            url = await getFullURL(servers[_global._selectedServer], false) + "json/" + filename + (filetypeOverride !== undefined ? filetypeOverride : ".json") + "?a=" + Date.now();
-        _logger._info("Loading JSON from " + url);
+            url = await getFullURL(servers[global._selectedServer], false) + "json/" + filename + (filetypeOverride !== undefined ? filetypeOverride : ".json") + "?a=" + Date.now();
+        logger.info("Loading JSON from " + url);
         request.responseType = responseType;
         return new Promise(function (resolve, reject) {
             request.open("GET", url);
             request.onload = function () {
                 resolve(request.response);
-                _logger._info("JSON load complete.");
+                logger.info("JSON load complete.");
             };
             request.onerror = function () {
                 reject(request.statusText);
-                _logger._warn("JSON load failed!");
-                _logger._norm(request.statusText);
+                logger.warn("JSON load failed!");
+                logger.norm(request.statusText);
             };
             request.send();
         });
     };
-    _util._getRatio = () => Math.max(_global._screenWidth, 16 * _global._screenHeight / 9) / _player._renderv;
-    _util._getScreenRatio = () => Math.max(_global._screenWidth, 16 * _global._screenHeight / 9) / _global._screenSize;
+    _util._getRatio = () => Math.max(global._screenWidth, 16 * global._screenHeight / 9) / _player._renderv;
+    _util._getScreenRatio = () => Math.max(global._screenWidth, 16 * global._screenHeight / 9) / global._screenSize;
     _util._getSpecialNameInfoById = id => [
-        ["#2e6d9b", "#579acb", `'Merienda', cursive`, 1, false],
-        ["#E673C4", "#ff00d0", `"Courier New", Courier, monospace`, 1, false],
-        ["#EE8833", "#784216", `coffee`, 1, "fillygroove_badge"]
+        ["#2e6d9b", "#579acb", `'Merienda', cursive`, 1],
+        ["#E673C4", "#ff00d0", `"Courier New", Courier, monospace`, 1],
+        ["#EE8833", "#784216", `coffee`, 1]
     ][id];
     const _rewardManager = new class {
         constructor() {
@@ -723,7 +290,7 @@ function RememberScriptingIsBannable() {
                 this._achievements[id].unlocked = true;
                 // Lol scripters gotta deal with ran int and waste time L bozo
                 localStorage.setItem(this._enc(this._storageKeyAchievement + `${id}`), (100 * Math.random).toFixed(0));
-                _global._sendMessageToClient("Achievement complete: " + this._achievements[id].title, "guiblack");
+                global._sendMessageToClient("Achievement complete: " + this._achievements[id].title, "guiblack");
                 if (Object.keys(this._achievements).map(key => this._achievements[key]).filter(a => !a.unlocked).sort((a, b) => a.tier - b.tier).length === 1) this._unlockAchievement("the_king");
             }
         }
@@ -815,8 +382,8 @@ function RememberScriptingIsBannable() {
 
         function resetOptions(dontOutput = false) {
             localStorage.setItem("hasLoadedBefore", true);
-            for (let _ in _config.Woomy) {
-                let setting = _config.Woomy[_];
+            for (let _ in config.Woomy) {
+                let setting = config.Woomy[_];
                 let element = document.getElementById(`Woomy_${setting.key}`);
                 if (element.type === "checkbox") element.checked = setting.default;
                 else element.value = setting.default;
@@ -858,19 +425,18 @@ function RememberScriptingIsBannable() {
                     } break;
                 }
             };
-            for (let _ in _config.Woomy) {
-                let setting = _config.Woomy[_];
+            for (let _ in config.Woomy) {
+                let setting = config.Woomy[_];
                 createInput(setting);
             }
             innerHTML += `</div><hr><br><button id="saveOptions">Save & Apply</button><button id="resetOptions">Reset Options</button><div style="float: right;"><button id="exportOptions">Export Options</button><button id="importOptions">Import Options</button></div> <br><input type="text" autofocus tabindex="0" spellcheck="false" placeholder="..." id="optionsResult"/><button id="entityEditor" style="display:none">Entity Editor (Beta)</button>`;
             holder.innerHTML += innerHTML;
             document.body.appendChild(holder);
-            document.getElementById("Woomy_theme").value = _config.Woomy["Theme"].value;
-            document.getElementById("Woomy_shaders").value = _config.Woomy["Shader Casting"].value;
-            document.getElementById("Woomy_filter").value = _config.Woomy["Filters"].value;
-            document.getElementById("Woomy_resolutionScale").value = _config.Woomy["Resolution"].value;
-            document.getElementById("Woomy_fontFamily").value = _config.Woomy["Font Family"].value;
-            document.getElementById("Woomy_backgroundAnimation").value = _config.Woomy["Menu Animation"].value;
+            document.getElementById("Woomy_theme").value = config.Woomy["Theme"].value;
+            document.getElementById("Woomy_shaders").value = config.Woomy["Shader Casting"].value;
+            document.getElementById("Woomy_filter").value = config.Woomy["Filters"].value;
+            document.getElementById("Woomy_resolutionScale").value = config.Woomy["Resolution"].value;
+            document.getElementById("Woomy_fontFamily").value = config.Woomy["Font Family"].value;
             let toggle = document.createElement("div");
             toggle.id = "settings-button";
             //if (!/Android|webOS|iPhone|iPad|iPod|BlackBerry|android|mobi/i.test(navigator.userAgent)) {
@@ -942,8 +508,8 @@ function RememberScriptingIsBannable() {
                         }
                         respond(JSON.stringify(obj), true);*/
                         let obj = {}
-                        for (let _ in _config.Woomy) {
-                            let setting = _config.Woomy[_];
+                        for (let _ in config.Woomy) {
+                            let setting = config.Woomy[_];
                             switch (setting.type) {
                                 case "boolean":
                                     obj[_] = Math.random() >= 0.5;
@@ -962,8 +528,8 @@ function RememberScriptingIsBannable() {
                         try {
                             input = JSON.parse(input);
                             if (input instanceof Array || !(typeof input === "object")) throw ("Not an object");
-                            for (let _ in _config.Woomy) {
-                                let setting = _config.Woomy[_];
+                            for (let _ in config.Woomy) {
+                                let setting = config.Woomy[_];
                                 if (input[setting.name] == null) continue;
                                 let element = document.getElementById(`Woomy_${setting.key}`);
                                 let value = input[setting.name];
@@ -981,13 +547,13 @@ function RememberScriptingIsBannable() {
             };
             exportButton.onclick = () => {
                 let out = {};
-                for (let key of Object.keys(_config.Woomy)) out[key] = _config.Woomy[key].value
+                for (let key of Object.keys(config.Woomy)) out[key] = config.Woomy[key].value
                 navigator.clipboard.writeText(JSON.stringify(out));
                 respond(JSON.stringify(out), true);
             }
             saveButton.onclick = () => {
-                for (let _ in _config.Woomy) {
-                    let setting = _config.Woomy[_];
+                for (let _ in config.Woomy) {
+                    let setting = config.Woomy[_];
                     let option = document.getElementById(`Woomy_${setting.key}`);
                     let value = option.value;
                     if (option.type === "checkbox") value = option.checked;
@@ -995,8 +561,8 @@ function RememberScriptingIsBannable() {
                 }
                 respond("Your options have been saved");
                 saveButtonReal = true;
-                if (_config.firstLoad != null) _rewardManager._unlockAchievement("personalization");
-                _config.firstLoad = false;
+                if (config.firstLoad != null) _rewardManager._unlockAchievement("personalization");
+                config.firstLoad = false;
             };
           
             let entityEditor = document.getElementById("entityEditor")
@@ -1013,1810 +579,11 @@ function RememberScriptingIsBannable() {
             respond("...");
         }
     }();
-    let _config = {
-        expectedMaxSkillLevel: 9,
-        screenshotMode: 0,
-        borderChunk: 5,
-        barChunk: 5,
-        mininumBorderChunk: 3,
-        darkBorders: 0,
-        rgbBorders: false,
-        noBorders: 0,
-        colors: "classic",
-        pointy: false,
-        deathExpandRatio: true,
-        fancyAnimations: true,
-        resolutionScale: 1,
-        fontSizeBoost: 10,
-        fontStrokeRatio: 4.5,
-        neon: 0,
-        useFourRows: 1,
-        disableMessages: 0,
-        roundUpgrades: 0,
-        drawOwnName: false,
-        autoUpgrade: _global.mobile,
-        tintedNest: true,
-        tintedDamage: true,
-        lerpSize: true,
-        glassMode: false,
-        shaders: "Disabled",
-        filterType: "none",
-        tintedHealth: true,
-        coloredHealthBars: false,
-        memory: 60,
-        newPrediction: 0,
-        prediction: 2,
-        fontFamily: "Ubuntu",
-        localmotion: false,
-    },
-        color = {
-            "teal": "#7ADBBC",
-            "lgreen": "#B9E87E",
-            "orange": "#E7896D",
-            "yellow": "#FDF380",
-            "lavender": "#B58EFD",
-            "pink": "#EF99C3",
-            "vlgrey": "#E8EBF7",
-            "lgrey": "#AA9F9E",
-            "guiwhite": "#FFFFFF",
-            "black": "#484848",
-            "blue": "#3CA4CB",
-            "green": "#8ABC3F",
-            "red": "#E03E41",
-            "gold": "#EFC74B",
-            "purple": "#8D6ADF",
-            "magenta": "#CC669C",
-            "grey": "#A7A7AF",
-            "dgrey": "#726F6F",
-            "white": "#DBDBDB",
-            "guiblack": "#000000",
-            "paletteSize": 10,
-            "border": 0.65
-        },
-        themes = {
-            "normal": {
-                "teal": "#7ADBBC",
-                "lgreen": "#B9E87E",
-                "orange": "#E7896D",
-                "yellow": "#FDF380",
-                "lavender": "#B58EFD",
-                "pink": "#EF99C3",
-                "vlgrey": "#E8EBF7",
-                "lgrey": "#AA9F9E",
-                "guiwhite": "#FFFFFF",
-                "black": "#484848",
-                "blue": "#3CA4CB",
-                "green": "#8ABC3F",
-                "red": "#E03E41",
-                "gold": "#EFC74B",
-                "purple": "#8D6ADF",
-                "magenta": "#CC669C",
-                "grey": "#A7A7AF",
-                "dgrey": "#726F6F",
-                "white": "#DBDBDB",
-                "guiblack": "#000000",
-                "paletteSize": 10,
-                "border": 0.65
-            },
-            "classic": {
-                "teal": "#8EFFFB",
-                "lgreen": "#85E37D",
-                "orange": "#FC7676",
-                "yellow": "#FFEB8E",
-                "lavender": "#B58EFF",
-                "pink": "#F177DD",
-                "vlgrey": "#CDCDCD",
-                "lgrey": "#999999",
-                "guiwhite": "#FFFFFF",
-                "black": "#525252",
-                "blue": "#00B0E1",
-                "green": "#00E06C",
-                "red": "#F04F54",
-                "gold": "#FFE46B",
-                "purple": "#768CFC",
-                "magenta": "#BE7FF5",
-                "grey": "#999999",
-                "dgrey": "#545454",
-                "white": "#C0C0C0",
-                "guiblack": "#000000",
-                "paletteSize": 10,
-                "border": 0.5
-            },
-            "dark": {
-                "teal": "#8975B7",
-                "lgreen": "#1BA01F",
-                "orange": "#C46748",
-                "yellow": "#B2B224",
-                "lavender": "#7D56C5",
-                "pink": "#B24FAE",
-                "vlgrey": "#1E1E1E",
-                "lgrey": "#3C3A3A",
-                "guiwhite": "#000000",
-                "black": "#E5E5E5",
-                "blue": "#379FC6",
-                "green": "#30B53B",
-                "red": "#FF6C6E",
-                "gold": "#FFC665",
-                "purple": "#9673E8",
-                "magenta": "#C8679B",
-                "grey": "#635F5F",
-                "dgrey": "#73747A",
-                "white": "#11110F",
-                "guiblack": "#FFFFFF",
-                "paletteSize": 10,
-                "border": 0.15
-            },
-            "natural": {
-                "teal": "#76C1BB",
-                "lgreen": "#AAD35D",
-                "orange": "#E09545",
-                "yellow": "#FFD993",
-                "lavender": "#939FFF",
-                "pink": "#D87FB2",
-                "vlgrey": "#C4B6B6",
-                "lgrey": "#7F7F7F",
-                "guiwhite": "#FFFFFF",
-                "black": "#373834",
-                "blue": "#4F93B5",
-                "green": "#00B659",
-                "red": "#E14F65",
-                "gold": "#E5BF42",
-                "purple": "#8053A0",
-                "magenta": "#B67CAA",
-                "grey": "#998F8F",
-                "dgrey": "#494954",
-                "white": "#A5B2A5",
-                "guiblack": "#000000",
-                "paletteSize": 10,
-                "border": 0.2
-            },
-            "ayu": {
-                "teal": "#7ADBBC",
-                "lgreen": "#B9E87E",
-                "orange": "#E7896D",
-                "yellow": "#FDF380",
-                "lavender": "#B58EFD",
-                "pink": "#EF99C3",
-                "vlgrey": "#01060e",
-                "lgrey": "#AA9F9E",
-                "guiwhite": "#FFFFFF",
-                "black": "#0a0e14",
-                "blue": "#72674f",
-                "green": "#8ABC3F",
-                "red": "#626a73",
-                "gold": "#EFC74B",
-                "purple": "#8D6ADF",
-                "magenta": "#ae81ff",
-                "grey": "#ffffff",
-                "dgrey": "#726F6F",
-                "white": "#0a0e14",
-                "guiblack": "#FFFFFF",
-                "paletteSize": 10,
-                "border": 0.5
-            },
-            "forest": {
-                "teal": "#884AA5",
-                "lgreen": "#8C9B3E",
-                "orange": "#D16A80",
-                "yellow": "#97596D",
-                "lavender": "#499855",
-                "pink": "#60294F",
-                "vlgrey": "#DDC6B8",
-                "lgrey": "#7E949E",
-                "guiwhite": "#FFFFE8",
-                "black": "#665750",
-                "blue": "#807BB6",
-                "green": "#A1BE55",
-                "red": "#E5B05B",
-                "gold": "#FF4747",
-                "purple": "#BAC674",
-                "magenta": "#BA78D1",
-                "grey": "#998866",
-                "dgrey": "#529758",
-                "white": "#7DA060",
-                "guiblack": "#000000",
-                "paletteSize": 10,
-                "border": 0.7
-            },
-            "boreal": {
-                "teal": "#c342ff",
-                "lgreen": "#4ee92f",
-                "orange": "#bb687a",
-                "yellow": "#97596D",
-                "lavender": "#499855",
-                "pink": "#e8e3e6",
-                "vlgrey": "#dfcbbf",
-                "lgrey": "#7E949E",
-                "guiwhite": "#FFFFE8",
-                "black": "#6f584d",
-                "blue": "#9c98c3",
-                "green": "#bbd57c",
-                "red": "#eac180",
-                "gold": "#f48080",
-                "purple": "#ccdb7b",
-                "magenta": "#ca98dd",
-                "grey": "#b7946c",
-                "dgrey": "#529758",
-                "white": "#ecf4f2",
-                "guiblack": "#000000",
-                "paletteSize": 10,
-                "border": 0.5
-            },
-            "midnight": {
-                "teal": "#2B9098",
-                "lgreen": "#4BAA5D",
-                "orange": "#345678",
-                "yellow": "#CDC684",
-                "lavender": "#89778E",
-                "pink": "#A85C90",
-                "vlgrey": "#CCCCCC",
-                "lgrey": "#A7B2B7",
-                "guiwhite": "#BAC6FF",
-                "black": "#091F28",
-                "blue": "#123455",
-                "green": "#098765",
-                "red": "#000013",
-                "gold": "#566381",
-                "purple": "#743784",
-                "magenta": "#B29098",
-                "grey": "#555555",
-                "dgrey": "#649EB7",
-                "white": "#444444",
-                "guiblack": "#000000",
-                "paletteSize": 10,
-                "border": 0.6
-            },
-            "pastel": {
-                "teal": "#89BFBA",
-                "lgreen": "#B5D17D",
-                "orange": "#E5E0E0",
-                "yellow": "#B5BBE5",
-                "lavender": "#939FFF",
-                "pink": "#646DE5",
-                "vlgrey": "#B2B2B2",
-                "lgrey": "#7F7F7F",
-                "guiwhite": "#FFFFFF",
-                "black": "#383835",
-                "blue": "#AEAEFF",
-                "green": "#AEFFAE",
-                "red": "#FFAEAE",
-                "gold": "#FFFFFF",
-                "purple": "#C3C3D8",
-                "magenta": "#FFB5FF",
-                "grey": "#CCCCCC",
-                "dgrey": "#A0A0B2",
-                "white": "#F2F2F2",
-                "guiblack": "#000000",
-                "paletteSize": 10,
-                "border": 0.35
-            },
-            "space": {
-                "teal": "#4788F3",
-                "lgreen": "#AF1010",
-                "orange": "#FF0000",
-                "yellow": "#82F850",
-                "lavender": "#FFFFFF",
-                "pink": "#57006C",
-                "vlgrey": "#FFFFFF",
-                "lgrey": "#272727",
-                "guiwhite": "#000000",
-                "black": "#7F7F7F",
-                "blue": "#0E1B92",
-                "green": "#0AEB80",
-                "red": "#C2B90A",
-                "gold": "#3E7E8C",
-                "purple": "#285911",
-                "magenta": "#A9707E",
-                "grey": "#6F6A68",
-                "dgrey": "#2D0738",
-                "white": "#000000",
-                "guiblack": "#FFFFFF",
-                "paletteSize": 10,
-                "border": 0.25
-            },
-            "factory": {
-                "teal": "#8686ab",
-                "lgreen": "#e4ca49",
-                "orange": "#c8b5b8",
-                "yellow": "#FDF380",
-                "lavender": "#8585ab",
-                "pink": "#b2b2cc",
-                "vlgrey": "#676480",
-                "lgrey": "#AA9F9E",
-                "guiwhite": "#a3a38e",
-                "black": "#3c3b4a",
-                "blue": "#36c6e2",
-                "green": "#36e28f",
-                "red": "#e45548",
-                "gold": "#ccccb2",
-                "purple": "#b2b2cc",
-                "magenta": "#c4addb",
-                "grey": "#8e8ca5",
-                "dgrey": "#535b5f",
-                "white": "#8a9195",
-                "guiblack": "#000000",
-                "paletteSize": 10,
-                "border": 0.75
-            },
-            "nebula": {
-                "teal": "#38B06E",
-                "lgreen": "#22882E",
-                "orange": "#D28E7F",
-                "yellow": "#D5D879",
-                "lavender": "#E084EB",
-                "pink": "#DF3E3E",
-                "vlgrey": "#F0F2CC",
-                "lgrey": "#7D7D7D",
-                "guiwhite": "#C2C5EF",
-                "black": "#161616",
-                "blue": "#9274E6",
-                "green": "#89F470",
-                "red": "#E08E5D",
-                "gold": "#ECDC58",
-                "purple": "#58CBEC",
-                "magenta": "#EA58EC",
-                "grey": "#7E5713",
-                "dgrey": "#303030",
-                "white": "#555555",
-                "guiblack": "#EAEAEA",
-                "paletteSize": 10,
-                "border": 0.5
-            },
-            "bleach": {
-                "teal": "#00FFFF",
-                "lgreen": "#00FF00",
-                "orange": "#FF3200",
-                "yellow": "#FFEC00",
-                "lavender": "#FF24A7",
-                "pink": "#FF3CBD",
-                "vlgrey": "#FFF186",
-                "lgrey": "#918181",
-                "guiwhite": "#F1F1F1",
-                "black": "#5F5F5F",
-                "blue": "#0025FF",
-                "green": "#00FF00",
-                "red": "#FF0000",
-                "gold": "#FFFA23",
-                "purple": "#3100FF",
-                "magenta": "#D4D3D3",
-                "grey": "#838383",
-                "dgrey": "#4C4C4C",
-                "white": "#FFFEFE",
-                "guiblack": "#080808",
-                "paletteSize": 10,
-                "border": 0.4
-            },
-            "ocean": {
-                "teal": "#76EEC6",
-                "lgreen": "#41AA78",
-                "orange": "#FF7F50",
-                "yellow": "#FFD250",
-                "lavender": "#DC3388",
-                "pink": "#FA8072",
-                "vlgrey": "#8B8886",
-                "lgrey": "#BFC1C2",
-                "guiwhite": "#FFFFFF",
-                "black": "#12466B",
-                "blue": "#4200AE",
-                "green": "#0D6338",
-                "red": "#DC4333",
-                "gold": "#FEA904",
-                "purple": "#7B4BAB",
-                "magenta": "#5C246E",
-                "grey": "#656884",
-                "dgrey": "#D4D7D9",
-                "white": "#3283BC",
-                "guiblack": "#000000",
-                "paletteSize": 10,
-                "border": 0.3
-            },
-            "mariana": {
-                "teal": "#e02e1a",
-                "lgreen": "#abfe10",
-                "orange": "#49a437",
-                "yellow": "#FFD250",
-                "lavender": "#DC3388",
-                "pink": "#e16d60",
-                "vlgrey": "#878482",
-                "lgrey": "#BFC1C2",
-                "guiwhite": "#99d8ff",
-                "black": "#3856f0",
-                "blue": "#576dc1",
-                "green": "#1daa63",
-                "red": "#bf703b",
-                "gold": "#b65449",
-                "purple": "#6e642b",
-                "magenta": "#9c47b8",
-                "grey": "#4d4d6a",
-                "dgrey": "#D4D7D9",
-                "white": "#0c3755",
-                "guiblack": "#FFFFFF",
-                "paletteSize": 10,
-                "border": 0.5
-            },
-            "badlands": {
-                "teal": "#F9CB9C",
-                "lgreen": "#F1C232",
-                "orange": "#38761D",
-                "yellow": "#E69138",
-                "lavender": "#B7B7B7",
-                "pink": "#78866B",
-                "vlgrey": "#6AA84F",
-                "lgrey": "#B7B7B7",
-                "guiwhite": "#A4C2F4",
-                "black": "#000000",
-                "blue": "#0C5A9E",
-                "green": "#6E8922",
-                "red": "#5B0000",
-                "gold": "#783F04",
-                "purple": "#591C77",
-                "magenta": "#20124D",
-                "grey": "#2F1C16",
-                "dgrey": "#999999",
-                "white": "#543517",
-                "guiblack": "#CFE2F3",
-                "paletteSize": 10,
-                "border": 0.4
-            },
-            "beta_arras": {
-                "teal": "#1F3D80",
-                "lgreen": "#39A016",
-                "orange": "#760D10",
-                "yellow": "#DBA015",
-                "lavender": "#820A66",
-                "pink": "#820A66",
-                "vlgrey": "#888888",
-                "lgrey": "#888888",
-                "guiwhite": "#FFFFFF",
-                "black": "#484848",
-                "blue": "#3762D1",
-                "green": "#22600D",
-                "red": "#C4151B",
-                "gold": "#83600D",
-                "purple": "#4E063D",
-                "magenta": "#CC669C",
-                "grey": "#A7A7AF",
-                "dgrey": "#525252",
-                "white": "#DBDBDB",
-                "guiblack": "#525252",
-                "paletteSize": 10,
-                "border": 0.65
-            },
-            "neon": {
-                "teal": "#00FFF2",
-                "lgreen": "#04FF00",
-                "orange": "#FF9D00",
-                "yellow": "#FFFA00",
-                "lavender": "#7D56C5",
-                "pink": "#FF89D7",
-                "vlgrey": "#161616",
-                "lgrey": "#3d3d3d",
-                "guiwhite": "#000000",
-                "black": "#E5E5E5",
-                "blue": "#0090FF",
-                "green": "#26D100",
-                "red": "#FF0000",
-                "gold": "#FFD400",
-                "purple": "#7b00ff",
-                "magenta": " #ff00e1",
-                "grey": "#635F5F",
-                "dgrey": "#73747A",
-                "white": "#000000",
-                "guiblack": "#FFFFFF",
-                "paletteSize": 10,
-                "border": 0.15
-            },
-            "haunted_house": {
-                "teal": "#000000",
-                "lgreen": "#841c93",
-                "orange": "#963518",
-                "yellow": "#cdbe03",
-                "lavender": "#9d5ffc",
-                "pink": "#f3b6d5",
-                "vlgrey": "#ffffff",
-                "lgrey": "#aa9f9e",
-                "guiwhite": "#ffffff",
-                "black": "#484848",
-                "blue": "#647aa4",
-                "green": "#81a259",
-                "red": "#9e031f",
-                "gold": "#b48b10",
-                "purple": "#351a75",
-                "magenta": "#b77b9a",
-                "grey": "#dcccdd",
-                "dgrey": "#77067d",
-                "white": "#020202",
-                "guiblack": "#ffffff",
-                "paletteSize": 10,
-                "border": 0.6
-            },
-            "pumpkin_theme": {
-                "teal": "#721970",
-                "lgreen": "#ff6347",
-                "orange": "#1b713a",
-                "yellow": "#fdf380",
-                "lavender": "#941100",
-                "pink": "#194417",
-                "vlgrey": "#1b713a",
-                "lgrey": "#aa9f9e",
-                "guiwhite": "#fed8b1",
-                "black": "#484848",
-                "blue": "#3ca4cb",
-                "green": "#8abc3f",
-                "red": "#e03e41",
-                "gold": "#1b713a",
-                "purple": "#1b713a",
-                "magenta": "#cc669c",
-                "grey": "#ffffff",
-                "dgrey": "#726f6f",
-                "white": "#ff9b58",
-                "guiblack": "#000000",
-                "paletteSize": 10,
-                "border": 3
-            },
-            "solarized_dark": {
-                "teal": "#B58900",
-                "lgreen": "#2AA198",
-                "orange": "#CB4B16",
-                "yellow": "#657B83",
-                "lavender": "#EEE8D5",
-                "pink": "#D33682",
-                "vlgrey": "#E0E2E4",
-                "lgrey": "#073642",
-                "guiwhite": "#ffffff",
-                "black": "#000000",
-                "blue": "#268BD2",
-                "green": "#869600",
-                "red": "#DC322F",
-                "gold": "#B58900",
-                "purple": "#678CB1",
-                "magenta": "#A082BD",
-                "grey": "#839496",
-                "dgrey": "#073642",
-                "white": "#002B36",
-                "guiblack": "#000000",
-                "paletteSize": 10,
-                "border": 0.5
-            },
-            "christmas": {
-                "teal": "#00d200",
-                "lgreen": "#ce0000",
-                "orange": "#d94d24",
-                "yellow": "#f3e103",
-                "lavender": "#5004dd",
-                "pink": "#e86aa9",
-                "vlgrey": "#ff0000",
-                "lgrey": "#00ae00",
-                "guiwhite": "#00f400",
-                "black": "#484848",
-                "blue": "#f2f200",
-                "green": "#8abc3f",
-                "red": "#e03e41",
-                "gold": "#ffff28",
-                "purple": "#6c3fd6",
-                "magenta": "#ffffff",
-                "grey": "#c0c0c0",
-                "dgrey": "#008000",
-                "white": "#00b300",
-                "guiblack": "#000000",
-                "paletteSize": 10,
-                "border": 0.5
-            },
-            "bubblegum": {
-                "teal": "#7adbbc",
-                "lgreen": "#b9e87e",
-                "orange": "#e7896d",
-                "yellow": "#fdf380",
-                "lavender": "#b58efd",
-                "pink": "#ef99c3",
-                "vlgrey": "#e8ebf7",
-                "lgrey": "#e761a4",
-                "guiwhite": "#ffffff",
-                "black": "#7d1348",
-                "blue": "#3ca4cb",
-                "green": "#8abc3f",
-                "red": "#e03e41",
-                "gold": "#efc74b",
-                "purple": "#8d6adf",
-                "magenta": "#cc669c",
-                "grey": "#e96dab",
-                "dgrey": "#c21f71",
-                "white": "#f5c0db",
-                "guiblack": "#000000",
-                "paletteSize": 10,
-                "border": 0.5
-            },
-            "amethyst": {
-                "teal": "#467b7c", "lgreen": "#79a05a", "orange": "#8a5b42", "yellow": "#FDF380", "lavender": "#B58EFD", "pink": "#a66e8e", "vlgrey": "#888891", "lgrey": "#AA9F9E", "guiwhite": "#a48ec2", "black": "#000000", "blue": "#254b74", "green": "#417e2a", "red": "#7e2525", "gold": "#8e862e", "purple": "#5c4186", "magenta": "#3d1764", "grey": "#58575b", "dgrey": "#726F6F", "white": "#665a87", "guiblack": "#000000", "paletteSize": 10, "border": 0.5
-            },
-            "fantasy": {
-                "teal": "#e43939", "lgreen": "#77ec6c", "orange": "#ed657a", "yellow": "#fdf380", "lavender": "#8c00ff", "pink": "#ff8bff", "vlgrey": "#f2f4fd", "lgrey": "#000000", "guiwhite": "#ffffff", "black": "#191919", "blue": "#3e67f4", "green": "#02cf05", "red": "#ca0020", "gold": "#fdef75", "purple": "#7a8bf4", "magenta": "#d952ff", "grey": "#4e4d50", "dgrey": "#353535", "white": "#646262", "guiblack": "#000000", "border": 0.5
-            }
-        };
-    _global.config = _config;
-    const _backgroundAnimations = (function () {
-        const realCanvas = document.getElementById("gameCanvas");
-        const realCtx = realCanvas.getContext("2d");
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-
-        function resetCanvas() {
-            canvas.width = window.innerWidth * window.devicePixelRatio;
-            canvas.height = window.innerHeight * window.devicePixelRatio;
-            ctx.lineJoin = ctx.lineCap = "round";
-        }
-
-        function lerp(a, b, x) {
-            return a + x * (b - a);
-        }
-
-        function getDistance(a, b) {
-            return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
-        }
-        window.addEventListener("resize", resetCanvas);
-        const animations = {
-            balls: (function () {
-                const balls = {};
-                class Ball {
-                    constructor() {
-                        this.x = Math.random() * canvas.width;
-                        this.y = Math.random() * canvas.height;
-                        this.vx = Math.random() * 2 - 1;
-                        this.vy = Math.random() * 2 - 1;
-                        this.size = Math.random() * 5 + 15;
-                        this.color = '#' + (Math.random() * 0xFFFFFF << 0).toString(16);
-                        this.alpha = Math.random() * .5 + .5;
-                        this.accel = 0;
-                    }
-                    move() {
-                        if (this.x + this.vx * this.accel <= 0 || this.x + this.vx * this.accel >= canvas.width) {
-                            this.vx *= -1;
-                            this.accel *= .5;
-                        }
-                        if (this.y + this.vy * this.accel <= 0 || this.y + this.vy * this.accel >= canvas.height) {
-                            this.vy *= -1;
-                            this.accel *= .5;
-                        }
-                        this.accel = lerp(this.accel, 5, .05);
-                        this.x += this.vx * this.accel;
-                        this.y += this.vy * this.accel;
-                    }
-                    draw() {
-                        ctx.save();
-                        ctx.globalAlpha = this.alpha;
-                        ctx.translate(this.x + .5 | 0, this.y + .5 | 0);
-                        ctx.beginPath();
-                        ctx.arc(0, 0, this.size + .5 | 0, 0, Math.PI * 2, true);
-                        ctx.closePath();
-                        ctx.fillStyle = this.color;
-                        ctx.fill();
-                        ctx.restore();
-                    }
-                }
-                for (let i = 0; i < 25; i++) {
-                    balls[i] = new Ball();
-                }
-
-                function drawLoop() {
-                    ctx.fillStyle = "rgba(0, 0, 0, .175)";
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    for (const id in balls) {
-                        const ball = balls[id];
-                        for (const id2 in balls) {
-                            if (id2 !== id) {
-                                const other = balls[id2];
-                                if (getDistance(ball, other) < ball.size + other.size) {
-                                    const angle = Math.atan2(other.y - ball.y, other.x - ball.x);
-                                    ball.vx = -Math.cos(angle);
-                                    ball.vy = -Math.sin(angle);
-                                    other.vx = Math.cos(angle);
-                                    other.vy = Math.sin(angle);
-                                    ball.accel *= other.size / ball.size * .5;
-                                    other.accel *= ball.size / other.size * .5;
-                                    ball.move();
-                                    other.move();
-                                }
-                            }
-                        }
-                        ball.move();
-                        ball.draw();
-                    }
-                }
-                return drawLoop;
-            })(),
-            ferris: (function () {
-                const particles = {};
-                let angle = Math.random() * Math.PI * 2,
-                    particleAmount = 20,
-                    id = 1;
-                class Particle {
-                    constructor() {
-                        this.x = canvas.width / 2;
-                        this.y = canvas.height / 2;
-                        this.size = 10;
-                        this.color = '#' + (Math.random() * 0xFFFFFF << 0).toString(16);
-                        this.distance = 0;
-                        this.realDistance = 175;
-                        this.angle = angle;
-                        this.id = id++;
-                        angle += Math.PI * 2 / particleAmount / 1.5;
-                    }
-                    move() {
-                        this.distance = lerp(this.distance, this.realDistance, .1);
-                        this.angle += .0025 * this.id;
-                        this.x = innerWidth / 2 + Math.cos(this.angle) * this.distance;
-                        this.y = innerHeight * .75 + Math.sin(this.angle) * this.distance;
-                    }
-                    draw() {
-                        ctx.save();
-                        ctx.fillStyle = this.color;
-                        ctx.translate(this.x + .5 | 0, this.y + .5 | 0);
-                        ctx.beginPath();
-                        ctx.arc(0, 0, this.size + .5 | 0, 0, Math.PI * 2, true);
-                        ctx.closePath();
-                        ctx.fill();
-                        ctx.beginPath();
-                        ctx.moveTo(0, 0);
-                        ctx.lineTo(-this.x + innerWidth / 2, -this.y + innerHeight * .75);
-                        ctx.closePath();
-                        ctx.lineWidth = Math.sqrt(this.size);
-                        ctx.strokeStyle = this.color;
-                        ctx.stroke();
-                        ctx.restore();
-                    }
-                }
-                for (let i = 0; i < particleAmount; i++) {
-                    particles[i] = new Particle();
-                }
-
-                function drawLoop() {
-                    ctx.fillStyle = "rgba(0, 0, 0, .175)";
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    for (const id in particles) {
-                        const particle = particles[id];
-                        particle.move();
-                        particle.draw();
-                    }
-                }
-                return drawLoop;
-            })(),
-            snow: (function () {
-                const snowflakes = {};
-                let id = 0;
-                class Snowflake {
-                    constructor() {
-                        this.x = Math.random() * innerWidth;
-                        this.y = 0;
-                        this.vx = Math.cos(Math.random() * Math.PI * 2);
-                        this.vy = Math.random() * 2 + 1;
-                        this.color = "#EEFEFF";
-                        this.alpha = Math.random();
-                        this.size = Math.random() * 5 + 5;
-                        this.id = id++;
-                        snowflakes[this.id] = this;
-                    }
-                    move() {
-                        this.x += this.vx * 3;
-                        this.y += this.vy * 3;
-                        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
-                            delete snowflakes[this.id];
-                        }
-                    }
-                    draw() {
-                        ctx.save();
-                        ctx.globalAlpha = this.alpha;
-                        ctx.translate(this.x + .5 | 0, this.y + .5 | 0);
-                        ctx.beginPath();
-                        ctx.arc(0, 0, this.size + .5 | 0, 0, Math.PI * 2, true);
-                        ctx.closePath();
-                        ctx.fillStyle = this.color;
-                        ctx.fill();
-                        ctx.restore();
-                    }
-                }
-
-                function drawLoop() {
-                    ctx.fillStyle = "rgba(0, 0, 0, .175)";
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    if (Object.keys(snowflakes).length < 50 && Math.random() > .9) {
-                        new Snowflake();
-                    }
-                    for (const id in snowflakes) {
-                        const snowflake = snowflakes[id];
-                        snowflake.move();
-                        snowflake.draw();
-                    }
-                }
-                return drawLoop;
-            })(),
-            fireworks: (function () {
-                const missiles = {};
-                const particles = {};
-                let id = 0;
-                class Particle {
-                    constructor(parent, angle) {
-                        this.x = parent.x;
-                        this.y = parent.y;
-                        this.vx = Math.cos(angle);
-                        this.vy = Math.sin(angle);
-                        this.color = parent.color;
-                        this.alpha = parent.alpha;
-                        this.size = parent.size / 3;
-                        this.maxTick = Math.random() * 100 + 100;
-                        this.tick = this.maxTick;
-                        this.id = id++;
-                        particles[this.id] = this;
-                    }
-                    move() {
-                        this.vy = lerp(this.vy, 1, .01);
-                        this.x += this.vx * 3;
-                        this.y += this.vy * 3;
-                        this.alpha = this.tick / this.maxTick;
-                        if (--this.tick < 0) {
-                            delete particles[this.id];
-                        }
-                    }
-                    draw() {
-                        ctx.save();
-                        ctx.globalAlpha = this.alpha;
-                        ctx.translate(this.x + .5 | 0, this.y + .5 | 0);
-                        ctx.beginPath();
-                        ctx.arc(0, 0, this.size + .5 | 0, 0, Math.PI * 2, true);
-                        ctx.closePath();
-                        ctx.fillStyle = this.color;
-                        ctx.fill();
-                        ctx.restore();
-                    }
-                }
-                class Missile {
-                    constructor() {
-                        this.x = innerWidth / 4 + Math.random() * innerWidth / 2;
-                        this.y = innerHeight;
-                        this.vx = Math.random() - .5;
-                        this.vy = -1;
-                        this.size = 5 + Math.random() * 5;
-                        this.color = '#' + (Math.random() * 0xFFFFFF << 0).toString(16);
-                        this.id = id++;
-                        missiles[this.id] = this;
-                    }
-                    move() {
-                        this.x += this.vx * 5;
-                        this.y += this.vy * 5;
-                        if (this.y < innerHeight / 2 && Math.random() > .9 + (this.y / innerWidth / 2) / 1.5) {
-                            for (let i = 0, l = Math.random() * 11 + 5; i < l; i++) {
-                                new Particle(this, (Math.PI * 2) / l * i);
-                            }
-                            delete missiles[this.id];
-                        }
-                    }
-                    draw() {
-                        ctx.save();
-                        ctx.globalAlpha = this.alpha;
-                        ctx.translate(this.x + .5 | 0, this.y + .5 | 0);
-                        ctx.beginPath();
-                        ctx.arc(0, 0, this.size + .5 | 0, 0, Math.PI * 2, true);
-                        ctx.closePath();
-                        ctx.fillStyle = this.color;
-                        ctx.fill();
-                        ctx.restore();
-                    }
-                }
-
-                function drawLoop() {
-                    ctx.fillStyle = "rgba(0, 0, 0, .175)";
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    if (Object.keys(missiles).length < 10 && Math.random() > .95) {
-                        new Missile();
-                    }
-                    for (const id in missiles) {
-                        const missile = missiles[id];
-                        missile.move();
-                        missile.draw();
-                    }
-                    for (const id in particles) {
-                        const particle = particles[id];
-                        particle.move();
-                        particle.draw();
-                    }
-                }
-                return drawLoop;
-            })(),
-            spiral: (function () {
-                const particles = {};
-                let id = 0,
-                    orbit = 1,
-                    particleAmount = 10;
-                class Particle {
-                    constructor() {
-                        this.x = innerWidth / 2;
-                        this.y = innerHeight / 2;
-                        this.orbit = orbit++;
-                        this.distance = 0;
-                        this.size = 5 + Math.random() * 5;
-                        this.alpha = Math.random() * .5 + .5;
-                        this.color = "#FFFFFF";
-                        this.angle = Math.PI * 2 / particleAmount * id;
-                        this.id = id++;
-                        particles[this.id] = this;
-                    }
-                    move() {
-                        this.distance = lerp(this.distance, this.orbit * 17.5, .01);
-                        this.angle += .01;
-                        this.x = innerWidth / 2 + Math.cos(this.angle) * this.distance;
-                        this.y = innerHeight * .75 + Math.sin(this.angle) * this.distance;
-                    }
-                    draw() {
-                        ctx.save();
-                        ctx.globalAlpha = this.alpha;
-                        ctx.translate(this.x + .5 | 0, this.y + .5 | 0);
-                        ctx.beginPath();
-                        ctx.arc(0, 0, this.size + .5 | 0, 0, Math.PI * 2, true);
-                        ctx.closePath();
-                        ctx.fillStyle = this.color;
-                        ctx.fill();
-                        ctx.restore();
-                    }
-                }
-                for (let i = 0; i < particleAmount; i++) {
-                    new Particle();
-                }
-
-                function drawLoop() {
-                    ctx.fillStyle = "rgba(0, 0, 0, .1)";
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    for (const id in particles) {
-                        const particle = particles[id];
-                        particle.move();
-                        particle.draw();
-                    }
-                }
-                return drawLoop;
-            })()
-        };
-        let enabled = false;
-        let selection = "";
-        let deltaTime = 0;
-        let size = 0;
-        function drawLoop() {
-            if (Date.now() > deltaTime + 1000 / 120) {
-                if (!animations[selection]) return
-                if (window.innerWidth + window.innerHeight !== size) {
-                    size = window.innerWidth + window.innerHeight;
-                    resetCanvas();
-                };
-                animations[selection]();
-                realCtx.clearRect(0, 0, realCanvas.width, realCanvas.height);
-                realCtx.globalAlpha = .25;
-                realCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height);
-                realCtx.globalAlpha = 1;
-                deltaTime = Date.now();
-            };
-            enabled && requestAnimationFrame(drawLoop);
-        }
-        return {
-            _start: function () {
-                enabled = true;
-                document.getElementById("gameAreaWrapper").style.opacity = 1;
-                drawLoop();
-            },
-            _stop: function () {
-                enabled = false;
-                window.removeEventListener("resize", resetCanvas);
-                setTimeout(() => realCtx.clearRect(0, 0, realCanvas.width, realCanvas.height), 100);
-            },
-            _setSelection: function (newSelection) {
-                if (animations[newSelection]) {
-                    selection = newSelection;
-                }
-            },
-            enabled: enabled
-        }
-    })();
-const mixColors = (() => {
-    // Cache with a small size limit
-    const memory = new Map();
-    const MAX_CACHE_SIZE = 1000;
-
-    return function (color1, color2, percentage) {
-        // Clamp the percentage between 0 and 1
-        percentage = Math.min(Math.max(percentage, 0), 1);
-
-        // Use a simpler, direct key generation method (without toFixed)
-        const key = `${color1}${color2}${percentage * 100}`;
-
-        // Check if the result is already cached
-        let mem = memory.get(key)
-        if(mem !== undefined) return mem
-
-        // Extract RGB values from hex without using regex
-        const r1 = parseInt(color1.slice(1, 3), 16);
-        const g1 = parseInt(color1.slice(3, 5), 16);
-        const b1 = parseInt(color1.slice(5, 7), 16);
-
-        const r2 = parseInt(color2.slice(1, 3), 16);
-        const g2 = parseInt(color2.slice(3, 5), 16);
-        const b2 = parseInt(color2.slice(5, 7), 16);
-
-        // Calculate the mixed RGB values with integer math
-        const mixedR = Math.round(r1 + (r2 - r1) * percentage);
-        const mixedG = Math.round(g1 + (g2 - g1) * percentage);
-        const mixedB = Math.round(b1 + (b2 - b1) * percentage);
-
-        // Combine RGB into hex and ensure 2 digit padding (hex format is #RRGGBB)
-        const mixedColor = `#${(mixedR < 16 ? '0' : '') + mixedR.toString(16)}${(mixedG < 16 ? '0' : '') + mixedG.toString(16)}${(mixedB < 16 ? '0' : '') + mixedB.toString(16)}`;
-
-        // Cache the result
-        memory.set(key, mixedColor);
-
-        // Evict oldest entry from memory if cache size exceeds the limit
-        if (memory.size > MAX_CACHE_SIZE) {
-            memory.delete(memory.keys().next().value);
-        }
-
-        return mixedColor;
-    };
-})();
-
-    const specialColors = {}
-    function getColor(colorID) {
-        switch (colorID) {
-            case -2: // suck my dick, props
-                return color.teal;
-            case -1: // Only used for shinies to detect the achievement
-                return color.teal;
-            case 0:
-                return color.teal;
-            case 1:
-                return color.lgreen;
-            case 2:
-                return color.orange;
-            case 3:
-                return color.yellow;
-            case 4:
-                return color.lavender;
-            case 5:
-                return color.pink;
-            case 6:
-                return color.vlgrey;
-            case 7:
-                return color.lgrey;
-            case 8:
-                return color.guiwhite;
-            case 9:
-                return color.black;
-            case 10:
-                return color.blue;
-            case 11:
-                return color.green;
-            case 12:
-                return color.red;
-            case 13:
-                return color.gold;
-            case 14:
-                return color.purple;
-            case 15:
-                return color.magenta;
-            case 16:
-                return color.grey;
-            case 17:
-                return color.dgrey;
-            case 18:
-                return color.white;
-            case 19:
-                return color.guiblack;
-            case 20:
-                return "#307A76";
-            case 21:
-                return "#47F51E";
-            case 22:
-                return "#9264EF";
-            case 23:
-                return "#1D00FF";
-            case 24:
-                return "#B35ED8";
-            case 25:
-                return "#0531CB";
-            case 26:
-                return "#FDA54D";
-            case 27:
-                return "#3761D1";
-            case 28:
-                return "#AB1515";
-            case 29:
-                return "#44AA34";
-            case 30:
-                return "#EEF5A7";
-            case 31:
-                return "#8BFE6A";
-            case 32:
-                return "#FAC577";
-            case 33:
-                return "#8AFF8A";
-            case 34:
-                return "#666666";
-            case 35:
-                return "#F37C20";
-            case 36:
-                return "#E85DDF";
-            case 37:
-                return "#FFFF00";
-            case 38:
-                return "#FF9900";
-            case 39:
-                return "#FFBF00";
-            case 40:
-                return "#57C8C2";
-            case 41:
-                return "#A6E1DE";
-            case 42:
-                return "#BF0731";
-            case 43:
-                return "#F80A41";
-            case 44: // Tellurium color
-                return "#00EEA4";
-            case 45: // Red team trench warfare door color (closed)
-                return mixColors(color.red, color.grey, .8);
-            case 46: // Red team trench warfare door color (open) and sporulator colors
-                return mixColors(color.green, color.grey, .8);
-            // Rainbow Colors
-            case 100:
-                return "#FF0000";
-            case 101:
-                return "#FF1A00";
-            case 102:
-                return "#FF2A00";
-            case 103:
-                return "#FF4300";
-            case 104:
-                return "#FF5D00";
-            case 105:
-                return "#FF7200";
-            case 106:
-                return "#FF7700";
-            case 107:
-                return "#FF9400";
-            case 108:
-                return "#FF9900";
-            case 109:
-                return "#FFA500";
-            case 110:
-                return "#FFBB00";
-            case 111:
-                return "#FFCC00";
-            case 112:
-                return "#FFDD00";
-            case 113:
-                return "#FFE900";
-            case 114:
-                return "#FFFA00";
-            case 115:
-                return "#EEFF00";
-            case 116:
-                return "#DDFF00";
-            case 117:
-                return "#D0FF00";
-            case 118:
-                return "#B6FF00";
-            case 119:
-                return "#AAFF00";
-            case 120:
-                return "#88FF00";
-            case 121:
-                return "#6EFF00";
-            case 122:
-                return "#54FF00";
-            case 123:
-                return "#32FF00";
-            case 124:
-                return "#19FF00";
-            case 125:
-                return "#04FF00";
-            case 126:
-                return "#00FF15";
-            case 127:
-                return "#00FF26";
-            case 128:
-                return "#00FF3F";
-            case 129:
-                return "#00FF55";
-            case 130:
-                return "#00FF6E";
-            case 131:
-                return "#00FF7F";
-            case 132:
-                return "#00FF99";
-            case 133:
-                return "#00FFA5";
-            case 134:
-                return "#00FFBB";
-            case 135:
-                return "#00FFCB";
-            case 136:
-                return "#00FFD8";
-            case 137:
-                return "#00FFED";
-            case 138:
-                return "#00FFFA";
-            case 139:
-                return "#00E9FF";
-            case 140:
-                return "#00D8FF";
-            case 141:
-                return "#00C3FF";
-            case 142:
-                return "#00BBFF";
-            case 143:
-                return "#00AEFF";
-            case 144:
-                return "#00A1FF";
-            case 145:
-                return "#0090FF";
-            case 146:
-                return "#007FFF";
-            case 147:
-                return "#0077FF";
-            case 148:
-                return "#006EFF";
-            case 149:
-                return "#005DFF";
-            case 150:
-                return "#0048FF";
-            case 151:
-                return "#0037FF";
-            case 152:
-                return "#0026FF";
-            case 153:
-                return "#0019FF";
-            case 154:
-                return "#0004FF";
-            case 155:
-                return "#0C00FF";
-            case 156:
-                return "#2200FF";
-            case 157:
-                return "#2E00FF";
-            case 158:
-                return "#3B00FF";
-            case 159:
-                return "#5400FF";
-            case 160:
-                return "#6A00FF";
-            case 161:
-                return "#7F00FF";
-            case 162:
-                return "#9000FF";
-            case 163:
-                return "#A100FF";
-            case 164:
-                return "#B600FF";
-            case 165:
-                return "#BF00FF";
-            case 166:
-                return "#D000FF";
-            case 167:
-                return "#DC00FF";
-            case 168:
-                return "#E900FF";
-            case 169:
-                return "#FA00FF";
-            case 170:
-                return "#FF00F6";
-            case 171:
-                return "#FF00E1";
-            case 172:
-                return "#FF00CB";
-            case 173:
-                return "#FF00B6";
-            case 174:
-                return "#FF00AA";
-            case 175:
-                return "#FF00A5";
-            case 176:
-                return "#FF0090";
-            case 177:
-                return "#FF007B";
-            case 178:
-                return "#FF006E";
-            case 179:
-                return "#FF005D";
-            case 180:
-                return "#FF0059";
-            case 181:
-                return "#FF0043";
-            case 182:
-                return "#FF003B";
-            case 183:
-                return "#FF0026";
-            case 184:
-                return "#FF001D";
-            case 185:
-                return "#FF000C";
-            // Railgun Colors
-            case 186:
-                return "#AA8A8B";
-            case 187:
-                return "#BC7B7D";
-            case 188:
-                return "#CD6D70";
-            case 189:
-                return "#DF5E62";
-            case 190:
-                return "#CB6F3C";
-            case 191:
-                return "#00D2FF";
-            case 192:
-                return "#003399";
-            case 193:
-                return "#BDBDBD";
-            case 194:
-                return "#B7410E";
-            case 195:
-                return "#65F0EC";
-            case 196:
-                return "#EAB57A";
-            case 197:
-                return "#E6E600";
-            case 198:
-                return "#E69138";
-            case 199:
-                return "#EA9999";
-            case 200:
-                return "#CCFF00";
-            case 201:
-                return "#800000";
-            case 202:
-                return "#F7EB73";
-            case 203: // Atlantis barrel color
-                return "#9A5BAB";
-            case 204: // Redditeer eye color
-                return "#ED7332";
-            case 205:
-                return "#FDA2A2";
-            case 206:
-                return "#00428B";
-            case 207:
-                return "#FF8000";
-            case 208:
-                return "#FFB66C";
-            case 209:
-                return "#C0C0C0";
-            case 210:
-                return "#FFFF80";
-            case 211:
-                return "#9B59D0";
-            case 212:
-                return "#996B6D";
-            case 213:
-                return "#FE9774";
-            case 214:
-                return "#77E2FB";
-            case 215:
-                return "#EFA900";
-            case 216:
-                return "#FC8208";
-            case 217:
-                return "#6CF1EE";
-            case 218:
-                return "#FFD900";
-            case 219:
-                return "#FFAE40";
-            case 220:
-                return "#FFA600";
-            case 221:
-                return "#FF0080";
-            case 222:
-                return "#00FFFF";
-            case 223:
-                return "#00BFFF";
-            case 224:
-                return "#99D9EA";
-            case 225:
-                return "#6DB5C9";
-            case 226:
-                return "#EFC74B";
-            case 227:
-                return "#D5095B";
-            case 228:
-                return "#FF7F00";
-            case 229:
-                return "#A277FB";
-            case 230:
-                return "#BA8939";
-            case 231:
-                return "#5AE3E3";
-            case 232:
-                return "#FF6600";
-            case 233:
-                return "#FF9955";
-            case 234:
-                return "#D4AF37";
-            case 235:
-                return "#990000";
-            case 236:
-                return "#CC0000";
-            case 237:
-                return "#434343";
-            case 238:
-                return "#D16161";
-            case 239:
-                return "#F0A900";
-            case 240:
-                return "#15CD2D";
-            case 241:
-                return "#56E012";
-            case 242:
-                return "#A177FC";
-            case 243:
-                return _util._HSL2COLOR((Date.now() % 2520) / 7, 100, 50);
-            case 244:
-                return "#3D79EF";
-            case 245:
-                return "#000CF2";
-            case 246:
-                return "#080CEB";
-            case 247:
-                return "#100BE3";
-            case 248:
-                return "#170BDC";
-            case 249:
-                return "#1F0AD5";
-            case 250:
-                return "#270ACE";
-            case 251:
-                return "#2F0AC6";
-            case 252:
-                return "#3709BF";
-            case 253:
-                return "#3E09B8";
-            case 254:
-                return "#4609B0";
-            case 255:
-                return "#4E08A9";
-            case 256:
-                return "#5608A2";
-            case 257:
-                return "#5E079B";
-            case 258:
-                return "#650793";
-            case 259:
-                return "#6D078C";
-            case 260:
-                return "#750685";
-            case 261:
-                return "#7D067D";
-            case 262:
-                return "#850576";
-            case 263:
-                return "#8D056F";
-            case 264:
-                return "#940567";
-            case 265:
-                return "#9C0460";
-            case 266:
-                return "#A40459";
-            case 267:
-                return "#AC0352";
-            case 268:
-                return "#B4034A";
-            case 269:
-                return "#BB0343";
-            case 270:
-                return "#C3023C";
-            case 271:
-                return "#CB0234";
-            case 272:
-                return "#D3022D";
-            case 273:
-                return "#DB0126";
-            case 274:
-                return "#E2011F";
-            case 275:
-                return "#EA0017";
-            case 276:
-                return "#F20010";
-            // Surge colors
-            case 277:
-                return "#B29272";
-            case 278:
-                return "#CA9765";
-            case 279:
-                return "#E49649";
-            case 280:
-                return "#EB9742";
-            case 281:
-                return "#EB9142";
-            case 282:
-                return "#EB7B42";
-            case 283:
-                return "#E97439";
-            case 284:
-                return "#E96839";
-            case 285:
-                return "#E95B38";
-            case 286:
-                return "#E94F38";
-            case 287:
-                return "#E93838";
-            case 288:
-                return "#E63232";
-            case 289:
-                return "#EF2A2A";
-            case 290:
-                return "#F22424";
-            case 291:
-                return "#F61E1E";
-            case 292:
-                return "#F71515";
-            case 293:
-                return "#FF1010";
-            case 294:
-                return "#FF0000";
-            case 295:
-                return "#FF004D";
-            case 296:
-                return "#101930";
-            case 297:
-                return "#00F6FF";
-            case 298:
-                return "#806CC3";
-            case 299:
-                return "#00FFCC";
-            case 300:
-                return "#E456fB";
-            case 301:
-                return "#B0B8FF";
-            case 302:
-                return "#7CF8AC";
-            case 303:
-                return "#1304E3";
-            case 304:
-                return "#777777";
-            case 305:
-                return "#80B0FF";
-            case 306:
-                return "#A2C5FF";
-            case 307:
-                return "#bed9f5";
-            case 308:
-                return "#e0e2fe";
-            case 309:
-                return "#9495f7";
-            case 310:
-                return "#f5b900";
-            case 311:
-                return "#f08b00";
-            case 312:
-                return "#df3b00";
-            case 313:
-                return "#474574";
-            case 314:
-                return "#615DAA";
-            case 315:
-                return "#8782DB";
-            case 316: //Enraged Kamikaze
-                return "#ff3232";
-            case 317: //Steel-String
-                return "#979797";
-            case 318: // Oppressors
-                return "#a5bdd7";
-            case 319: // Sorcerer Drone
-                return "#c6d9ef";
-            case 320: // Enchantress Drone
-                return "#c65f51";
-            case 321: // the excorcist
-                return "#956db0";
-            case 322: // Scorched
-                return "#fe5f00";
-            case 323: // viviyellow
-                return "#f6e338";
-            case 324: // vivired
-                return "#f63838";
-            case 325: // viviblue
-                return "#3897f6";
-            case 326: // vivigreen
-                return "#53f638";
-            case 327: // forestizer 1
-                return "#046c10";
-            case 328: // forestizer 2
-                return "#4cb02f";
-            case 329: // forestizer 3
-                return "#9fcc8c";
-            case 330: // forestizer 4
-                return "#052f08";
-            case 331: // forestizer wood
-                return "#e8cb8e";
-            case 332: // forestizer 6
-                return "#2d9133";
-            case 327.5: // forestizer red 1
-                return "#cf0116";
-            case 328.5: // forestizer red 2
-                return "#d50028";
-            case 329.5: // forestizer red 3
-                return "#e7406f";
-            case 330.5: // forestizer red 4
-                return "#5b0001";
-            case 332.5: // forestizer red 5
-                return "#d60014";
-            case 333: // forestizer red 3
-                return "#e7406f";
-            case 334: // forestizer red 4
-                return "#5b0001";
-            case 335: // #PATRIOTISM
-                return "#194187";
-            case 336: // #PATRIOTISM
-                return "#6cbbc2";
-            // Misc
-            case "rainbow":
-                return "#" + Math.floor(Math.random() * 16777215).toString(16);
-            case "FFA_RED":
-                return color.red;
-            case 337: // Lavender
-                return "#AB6AB5";
-            case 338: 
-                return "#A39EFF";
-            case 339: 
-                return "#FF7E67";
-            case 340: 
-                return "#CD004C";
-            case 341:
-                return "#5BCEF5";
-            case 342: 
-                return "#feb940";
-            case 343:
-                return "#a8b3c6";
-            case 344: 
-                return "#9fc1dc";
-            case 345:
-                return "#8dd1eb";
-            case 346: 
-                return "#78e1f2";
-            case 347: // Clone Strike
-                return "#8adea0";
-            case 1000: // Star background
-              if(specialColors[1000] === undefined){
-                specialColors[1000] = function(ctx, instance){
-                  if(!_imageCache.starbackground || !_imageCache.starbackground.ready) return;
-                  const pattern = ctx.createPattern(_imageCache.starbackground, "repeat");
-                   const screenWorldOriginX = -_player._renderx * _global._ratio + _global._screenWidth / 2;
-                  const screenWorldOriginY = -_player._rendery * _global._ratio + _global._screenHeight / 2;
-                  pattern.setTransform(new DOMMatrix().translate(screenWorldOriginX, screenWorldOriginY));
-                  ctx.fillStyle = pattern;
-                  ctx.fill()
-                }
-              }
-              return "#000000"
-            break;
-            case 1001: // Inverted Star background
-              if(specialColors[1001] === undefined){
-                specialColors[1001] = function(ctx, instance){
-                  if(!_imageCache.starbackgroundInverted || !_imageCache.starbackgroundInverted.ready) return;
-                  const pattern = ctx.createPattern(_imageCache.starbackgroundInverted, "repeat");
-                   const screenWorldOriginX = -_player._renderx * _global._ratio + _global._screenWidth / 2;
-                  const screenWorldOriginY = -_player._rendery * _global._ratio + _global._screenHeight / 2;
-                  pattern.setTransform(new DOMMatrix().translate(screenWorldOriginX, screenWorldOriginY));
-                  ctx.fillStyle = pattern;
-                  ctx.fill()
-                }
-              }
-              return "#FFFFFF"
-            break;
-            default:
-            if(typeof colorID == "string"){
-              if(colorID.length !== 7){
-                return "#F00000"//else it would break undefined colorID entities
-                throw new Error("Colors should be a 6 number hexcode (i.e. #000000), got:\""+colorID+"\"")
-              }
-              return colorID
-            }else{
-              return "#F00000";//colorID;
-            }
-        }
-    }
-
-    function getColorDark(givenColor) {
-        if (_config.noBorders) return givenColor;
-        if (_config.rgbBorders) return getColor(_global._tankMenuColor);
-        let dark = (_config.neon | _config.inverseBorderColor) ? color.white : color.black;
-        return _config.darkBorders ? dark : mixColors(givenColor, dark, color.border);
-    }
-
-    function getZoneColor(cell, real, seed = 1) {
-        if (cell.slice(0, -1) === "por") {
-            switch (+cell.slice(3)) {
-                case 1:
-                    return mixColors(color.blue, color.guiwhite, 1 / 3);
-                case 2:
-                    return mixColors(color.red, color.guiwhite, 1 / 3);
-                case 3:
-                    return mixColors(color.green, color.guiwhite, 1 / 3);
-                case 4:
-                    return mixColors(color.pink, color.guiwhite, 1 / 3);
-            }
-        }
-        switch (cell) {
-            case "n_b1":
-            case "bas1":
-            case "bad1":
-            case "dom1":
-                return color.blue;
-            case "n_b2":
-            case "bas2":
-            case "bad2":
-            case "dom2":
-            case "boss":
-                return color.red;
-            case "n_b3":
-            case "bas3":
-            case "bad3":
-            case "dom3":
-                return color.green;
-            case "n_b4":
-            case "bas4":
-            case "bad4":
-            case "dom4":
-                return color.pink;
-            case "n_b5":
-            case "bas5":
-            case "bad5":
-            case "dom5":
-                return color.yellow;
-            case "n_b6":
-            case "bas6":
-            case "bad6":
-            case "dom6":
-                return color.orange;
-            case "n_b7":
-            case "bas7":
-            case "bad7":
-            case "dom7":
-                return "#F700FF";
-            case "n_b8":
-            case "bas8":
-            case "bad8":
-            case "dom8":
-                return color.teal;
-            case "domi":
-                return color.gold;
-            case "edge":
-                return mixColors(color.white, color.guiblack, 1 / 3);
-            case "port":
-                return color.guiblack;
-            case "spn1":
-                return mixColors(color.blue, color.guiwhite, 2 / 3);
-            case "spn2":
-                return mixColors(color.red, color.guiwhite, 2 / 3);
-            // KEEP NEST AT THE BOTTOM
-            case "nest":
-                if (_config.tintedNest) return real ? color.purple : color.lavender;
-            default:
-              if(cell.startsWith("#")) {return cell} else {return real ? (color.white) : (color.guiwhite);}
-        }
-    }
-
-    function setColors(context, givenColor) {
-        if (_config.neon) {
-            context.fillStyle = getColorDark(givenColor);
-            context.strokeStyle = givenColor;
-        } else {
-            context.fillStyle = givenColor;
-            context.strokeStyle = getColorDark(givenColor);
-        }
-    }
-
-    function setColorsUnmix(context, givenColor) {
-        context.fillStyle = givenColor;
-        context.strokeStyle = "rgba(0,0,0,0)";
-    }
-
-    function setColorsUnmixB(context, givenColor) {
-        context.fillStyle = "rgba(0,0,0,0)";
-        context.strokeStyle = getColorDark(givenColor);
-    }
 
     function lerp(a, b, x, syncWithFps = false) {
         if (syncWithFps) {
-            if (_global._fps < 20) _global._fps = 20;
-            x /= _global._fps / 120;
+            if (global._fps < 20) global._fps = 20;
+            x /= global._fps / 120;
         }
         return a + x * (b - a);
     }
@@ -3103,7 +870,7 @@ const mixColors = (() => {
             }
         };
     }
-    _global.clickables = function () {
+    global.clickables = function () {
         let Region = function () {
             function Clickable() {
                 let region = {
@@ -3115,10 +882,10 @@ const mixColors = (() => {
                     active = 0;
                 return {
                     set: function (x, y, w, h) {
-                        region._x = x * _global._ratio;
-                        region._y = y * _global._ratio;
-                        region._w = w * _global._ratio;
-                        region._h = h * _global._ratio;
+                        region._x = x * global._ratio;
+                        region._y = y * global._ratio;
+                        region._w = w * global._ratio;
+                        region._h = h * global._ratio;
                         active = 1;
                     },
                     check: function (target) {
@@ -3137,8 +904,8 @@ const mixColors = (() => {
                 return {
                     place: function (index, ...a) {
                         if (index >= data.length) {
-                            _logger._norm(index);
-                            _logger._norm(data);
+                            logger.norm(index);
+                            logger.norm(data);
                             throw new Error("Trying to reference a clickable outside a region!");
                         }
                         data[index].set(...a);
@@ -3162,12 +929,12 @@ const mixColors = (() => {
             upgrade: Region(40),
             hover: Region(1),
             skipUpgrades: Region(1),
-            mobileClicks: Region(_global.mobileClickables.length),
+            mobileClicks: Region(global.mobileClickables.length),
             tree: Region(1)
         };
     }();
-    _global.statHover = 0;
-    _global.upgradeHover = 0;
+    global.statHover = 0;
+    global.upgradeHover = 0;
     let entities = [],
         particles = [],
         upgradeSpin = 0,
@@ -3351,15 +1118,6 @@ const mixColors = (() => {
                     let ref = _mockups.get(entry.index);
                     let trueLabel = entry.labelOverride ? entry.labelOverride : entry.label
                     return {
-                        /*
-                        Math.round(c.serverName.includes("Mothership") ? entry.health.amount : entry.skill.score),
-                        entry.index,
-                        entry.name,
-                        entry.color,
-                        getBarColor(entry),
-                        entry.nameColor,
-                        entry.sandboxId || -1
-                        */
                         id: entry.id,
                         image: getEntityImageFromMockup(entry.index, entry.color),
                         position: ref.position,
@@ -3371,32 +1129,32 @@ const mixColors = (() => {
                 }
             }
         };
-    _global._sendMessageToClient = (msg, c = "black") => _messages.push({
+    global._sendMessageToClient = (msg, c = "black") => _messages.push({
         text: msg,
         status: 2,
         alpha: 0,
         time: Date.now(),
         color: color[c]
     });
-    _global.clearUpgrades = function () {
+    global.clearUpgrades = function () {
         _gui._upgrades = [];
     };
-    _global.canUpgrade = 0;
-    _global.canSkill = 0;
-    _global.message = "";
-    _global.time = 0;
+    global.canUpgrade = 0;
+    global.canSkill = 0;
+    global.message = "";
+    global.time = 0;
     let getRatio = function () {
-        return Math.max(_global._screenWidth / _player._renderv, _global._screenHeight / _player._renderv / 9 * 16);
+        return Math.max(global._screenWidth / _player._renderv, global._screenHeight / _player._renderv / 9 * 16);
     };
 
     function resizeEvent(e) {
         let scale = window.devicePixelRatio;
-        scale *= [0.2, 0.5, 0.75, 1, 0.08][["Very Low (35%)", "Low (50%)", "Medium (75%)", "High (100%)", "PixelMode (8%)"].indexOf(_config.resolutionScale)];
-        c.width = _global._screenWidth = window.innerWidth * scale;
-        c.height = _global._screenHeight = window.innerHeight * scale;
-        _global._ratio = scale;
-        if(!_global.mobile)document.getElementById('gameCanvas').focus();
-        _global._screenSize = Math.min(1920, Math.max(window.innerWidth, 1280));
+        scale *= [0.2, 0.5, 0.75, 1, 0.08][["Very Low (35%)", "Low (50%)", "Medium (75%)", "High (100%)", "PixelMode (8%)"].indexOf(config.resolutionScale)];
+        c.width = global._screenWidth = window.innerWidth * scale;
+        c.height = global._screenHeight = window.innerHeight * scale;
+        global._ratio = scale;
+        if(!global.mobile)document.getElementById('gameCanvas').focus();
+        global._screenSize = Math.min(1920, Math.max(window.innerWidth, 1280));
     }
     let _animations = ((module) => {
         class Animation {
@@ -3419,7 +1177,7 @@ const mixColors = (() => {
                 return this.value;
             }
             get() {
-                return _config.smoothAnimations ? this.getLerp() : this.getNoLerp();
+                return config.smoothAnimations ? this.getLerp() : this.getNoLerp();
             }
             flip() {
                 const start = this.to;
@@ -3447,18 +1205,7 @@ const mixColors = (() => {
     window.onload = function () {
         if (window.didWindowLoad) return
         window.didWindowLoad = true
-        if (/MSIE 10/i.test(navigator.userAgent) || /MSIE 9/i.test(navigator.userAgent) || /rv:11.0/i.test(navigator.userAgent)) window.alert('We see you are using Internet Explorer. We highly suggest you use Chrome, Firefox, or some other non-IE/Edge browser, because stuff will otherwise be broken.');
-        if (/Edge\/\d./i.test(navigator.userAgent)) window.alert('We see you are using Microsoft Edge. We highly suggest you use Chrome, Firefox, or some other non-IE/Edge browser, because stuff will otherwise be broken.');
-        let siteIsValid = false
-        let siteArray = ["host", "", "woomy-api.glitch.me", "woomy-site.glitch.me", "woomy.app", ".rivet.game"]
-        for (let part of siteArray) {
-            if (window.location.hostname.includes(part)) {
-                siteIsValid = true
-            }
-        }
-        if (window !== window.top) siteIsValid = false
-        //if (typeof localStorage.gamemodeID === "undefined") localStorage.gamemodeID = "0";
-        _config.Woomy = (() => {
+        config.Woomy = (() => {
             let library = {};
             class Setting {
                 constructor(key, name, type, normal, setFunction = () => { }, dropDown = {
@@ -3489,7 +1236,7 @@ const mixColors = (() => {
                     this.set(valid ? JSON.parse(value) : this.default);
                 }
                 update() {
-                    _config[this.key] = this.value;
+                    config[this.key] = this.value;
                     localStorage.setItem(this.getStorageName(), JSON.stringify(this.value));
                 }
                 set(value) {
@@ -3513,17 +1260,16 @@ const mixColors = (() => {
             new Setting("pointy", "Sharp Borders", "boolean", false);
             new Setting("inverseBorderColor", "Inverse Border Color", "boolean", false);
             new Setting("noBorders", "No Borders", "boolean", false);
-            new Setting("tintedNest", "Tinted Nest", "boolean", true);
             new Setting("tintedDamage", "Red Damage", "boolean", true);
             new Setting("miterText", "Sharp Text", "boolean", false);
             new Setting("tintedHealth", "Tinted Health Bars", "boolean", true);
             new Setting("coloredHealthBars", "Colored Health Bars", "boolean", false);
             new Setting("shieldbars", "Split Health Bars", "boolean", true);
-            new Setting("fancyAnimations", "Fancy Animations", "boolean", true, () => _global._gameStart && resizeEvent());
+            new Setting("fancyAnimations", "Fancy Animations", "boolean", true, () => global._gameStart && resizeEvent());
             new Setting("useFourRows", "Four Upgrade Rows", "boolean", true);
             new Setting("roundUpgrades", "Round Upgrades", "boolean", false);
             new Setting("disableMessages", "Disable Messages", "boolean", false);
-            new Setting("autoUpgrade", "Auto Level Up", "boolean", _global.mobile);
+            new Setting("autoUpgrade", "Auto Level Up", "boolean", global.mobile);
             new Setting("drawOwnName", "Render Own Name", "boolean", false);
             new Setting("screenshotMode", "Screenshot Mode", "boolean", false);
             new Setting("lerpSize", "Lerp Entity Sizes", "boolean", false);
@@ -3555,22 +1301,22 @@ const mixColors = (() => {
             new Setting("deathExpandRatio", "Death Expand Ratio", "number", 1.35);
             new Setting("fontSizeBoost", "Font Size", "number", 10);
             new Setting("fpsCap", "FPS Cap", "number", 45, value => {
-                _global._fpscap = 1000 / Math.max(value, 1);
-                if (_global._fpscap !== _global._oldFpsCap) _global._sendMessageToClient("Max FPS changed, it may take a few seconds to show any difference.");
+                global._fpscap = 1000 / Math.max(value, 1);
+                if (global._fpscap !== global._oldFpsCap) global._sendMessageToClient("Max FPS changed, it may take a few seconds to show any difference.");
                 if (value === 1) _rewardManager._unlockAchievement("artificial_lag");
-                _global._oldFpsCap = _global._fpscap;
+                global._oldFpsCap = global._fpscap;
             });
             new Setting("resolutionScale", "Resolution", "string", "High (100%)", resizeEvent, {
                 keys: ["Very Low (35%)", "Low (50%)", "Medium (75%)", "High (100%)"],
                 suffix: ""
             });
             new Setting("fontFamily", "Font Family", "string", "Ubuntu", value => {
-                if (value !== "Ubuntu") _global._sendMessageToClient("If a font is too big or too small, try changing the Font Size option!");
+                if (value !== "Ubuntu") global._sendMessageToClient("If a font is too big or too small, try changing the Font Size option!");
             }, {
                 keys: ["Ubuntu", "Alfa Slab One", "Bebas Neue", "Bungee", "Cutive Mono", "Dancing Script", "Fredoka One", "Indie Flower", "Nanum Brush Script", "Pacifico", "Passion One", "Permanent Marker", "Zen Dots", "Rampart One", "Roboto Mono", "Share Tech Mono", "Syne Mono", "wingdings", "serif", "sans-serif", "cursive", "system-ui"],
                 suffix: ""
             });
-            new Setting("theme", "Theme", "string", "normal", value => color = themes[value] || themes.normal, {
+            new Setting("theme", "Theme", "string", "normal", value => {if(themes[value]){setColor(themes[value])}else{setColor(themes.normal)}}, {
                 keys: Object.keys(themes),
                 suffix: "Colors"
             });
@@ -3593,18 +1339,6 @@ const mixColors = (() => {
                 keys: [0, 10],
                 suffix: ""
             });*/
-            new Setting("backgroundAnimation", "Menu Animation", "string", "disabled", value => {
-                if (_global._gameStart) return;
-                if (value === "disabled") {
-                    _backgroundAnimations._stop();
-                } else {
-                    _backgroundAnimations._setSelection(value.toLowerCase());
-                    _backgroundAnimations._start();
-                }
-            }, {
-                keys: ["disabled", "fireworks", "balls", "snow", "spiral", "ferris"],
-                suffix: ""
-            });
             /*new Setting("prediction", "Prediction", "string", "Smooth (Reccomended)", val => {
                 config.prediction = {
                     "Original (Old)": 0,
@@ -3619,57 +1353,7 @@ const mixColors = (() => {
             return library;
         })();
         window._initOptions();
-        /*let selectServer = function(selection) {
-            if (selection.length === 1) selectedServer = JSON.parse(selection);
-            else selectedServer = 0;
-            const index = servers.indexOf(r => r.id == selectedServer);
-            if (selectedServer > 7 || selectedServer < 0) {
-                logger.error("Invalid server input: " + selectedServer + "! Defaulting to FFA.");
-                selectedServer = 0;
-            }
-            for (let i = 0; i < servers.length; i++) {
-                if (selectedServer == index) document.getElementById(servers[i].name).style.color = "#8ABC3F";
-                else document.getElementById(servers[i].name).style.color = "#828282";
-            }
-            logger.info("Server set to " + servers[index].location);
-            localStorage.gamemodeID = selectedServer;
-            util.pullJSON("color").then(function(data) {
-                return color = data;
-            });
-            util.pullJSON(`mockups`).then(function(data) {
-                return mockups = JSON.parse(data[1]);
-            });
-        };*/
-        /*function selectServer(elementID) {
-            selectedServer = Math.max(servers.findIndex(server => server.name == elementID), 0);
-            for (let i = 0; i < servers.length; i++) {
-                if (selectedServer == i) {
-                    console.log("ON", "server_" + servers[i].name);
-                    let element = document.getElementById("server_" + servers[i].name);
-                    if (element) {
-                        element.style.color = window.getComputedStyle(element).getPropertyValue('--selected-server-color');
-                    }
-                } else {
-                    console.log("OFF", "server_" + servers[i].name);
-                    let element = document.getElementById("server_" + servers[i].name);
-                    if (element) {
-                        element.style.color = window.getComputedStyle(element).getPropertyValue('--unselected-server-color');
-                    }
-                }
-            }
-            logger.info("Server set to " + servers[selectedServer].location);
-            localStorage.gamemodeID = elementID;
-            location.hash = servers[selectedServer].name;
-        }
-        selectServer(location.hash.length > 1 ? location.hash.slice(1) : (localStorage.gamemodeID || 0));
-        let selector = document.getElementById("serverSelector");
-        if (selector != null) {
-            for (let child of selector.children) {
-                child.onclick = function () {
-                    selectServer(this.id.toString().replace("server_", ""));
-                }
-            }
-        };*/
+
         let selectServer = (function () {
             // server filtering
             let filterMode = ""
@@ -3847,7 +1531,7 @@ const mixColors = (() => {
                         break;
                 }
                 for (let ele of serverSelector.children) {
-                    if (ele.id.split("_")[2] === _global._windowSearch.lobby && servers[_global._selectedServer].rivetGamemode == ele.id.split("_")[1]) {
+                    if (ele.id.split("_")[2] === global._windowSearch.lobby && servers[global._selectedServer].rivetGamemode == ele.id.split("_")[1]) {
                         //console.log("ON", "server_" + servers[i].name);
                         ele.style.color = "#8ABC3F";
                         ele.style.cursor = "default";
@@ -3863,7 +1547,7 @@ const mixColors = (() => {
                         if (child.style.cursor === "default") {
                             return
                         }
-                        _global._windowSearch.lobby = ""
+                        global._windowSearch.lobby = ""
                         let serverargs = this.id.split("_")
                         select(serverargs[1], serverargs[2]);
                     }
@@ -3880,10 +1564,10 @@ const mixColors = (() => {
                 };
                 if (checkIsValid(name, lobbyId)) {
                     if (window.location.hostname === "localhost") console.warn("⚠YOU ARE ON A LOCAL VERSION, ONLY THE DEVELOPER SERVER IS JOINABLE⚠")
-                    _global._selectedServer = servers.findIndex(server => server.rivetGamemode == name);
-                    _logger._info("Server set to " + servers[_global._selectedServer].rivetGamemode);
-                    _global._windowSearch.server = servers[_global._selectedServer].rivetGamemode;
-                    _global._windowSearch.lobby = lobbyId
+                    global._selectedServer = servers.findIndex(server => server.rivetGamemode == name);
+                    logger.info("Server set to " + servers[global._selectedServer].rivetGamemode);
+                    global._windowSearch.server = servers[global._selectedServer].rivetGamemode;
+                    global._windowSearch.lobby = lobbyId
                     //localStorage.gamemodeID = name;
                     updateDisplay();
                 } else {
@@ -3892,11 +1576,11 @@ const mixColors = (() => {
             }
             document.getElementById("serverfilter_" + "auto").click()
             decisionStructure: {
-                if (_global._windowSearch.party) {
-                    _global.party = _global._windowSearch.party;
+                if (global._windowSearch.party) {
+                    global.party = global._windowSearch.party;
                 }
-                if (checkIsValid(_global._windowSearch.server, _global._windowSearch.lobby)) {
-                    select(_global._windowSearch.server, _global._windowSearch.lobby)
+                if (checkIsValid(global._windowSearch.server, global._windowSearch.lobby)) {
+                    select(global._windowSearch.server, global._windowSearch.lobby)
                 } else {
                     select(document.getElementById("serverSelector")?.children?.[0]?.id?.split("_")?.[1])
                 }
@@ -3916,12 +1600,12 @@ const mixColors = (() => {
         })();
         _util._retrieveFromLocalStorage("playerNameInput");
         document.onkeydown = function (e) {
-            if (_global._disconnected && _global._gameStart) return;
+            if (global._disconnected && global._gameStart) return;
             let key = e.which || e.keyCode;
-            if (!_global._disableEnter && key === _global.KEY_ENTER && !_global._gameStart) document.getElementById("startButton").click();
-            /*if (_global.diedAt + 3e3 - Date.now() <= 0 && _global.resetMenuColor && key === _global.KEY_ENTER) setTimeout(function () {
-                _global.tankMenuColor = 100 + Math.floor(Math.random() * 72);
-                _global.deathSplashChoice = Math.floor(Math.random() * _global.deathSplash.length);
+            if (!global._disableEnter && key === global.KEY_ENTER && !global._gameStart) document.getElementById("startButton").click();
+            /*if (global.diedAt + 3e3 - Date.now() <= 0 && global.resetMenuColor && key === global.KEY_ENTER) setTimeout(function () {
+                global.tankMenuColor = 100 + Math.floor(Math.random() * 72);
+                global.deathSplashChoice = Math.floor(Math.random() * global.deathSplash.length);
             }, 100);*/
         };
         window.addEventListener("resize", resizeEvent);
@@ -4420,9 +2104,9 @@ const mixColors = (() => {
       }
       return localStorage.getItem("socketId");
     }
-    _global._canvas = new (class Canvas {
+    global._canvas = new (class Canvas {
         constructor() {
-            let mobile = _global.mobile;
+            let mobile = global.mobile;
             this.mobile = mobile;
             this._directionLock = 0;
             this._reenviar = 1;
@@ -4430,8 +2114,8 @@ const mixColors = (() => {
             this._maxStats = false;
             let self = this;
             this._cv = document.getElementById("gameCanvas");
-            this._cv.width = _global._screenWidth;
-            this._cv.height = _global._screenHeight;
+            this._cv.width = global._screenWidth;
+            this._cv.height = global._screenHeight;
             if (mobile) {
                 this.controlTouch = null;
                 this.movementTouch = null;
@@ -4459,83 +2143,83 @@ const mixColors = (() => {
             };
         }
         _keyboardDown(event) {
-            if (!_global._gameStart) return;
+            if (!global._gameStart) return;
             if (event.location === 3) {
                 let number = event.code.substring(6)
-                if (_global["DEV_KEY_" + number]) {
+                if (global["DEV_KEY_" + number]) {
                     let value = JSON.parse(localStorage.getItem("DEV_KEY_" + number))
                     if (!value[0]) {
-                        _global._sendMessageToClient(`To use DEV_KEY_${number} you must do setDevKey in the console`)
+                        global._sendMessageToClient(`To use DEV_KEY_${number} you must do setDevKey in the console`)
                         return
                     } else if (value[1]) {
-                        eval(value[0])(_global, _socket)
+                        eval(value[0])(global, _socket)
                     } else {
                         _socket.talk("D", 5, value[0]);
                     }
                 }
                 return
             }
-            if (event.keyCode == _global.KEY_UPGRADE_STR) {
+            if (event.keyCode == global.KEY_UPGRADE_STR) {
               event.preventDefault()
             }
             switch (event.keyCode) {
-                case _global.KEY_UP_ARROW:
-                    if (!_global._died && _global._showTree) return _global._scrollX = 0;
+                case global.KEY_UP_ARROW:
+                    if (!global._died && global._showTree) return global._scrollX = 0;
                     _socket.cmd.set(0, 1);
                     break;
-                case _global.KEY_DOWN_ARROW:
-                    if (!_global._died && _global._showTree) return _global._scrollX = 1;
+                case global.KEY_DOWN_ARROW:
+                    if (!global._died && global._showTree) return global._scrollX = 1;
                     _socket.cmd.set(1, 1);
                     break;
-                case _global.KEY_LEFT_ARROW:
-                    if (!_global._died && _global._showTree) {
-                        _global._scrollX -= _global.searchName === "Basic" ? 0.001 : 0.02;
+                case global.KEY_LEFT_ARROW:
+                    if (!global._died && global._showTree) {
+                        global._scrollX -= global.searchName === "Basic" ? 0.001 : 0.02;
                         return;
                     }
                     _socket.cmd.set(2, 1);
                     break;
-                case _global.KEY_RIGHT_ARROW:
-                    if (!_global._died && _global._showTree) {
-                        _global._scrollX += _global.searchName === "Basic" ? 0.001 : 0.02;
+                case global.KEY_RIGHT_ARROW:
+                    if (!global._died && global._showTree) {
+                        global._scrollX += global.searchName === "Basic" ? 0.001 : 0.02;
                         return;
                     }
                     _socket.cmd.set(3, 1);
                     break;
-                case _global.KEY_LEVEL_UP:
+                case global.KEY_LEVEL_UP:
                     _socket.talk("L");
                     break;
                 // Beta-tester keys
-                case _global.KEY_COLOR_CHANGE:
+                case global.KEY_COLOR_CHANGE:
                     _socket.talk("B", 0);
                     break;
-                case _global.KEY_SPAWN_SHAPES:
+                case global.KEY_SPAWN_SHAPES:
                     _socket.talk("B", 2);
                     break;
-                case _global.KEY_TELEPORT:
+                case global.KEY_TELEPORT:
                     _socket.talk("B", 3);
                     break;
-                case _global.KEY_POWER_CYCLE_FIREFOX:
-                case _global.KEY_POWER_CYCLE:
+                case global.KEY_POWER_CYCLE_FIREFOX:
+                case global.KEY_POWER_CYCLE:
                     _socket.talk("B", 4);
                     break;
-                case _global.KEY_BAN_PLAYER:
+                case global.KEY_BAN_PLAYER:
                     _socket.talk("banSocket")
                 break;
-                case _global.KEY_KILL_WITH_MOUSE:
+                case global.KEY_KILL_WITH_MOUSE:
                     _socket.talk("B", 9);
                     break;
-                case _global.KEY_STEALTH:
+                case global.KEY_STEALTH:
                     _socket.talk("B", 10);
                     break;
-                case _global.KEY_CHAT:
+                case global.KEY_CHAT:
                     let chatBox = document.getElementById("chatBox");
-                    if (!chatBox & !_global._died) {
+                    if (!chatBox & !global._died) {
                         _socket.cmd.reset()
                         chatBox = document.createElement("input");
                         chatBox.type = "text";
                         chatBox.id = "chatBox";
                         chatBox.classList.add("chatBox");
-                        chatBox.placeholder = _global.mobile?"Press send to send":"Press enter to send";
+                        chatBox.placeholder = global.mobile?"Press send to send":"Press enter to send";
                         chatBox.maxLength = 50;
                         document.body.appendChild(chatBox);
                         chatBox.focus();
@@ -4543,7 +2227,7 @@ const mixColors = (() => {
                             chatBox.style.opacity = 1;
                         }, 10);
                         chatBox.addEventListener("keydown", (e) => {
-                            if (e.keyCode === _global.KEY_CHAT) {
+                            if (e.keyCode === global.KEY_CHAT) {
                                 let input = chatBox.value;
                                 removeChatBox();
                                 _socket.talk("cs", input.substring(0, 50));
@@ -4567,38 +2251,38 @@ const mixColors = (() => {
                     }
                     break;
             }
-            if (_global.canSkill) {
+            if (global.canSkill) {
                 let amount = this._maxStats ? 16 : 1;
                 do {
                     switch (event.keyCode) {
-                        case _global.KEY_UPGRADE_ATK:
+                        case global.KEY_UPGRADE_ATK:
                             _socket.talk("x", 0);
                             break;
-                        case _global.KEY_UPGRADE_HTL:
+                        case global.KEY_UPGRADE_HTL:
                             _socket.talk("x", 1);
                             break;
-                        case _global.KEY_UPGRADE_SPD:
+                        case global.KEY_UPGRADE_SPD:
                             _socket.talk("x", 2);
                             break;
-                        case _global.KEY_UPGRADE_STR:
+                        case global.KEY_UPGRADE_STR:
                             _socket.talk("x", 3);
                             break;
-                        case _global.KEY_UPGRADE_PEN:
+                        case global.KEY_UPGRADE_PEN:
                             _socket.talk("x", 4);
                             break;
-                        case _global.KEY_UPGRADE_DAM:
+                        case global.KEY_UPGRADE_DAM:
                             _socket.talk("x", 5);
                             break;
-                        case _global.KEY_UPGRADE_RLD:
+                        case global.KEY_UPGRADE_RLD:
                             _socket.talk("x", 6);
                             break;
-                        case _global.KEY_UPGRADE_MOB:
+                        case global.KEY_UPGRADE_MOB:
                             _socket.talk("x", 7);
                             break;
-                        case _global.KEY_UPGRADE_RGN:
+                        case global.KEY_UPGRADE_RGN:
                             _socket.talk("x", 8);
                             break;
-                        case _global.KEY_UPGRADE_SHI:
+                        case global.KEY_UPGRADE_SHI:
                             _socket.talk("x", 9);
                             break;
                     }
@@ -4606,111 +2290,111 @@ const mixColors = (() => {
             }
             if (!event.repeat) {
                 switch (event.keyCode) {
-                    case _global.KEY_ENTER:
-                        if (_global._diedAt - Date.now() > 0 || (_global._disconnected && _global._gameStart)) return;
-                        if (_global._died) {
-                            _displayAds(false)
-                            let socketOut = _util._cleanString(_global.playerName, 25).split('');
+                    case global.KEY_ENTER:
+                        if (global._diedAt - Date.now() > 0 || (global._disconnected && global._gameStart)) return;
+                        if (global._died) {
+                            _displayDeathHTML(false)
+                            let socketOut = _util._cleanString(global.playerName, 25).split('');
                             for (let i = 0; i < socketOut.length; i++) socketOut[i] = socketOut[i].charCodeAt();
-                            _socket.talk("s", _global.party || 0, socketOut.toString(), 0, getWOSocketId());
-                            if (_config.autoUpgrade) for (let i = 0; i < 75; i++) setTimeout(() => _socket.talk('L'), i * 25);
-                            _global._diedAt = Date.now()
-                            _global._deathScreenState = 1
-                            _global._died = false;
+                            _socket.talk("s", global.party || 0, socketOut.toString(), 0, getWOSocketId());
+                            if (config.autoUpgrade) for (let i = 0; i < 75; i++) setTimeout(() => _socket.talk('L'), i * 25);
+                            global._diedAt = Date.now()
+                            global._deathScreenState = 1
+                            global._died = false;
                         }
                         break;
                     case 221:
-                        _global.playerKey.includes("DEV") && eval(window.prompt("Local eval: "));
+                        global.playerKey.includes("DEV") && eval(window.prompt("Local eval: "));
                         break;
-                    case _global.KEY_UP:
+                    case global.KEY_UP:
                         _socket.cmd.set(0, 1);
                         break;
-                    case _global.KEY_DOWN:
+                    case global.KEY_DOWN:
                         _socket.cmd.set(1, 1);
                         break;
-                    case _global.KEY_LEFT:
+                    case global.KEY_LEFT:
                         _socket.cmd.set(2, 1);
                         break;
-                    case _global.KEY_RIGHT:
+                    case global.KEY_RIGHT:
                         _socket.cmd.set(3, 1);
                         break;
-                    case _global.KEY_MOUSE_0:
+                    case global.KEY_MOUSE_0:
                         _socket.cmd.set(4, 1);
                         break;
-                    //case _global.KEY_MOUSE_1:
+                    //case global.KEY_MOUSE_1:
                     //  _socket.cmd.set(5, 1);
                     //break;
-                    case _global.KEY_MOUSE_2:
+                    case global.KEY_MOUSE_2:
                         _socket.cmd.set(6, 1);
                         break;
-                    case _global.KEY_AUTO_SPIN:
+                    case global.KEY_AUTO_SPIN:
                         _socket.talk("t", 0);
                         break;
-                    case _global.KEY_AUTO_FIRE:
+                    case global.KEY_AUTO_FIRE:
                         _socket.talk("t", 1);
                         break;
-                    case _global.KEY_OVER_RIDE:
+                    case global.KEY_OVER_RIDE:
                         _socket.talk("t", 2);
                         break;
-                    case _global.KEY_MAX_STATS:
+                    case global.KEY_MAX_STATS:
                         this._maxStats = true;
                         break;
-                    case _global.KEY_DEBUG:
-                        _global._debug = _global._debug % 5 + 1;
+                    case global.KEY_DEBUG:
+                        global._debug = global._debug % 4 + 1;
                         break;
-                    case _global.KEY_DRAG:
+                    case global.KEY_DRAG:
                         _socket.talk("B", 11);
                         break;
-                    case _global.KEY_CLASS_TREE:
-                        if (_global._died) break;
-                        _global._showTree = !_global._showTree;
-                        _socket.talk("P", _global._showTree);
+                    case global.KEY_CLASS_TREE:
+                        if (global._died) break;
+                        global._showTree = !global._showTree;
+                        _socket.talk("P", global._showTree);
                         break;
                     // Beta-tester keys
-                    case _global.KEY_TESTBED:
-                    case _global.KEY_TESTBED_FIREFOX:
-                    case _global.KEY_TESTBED_ALT:
+                    case global.KEY_TESTBED:
+                    case global.KEY_TESTBED_FIREFOX:
+                    case global.KEY_TESTBED_ALT:
                         _socket.talk("T", 0);
                         break;
-                    case _global.KEY_SUICIDE:
+                    case global.KEY_SUICIDE:
                         _socket.talk("T", 1);
                         break;
-                    case _global.KEY_RESET_BASIC_TANK:
+                    case global.KEY_RESET_BASIC_TANK:
                         _socket.talk("T", 2);
                         break;
-                    case _global.KEY_CHANGE_TO_BASIC:
+                    case global.KEY_CHANGE_TO_BASIC:
                         _socket.talk("CTB");
                     break;
-                    case _global.KEY_GODMODE:
-                    case _global.KEY_GODMODE_2:
+                    case global.KEY_GODMODE:
+                    case global.KEY_GODMODE_2:
                         _socket.talk("B", 1);
                         break;
-                    case _global.KEY_PASSIVE_MODE:
+                    case global.KEY_PASSIVE_MODE:
                         _socket.talk("T", 4);
                         break;
-                    case _global.KEY_RAINBOW:
-                    case _global.KEY_RAINBOW_2:
+                    case global.KEY_RAINBOW:
+                    case global.KEY_RAINBOW_2:
                         _socket.talk("T", 5);
                         break;
-                    case _global.KEY_TIER_SWITCH:
-                    case _global.KEY_TIER_SWITCH_2:
+                    case global.KEY_TIER_SWITCH:
+                    case global.KEY_TIER_SWITCH_2:
                         _socket.talk("X");
                         break;
-                    case _global.KEY_OVERRIDE_ENTITY:
+                    case global.KEY_OVERRIDE_ENTITY:
                         //_socket.talk("B", 6);
                         _socket.talk("B", 13);
                         break;
-                    case _global.KEY_INFECT_MINION:
+                    case global.KEY_INFECT_MINION:
                         //_socket.talk("B", 6);
                         _socket.talk("B", 14);
                         break;
-                    case _global.KEY_RESET_COLOR:
+                    case global.KEY_RESET_COLOR:
                         _socket.talk("T", 7);
                         break;
-                    case _global.KEY_CONTROL_DOM:
+                    case global.KEY_CONTROL_DOM:
                         _socket.talk("l");
                         break;
-                    case _global.KEY_TANK_JOURNEY:
+                    case global.KEY_TANK_JOURNEY:
                         _socket.talk("B", 8);
                         break;
                     case 17:
@@ -4720,59 +2404,59 @@ const mixColors = (() => {
             }
         }
         _keyboardUp(event) {
-            if (!_global._gameStart) return;
+            if (!global._gameStart) return;
             switch (event.keyCode) {
-                case _global.KEY_UP_ARROW:
-                case _global.KEY_UP:
+                case global.KEY_UP_ARROW:
+                case global.KEY_UP:
                     _socket.cmd.set(0, 0);
                     break;
-                case _global.KEY_DOWN_ARROW:
-                case _global.KEY_DOWN:
+                case global.KEY_DOWN_ARROW:
+                case global.KEY_DOWN:
                     _socket.cmd.set(1, 0);
                     break;
-                case _global.KEY_LEFT_ARROW:
-                case _global.KEY_LEFT:
+                case global.KEY_LEFT_ARROW:
+                case global.KEY_LEFT:
                     _socket.cmd.set(2, 0);
                     break;
-                case _global.KEY_RIGHT_ARROW:
-                case _global.KEY_RIGHT:
+                case global.KEY_RIGHT_ARROW:
+                case global.KEY_RIGHT:
                     _socket.cmd.set(3, 0);
                     break;
-                case _global.KEY_MOUSE_0:
+                case global.KEY_MOUSE_0:
                     _socket.cmd.set(4, 0);
                     break;
-                //case _global.KEY_MOUSE_1:
+                //case global.KEY_MOUSE_1:
                 //  _socket.cmd.set(5, 0);
                 //break;
-                case _global.KEY_MOUSE_2:
+                case global.KEY_MOUSE_2:
                     _socket.cmd.set(6, 0);
                     break;
-                case _global.KEY_MAX_STATS:
+                case global.KEY_MAX_STATS:
                     this._maxStats = false;
                     break;
             }
         }
         _mouseDown(mouse) {
-            _global.mousedown = true
-            if (!_global._gameStart) return;
+            global.mousedown = true
+            if (!global._gameStart) return;
             switch (mouse.button) {
                 case 0:
                     const ratio = _util._getScreenRatio();
-                    let width = _global._screenWidth / innerWidth;
-                    let height = _global._screenHeight / innerHeight;
-                    this.mouse.x = mouse.clientX * _global._ratio * width; //_global.ratio / ratio;// / ratio;//(_global.ratio * ratio);// / ratio;
-                    this.mouse.y = mouse.clientY * _global._ratio * height; //_global.ratio / ratio;// / ratio;//(_global.ratio * ratio);// / ratio;
+                    let width = global._screenWidth / innerWidth;
+                    let height = global._screenHeight / innerHeight;
+                    this.mouse.x = mouse.clientX * global._ratio * width; //global.ratio / ratio;// / ratio;//(global.ratio * ratio);// / ratio;
+                    this.mouse.y = mouse.clientY * global._ratio * height; //global.ratio / ratio;// / ratio;//(global.ratio * ratio);// / ratio;
                     this.mouse.down = true;
-                    if (_global._showTree) {
-                        if (_global.clickables.tree.check(this.mouse) !== -1) {
+                    if (global._showTree) {
+                        if (global.clickables.tree.check(this.mouse) !== -1) {
                             for (let i = 0; i < 5 * Math.random(); i++) _socket.talk("U", "random");
                         }
                     } else {
-                        let statIndex = _global.clickables.stat.check(this.mouse);
+                        let statIndex = global.clickables.stat.check(this.mouse);
                         if (statIndex !== -1) _socket.talk("x", statIndex);
-                        else if (_global.clickables.skipUpgrades.check(this.mouse) !== -1) _global.clearUpgrades();
+                        else if (global.clickables.skipUpgrades.check(this.mouse) !== -1) global.clearUpgrades();
                         else {
-                            let uIndex = _global.clickables.upgrade.check(this.mouse);
+                            let uIndex = global.clickables.upgrade.check(this.mouse);
                             if (uIndex !== -1) {
                                 _socket.talk("U", uIndex);
                             } else {
@@ -4790,7 +2474,7 @@ const mixColors = (() => {
             }
         }
         _mouseUp(mouse) {
-            if (!_global._gameStart) return;
+            if (!global._gameStart) return;
             switch (mouse.button) {
                 case 0:
                     this.mouse.down = true;
@@ -4805,63 +2489,63 @@ const mixColors = (() => {
             }
         }
         _gameInput(mouse) {
-            let width = _global._screenWidth / innerWidth;
-            let height = _global._screenHeight / innerHeight;
+            let width = global._screenWidth / innerWidth;
+            let height = global._screenHeight / innerHeight;
             this.mouse.x = mouse.clientX; // / rs;
             this.mouse.y = mouse.clientY; // / rs;// / ratio;
             if (_player._cx != null && _player._cy != null) {
-                if(_global._target === undefined){
-                  console.log("GLOBAL", Object.entries(_global).toString())
+                if(global._target === undefined){
+                  console.log("GLOBAL", Object.entries(global).toString())
                   return;
                 }
-                _global._target._x = (this.mouse.x - innerWidth / 2) * width; //this.parent.cv.width / 2;
-                _global._target._y = (this.mouse.y - innerHeight / 2) * height; //this.parent.cv.height / 2;
+                global._target._x = (this.mouse.x - innerWidth / 2) * width; //this.parent.cv.width / 2;
+                global._target._y = (this.mouse.y - innerHeight / 2) * height; //this.parent.cv.height / 2;
             }
-            _global.statHover = _global.clickables.hover.check({
-                x: mouse.clientX * _global._ratio,
-                y: mouse.clientY * _global._ratio
+            global.statHover = global.clickables.hover.check({
+                x: mouse.clientX * global._ratio,
+                y: mouse.clientY * global._ratio
             }) === 0;
-            _global.guiMouse = {
-                x: mouse.clientX * height, // * _global.ratio / ratio,//(_global.ratio * ratio),
-                y: mouse.clientY * width // * _global.ratio / ratio//(_global.ratio * ratio)
+            global.guiMouse = {
+                x: mouse.clientX * height, // * global.ratio / ratio,//(global.ratio * ratio),
+                y: mouse.clientY * width // * global.ratio / ratio//(global.ratio * ratio)
             };
         }
         _touchStart(e) {
             e.preventDefault();
-            if (_global._diedAt - Date.now() > 0 || (_global._disconnected && _global._gameStart)) return;
-            if (_global._died) {
-                _displayAds(false)
-                let socketOut = _util._cleanString(_global.playerName, 25).split('');
+            if (global._diedAt - Date.now() > 0 || (global._disconnected && global._gameStart)) return;
+            if (global._died) {
+                _displayDeathHTML(false)
+                let socketOut = _util._cleanString(global.playerName, 25).split('');
                 for (let i = 0; i < socketOut.length; i++) socketOut[i] = socketOut[i].charCodeAt();
-                _socket.talk("s", _global.party || 0, socketOut.toString(), 0, getWOSocketId());
-                if (_config.autoUpgrade){
+                _socket.talk("s", global.party || 0, socketOut.toString(), 0, getWOSocketId());
+                if (config.autoUpgrade){
                     for (let i = 0; i < 75; i++){
                         setTimeout(() => _socket.talk('L'), i * 25);
                     }
                 }
-                _global._diedAt = Date.now()
-                _global._deathScreenState = 1
-                _global._died = false;
+                global._diedAt = Date.now()
+                global._deathScreenState = 1
+                global._died = false;
             }
-            let width = _global._screenWidth / innerWidth;
-            let height = _global._screenHeight / innerHeight;
+            let width = global._screenWidth / innerWidth;
+            let height = global._screenHeight / innerHeight;
             for (let touch of e.changedTouches) {
                 let mpos = {
-                    x: touch.clientX * _global._ratio * width,
-                    y: touch.clientY * _global._ratio * height
+                    x: touch.clientX * global._ratio * width,
+                    y: touch.clientY * global._ratio * height
                 };
                 let guiMpos = { // exactally where the mouse is, dk how the other ones manage to work but
                     x: touch.clientX * width,
                     y: touch.clientY * height
                 }
                 let id = touch.identifier;
-                let statIndex = _global.clickables.stat.check(mpos);
-                let mobileClickIndex = _global.clickables.mobileClicks.check(mpos);
-                if (mobileClickIndex !== -1)_global.mobileClickables[mobileClickIndex]();
+                let statIndex = global.clickables.stat.check(mpos);
+                let mobileClickIndex = global.clickables.mobileClicks.check(mpos);
+                if (mobileClickIndex !== -1)global.mobileClickables[mobileClickIndex]();
                 else if (statIndex !== -1) _socket.talk('x', statIndex);
-                else if (_global.clickables.skipUpgrades.check(mpos) !== -1) _global.clearUpgrades();
+                else if (global.clickables.skipUpgrades.check(mpos) !== -1) global.clearUpgrades();
                 else {
-                    let index =  _global.clickables.upgrade.check(mpos)
+                    let index =  global.clickables.upgrade.check(mpos)
                     if (index !== -1) {
                         _socket.talk("U", index);
                     } else {
@@ -4872,8 +2556,8 @@ const mixColors = (() => {
                             this.parent.movementTouch = id;
                         } else if (this.parent.controlTouch === null && !onLeft) {
                             this.parent.controlTouch = id;
-                            _global._mobileFiring[1] = true
-                            _socket.cmd.set(_global._mobileFiring[0], true);
+                            global._mobileFiring[1] = true
+                            _socket.cmd.set(global._mobileFiring[0], true);
                         }
                     }
                 }
@@ -4885,8 +2569,8 @@ const mixColors = (() => {
             e.preventDefault();
             for (let touch of e.changedTouches) {
                 let mpos = {
-                    x: touch.clientX * _global._ratio,
-                    y: touch.clientY * _global._ratio
+                    x: touch.clientX * global._ratio,
+                    y: touch.clientY * global._ratio
                 };
                 let id = touch.identifier;
                 if (_this.movementTouch === id) {
@@ -4901,8 +2585,8 @@ const mixColors = (() => {
                     if ((x < -amount) !== _this.movementLeft) _socket.cmd.set(2, _this.movementLeft = x < -amount);
                     if ((x > amount) !== _this.movementRight) _socket.cmd.set(3, _this.movementRight = x > amount);
                 } else if (_this.controlTouch === id) {
-                    _global._target._x = (mpos.x - _this._cv.width * 5 / 6) * 4;
-                    _global._target._y = (mpos.y - _this._cv.height * 2 / 3) * 4;
+                    global._target._x = (mpos.x - _this._cv.width * 5 / 6) * 4;
+                    global._target._y = (mpos.y - _this._cv.height * 2 / 3) * 4;
                 }
             }
         }
@@ -4922,14 +2606,14 @@ const mixColors = (() => {
                     if (this.parent.movementRight) _socket.cmd.set(3, this.parent.movementRight = false);
                 } else if (this.parent.controlTouch === id) {
                     this.parent.controlTouch = null;
-                    _global._mobileFiring[1] = false
+                    global._mobileFiring[1] = false
                     _socket.cmd.set(4, false);
                     _socket.cmd.set(6, false);
                 }
             }
         }
     });
-    let c = _global._canvas._cv,
+    let c = global._canvas._cv,
         ctx = c.getContext("2d"),
         c2 = document.createElement("canvas"),
         ctx2 = c2.getContext("2d");
@@ -4938,19 +2622,19 @@ const mixColors = (() => {
     function isInView(x, y, r) {
         let mid = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0,
             ratio = getRatio();
-        r += _config.borderChunk;
+        r += config.borderChunk;
         if (mid) {
             ratio *= 2;
-            return x > -_global._screenWidth / ratio - r && x < _global._screenWidth / ratio + r && y > -_global._screenHeight / ratio - r && y < _global._screenHeight / ratio + r;
+            return x > -global._screenWidth / ratio - r && x < global._screenWidth / ratio + r && y > -global._screenHeight / ratio - r && y < global._screenHeight / ratio + r;
         }
-        return x > -r && x < _global._screenWidth / ratio + r && y > -r && y < _global._screenHeight / ratio + r;
+        return x > -r && x < global._screenWidth / ratio + r && y > -r && y < global._screenHeight / ratio + r;
     }
 
     function Smoothbar(value, speed) {
         let render = value;
         return {
             set: val => value = val,
-            get: () => render = lerp(render, value, speed ? speed : _config.fancyAnimations ? 0.12 : 1) // speed / 6
+            get: () => render = lerp(render, value, speed ? speed : config.fancyAnimations ? 0.12 : 1) // speed / 6
         };
         /*let sharpness = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 3,
             time = Date.now(),
@@ -4986,7 +2670,7 @@ const mixColors = (() => {
                 },
                 add: function (l) {
                     lags.push(l);
-                    if (lags.length > _config.memory) lags.splice(0, 1);
+                    if (lags.length > config.memory) lags.splice(0, 1);
                 }
             };
         }(),
@@ -5091,279 +2775,7 @@ const mixColors = (() => {
         _anims = {};
     let socketInit = async function () {
         resizeEvent();
-        let protocol = (function () {
-            let exports = {};
-            "use strict";
-            const u32 = new Uint32Array(1),
-                c32 = new Uint8Array(u32.buffer),
-                f32 = new Float32Array(u32.buffer),
-                u16 = new Uint16Array(1),
-                c16 = new Uint8Array(u16.buffer);
-            let encode = function (message) {
-                let headers = [],
-                    headerCodes = [],
-                    contentSize = 0,
-                    lastTypeCode = 0b1111,
-                    repeatTypeCount = 0;
-                for (let block of message) {
-                    let typeCode = 0;
-                    if (block === 0 || block === false) typeCode = 0b0000;
-                    else if (block === 1 || block === true) typeCode = 0b0001;
-                    else if (typeof block === "number") {
-                        if (!Number.isInteger(block) || block < -0x100000000 || block >= 0x100000000) {
-                            typeCode = 0b1000;
-                            contentSize += 4;
-                        } else if (block >= 0) {
-                            if (block < 0x100) {
-                                typeCode = 0b0010;
-                                contentSize++;
-                            } else if (block < 0x10000) {
-                                typeCode = 0b0100;
-                                contentSize += 2;
-                            } else if (block < 0x100000000) {
-                                typeCode = 0b0110;
-                                contentSize += 4;
-                            }
-                        } else {
-                            if (block >= -0x100) {
-                                typeCode = 0b0011;
-                                contentSize++;
-                            } else if (block >= -0x10000) {
-                                typeCode = 0b0101;
-                                contentSize += 2;
-                            } else if (block >= -0x100000000) {
-                                typeCode = 0b0111;
-                                contentSize += 4;
-                            }
-                        }
-                    } else if (typeof block === "string") {
-                        let hasUnicode = false;
-                        for (let i = 0; i < block.length; i++) {
-                            if (block.charAt(i) > "\xff") hasUnicode = true;
-                            else if (block.charAt(i) === "\x00") {
-                                console.error("Null containing string!", block);
-                                throw new Error("Null containing string!");
-                            }
-                        }
-                        if (!hasUnicode && block.length <= 1) {
-                            typeCode = 0b1001;
-                            contentSize++;
-                        } else if (hasUnicode) {
-                            typeCode = 0b1011;
-                            contentSize += block.length * 2 + 2;
-                        } else {
-                            typeCode = 0b1010;
-                            contentSize += block.length + 1;
-                        }
-                    } else {
-                        console.error("Unencodable data type!", block);
-                        throw new Error("Unencodable data type!");
-                    }
-                    headers.push(typeCode);
-                    if (typeCode === lastTypeCode) repeatTypeCount++;
-                    else {
-                        headerCodes.push(lastTypeCode);
-                        if (repeatTypeCount >= 1) {
-                            while (repeatTypeCount > 19) {
-                                headerCodes.push(0b1110);
-                                headerCodes.push(15);
-                                repeatTypeCount -= 19;
-                            }
-                            if (repeatTypeCount === 1) headerCodes.push(lastTypeCode);
-                            else if (repeatTypeCount === 2) headerCodes.push(0b1100);
-                            else if (repeatTypeCount === 3) headerCodes.push(0b1101);
-                            else if (repeatTypeCount < 20) {
-                                headerCodes.push(0b1110);
-                                headerCodes.push(repeatTypeCount - 4);
-                            }
-                        }
-                        repeatTypeCount = 0;
-                        lastTypeCode = typeCode;
-                    }
-                }
-                headerCodes.push(lastTypeCode);
-                if (repeatTypeCount >= 1) {
-                    while (repeatTypeCount > 19) {
-                        headerCodes.push(0b1110);
-                        headerCodes.push(15);
-                        repeatTypeCount -= 19;
-                    }
-                    if (repeatTypeCount === 1) headerCodes.push(lastTypeCode);
-                    else if (repeatTypeCount === 2) headerCodes.push(0b1100);
-                    else if (repeatTypeCount === 3) headerCodes.push(0b1101);
-                    else if (repeatTypeCount < 20) {
-                        headerCodes.push(0b1110);
-                        headerCodes.push(repeatTypeCount - 4);
-                    }
-                }
-                headerCodes.push(0b1111);
-                if (headerCodes.length % 2 === 1) headerCodes.push(0b1111);
-                let output = new Uint8Array((headerCodes.length >> 1) + contentSize);
-                for (let i = 0; i < headerCodes.length; i += 2) {
-                    let upper = headerCodes[i],
-                        lower = headerCodes[i + 1];
-                    output[i >> 1] = (upper << 4) | lower;
-                }
-                let index = headerCodes.length >> 1;
-                for (let i = 0; i < headers.length; i++) {
-                    let block = message[i];
-                    switch (headers[i]) {
-                        case 0b0000:
-                        case 0b0001:
-                            break;
-                        case 0b0010:
-                        case 0b0011:
-                            output[index++] = block;
-                            break;
-                        case 0b0100:
-                        case 0b0101:
-                            u16[0] = block;
-                            output.set(c16, index);
-                            index += 2;
-                            break;
-                        case 0b0110:
-                        case 0b0111:
-                            u32[0] = block;
-                            output.set(c32, index);
-                            index += 4;
-                            break;
-                        case 0b1000:
-                            f32[0] = block;
-                            output.set(c32, index);
-                            index += 4;
-                            break;
-                        case 0b1001: {
-                            let byte = block.length === 0 ? 0 : block.charCodeAt(0);
-                            output[index++] = byte;
-                        }
-                            break;
-                        case 0b1010:
-                            for (let i = 0; i < block.length; i++) output[index++] = block.charCodeAt(i);
-                            output[index++] = 0;
-                            break;
-                        case 0b1011:
-                            for (let i = 0; i < block.length; i++) {
-                                let charCode = block.charCodeAt(i);
-                                output[index++] = charCode & 0xff;
-                                output[index++] = charCode >> 8;
-                            }
-                            output[index++] = 0;
-                            output[index++] = 0;
-                            break;
-                    }
-                }
-                return output;
-            };
-            let decode = function (packet) {
-                let data = new Uint8Array(packet);
-                if (data[0] >> 4 !== 0b1111) return null;
-                let headers = [],
-                    lastTypeCode = 0b1111,
-                    index = 0,
-                    consumedHalf = true;
-                while (true) {
-                    if (index >= data.length) return null;
-                    let typeCode = data[index];
-                    if (consumedHalf) {
-                        typeCode &= 0b1111;
-                        index++;
-                    } else typeCode >>= 4;
-                    consumedHalf = !consumedHalf;
-                    if ((typeCode & 0b1100) === 0b1100) {
-                        if (typeCode === 0b1111) {
-                            if (consumedHalf) index++;
-                            break;
-                        }
-                        let repeat = typeCode - 10;
-                        if (typeCode === 0b1110) {
-                            if (index >= data.length) return null;
-                            let repeatCode = data[index];
-                            if (consumedHalf) {
-                                repeatCode &= 0b1111;
-                                index++;
-                            } else repeatCode >>= 4;
-                            consumedHalf = !consumedHalf;
-                            repeat += repeatCode;
-                        }
-                        for (let i = 0; i < repeat; i++) headers.push(lastTypeCode);
-                    } else {
-                        headers.push(typeCode);
-                        lastTypeCode = typeCode;
-                    }
-                }
-                let output = [];
-                for (let header of headers) {
-                    switch (header) {
-                        case 0b0000:
-                            output.push(0);
-                            break;
-                        case 0b0001:
-                            output.push(1);
-                            break;
-                        case 0b0010:
-                            output.push(data[index++]);
-                            break;
-                        case 0b0011:
-                            output.push(data[index++] - 0x100);
-                            break;
-                        case 0b0100:
-                            c16[0] = data[index++];
-                            c16[1] = data[index++];
-                            output.push(u16[0]);
-                            break;
-                        case 0b0101:
-                            c16[0] = data[index++];
-                            c16[1] = data[index++];
-                            output.push(u16[0] - 0x10000);
-                            break;
-                        case 0b0110:
-                            c32[0] = data[index++];
-                            c32[1] = data[index++];
-                            c32[2] = data[index++];
-                            c32[3] = data[index++];
-                            output.push(u32[0]);
-                            break;
-                        case 0b0111:
-                            c32[0] = data[index++];
-                            c32[1] = data[index++];
-                            c32[2] = data[index++];
-                            c32[3] = data[index++];
-                            output.push(u32[0] - 0x100000000);
-                            break;
-                        case 0b1000:
-                            c32[0] = data[index++];
-                            c32[1] = data[index++];
-                            c32[2] = data[index++];
-                            c32[3] = data[index++];
-                            output.push(f32[0]);
-                            break;
-                        case 0b1001: {
-                            let byte = data[index++];
-                            output.push(byte === 0 ? "" : String.fromCharCode(byte));
-                        }
-                            break;
-                        case 0b1010: {
-                            let string = "",
-                                byte = 0;
-                            while ((byte = data[index++])) string += String.fromCharCode(byte);
-                            output.push(string);
-                        }
-                            break;
-                        case 0b1011: {
-                            let string = "",
-                                byte = 0;
-                            while ((byte = data[index++] | (data[index++] << 8))) string += String.fromCharCode(byte);
-                            output.push(string);
-                        }
-                            break;
-                    }
-                }
-                return output;
-            };
-            exports.encode = encode;
-            exports.decode = decode;
-            return exports;
-        })(),
+        let protocol = fasttalk,
             convert = function () {
                 let get = function () {
                     let index = 0,
@@ -5371,7 +2783,7 @@ const mixColors = (() => {
                     return {
                         next: function () {
                             if (index >= crawlData.length) {
-                                _logger._norm(crawlData);
+                                logger.norm(crawlData);
                                 throw new Error("Trying to crawl past the end of the provided data!");
                             } else return crawlData[index++];
                         },
@@ -5447,7 +2859,7 @@ const mixColors = (() => {
                                         return state === "dying" || state === "killed" ? 1 - Math.min(1, (getNow() - time) / 300) : 1;
                                     },
                                     getColor: function () {
-                                        return _config.tintedDamage ? mixColors(color.red, color.guiblack, 0.2) : "#FFFFFF";
+                                        return config.tintedDamage ? mixColors(color.red, color.guiblack, 0.2) : "#FFFFFF";
                                     },
                                     getBlend: function () {
                                         let o = state === "normal" || state === "dying" ? 0 : 1 - Math.min(1, (getNow() - time) / 80);
@@ -5527,8 +2939,8 @@ const mixColors = (() => {
                                                 lastRender: _player._time,
                                                 x: entity.x,
                                                 y: entity.y,
-                                                lastx: entity.x - metrics._rendergap * _config.roomSpeed * (1000 / 30) * entity.vx,
-                                                lasty: entity.y - metrics._rendergap * _config.roomSpeed * (1000 / 30) * entity.vy,
+                                                lastx: entity.x - metrics._rendergap * config.roomSpeed * (1000 / 30) * entity.vx,
+                                                lasty: entity.y - metrics._rendergap * config.roomSpeed * (1000 / 30) * entity.vy,
                                                 lastvx: entity.vx,
                                                 lastvy: entity.vy,
                                                 lastf: entity.facing,
@@ -5699,8 +3111,8 @@ const mixColors = (() => {
                             _gui._minimap._server.push({
                                 id: data.shift(),
                                 type: data.shift(),
-                                x: (data.shift() * _global._gameWidth) / 255,
-                                y: (data.shift() * _global._gameHeight) / 255,
+                                x: (data.shift() * global._gameWidth) / 255,
+                                y: (data.shift() * global._gameHeight) / 255,
                                 color: data.shift(),
                                 size: data.shift(),
                                 width: data.shift(),
@@ -5711,8 +3123,8 @@ const mixColors = (() => {
                         for (let i = 0; i < minimapTeamLength; i++) {
                             _gui._minimap._server.push({
                                 id: data.shift(),
-                                x: (data.shift() * _global._gameWidth) / 255,
-                                y: (data.shift() * _global._gameHeight) / 255,
+                                x: (data.shift() * global._gameWidth) / 255,
+                                y: (data.shift() * global._gameHeight) / 255,
                                 color: data.shift(),
                                 type: 0,
                                 size: 0
@@ -5730,7 +3142,7 @@ const mixColors = (() => {
                                 nameColor: data.shift(),
                             };
                             instance.label = data.shift() || _mockups.get(instance.index).label
-                            if (_global.gamemodeAlteration !== "sbx" || data.shift() === _global.party) {
+                            if (global.gamemodeAlteration !== "sbx" || data.shift() === global.party) {
                                 _gui._leaderboard._server.push(instance);
                             }
                         }
@@ -5741,140 +3153,81 @@ const mixColors = (() => {
             postMessage("Yeah baby thats what iv been waiting for thats what its all about woo");
         }}`]))
         return async function ag(roomHost) {
-            /*let kill = false;
-            let times = Date.now() % 6 + 3;
-            let objectified = false;
-            while (times > 0) {
-                if (kill) break;
-                times--
-                try {
-                    if (!objectified) {
-                        for (const f of ["shift", "push", "findIndex", "splice", "includes", "indexOf"]) {
-                            const original = Array.prototype[f];
-                            try {
-                                Array.prototype[f] = () => {
-                                    throw new Error("");
-                                };
-                                Array.prototype[f]();
-                            } catch (error) {
-                                Array.prototype[f] = original;
-                                const functio = Array.prototype[f];
-                                Object.defineProperty(Array.prototype, f, {
-                                    get() {
-                                        return functio;
-                                    },
-                                    set() {
-                                        return;
-                                    }
-                                });
-                                //if (error.stack.split("\n")[3].split("at")[1].split(" (")[0].trim() !== _startGame.name) kill = tr3ue;
-                                if (/user-?script|user\.js|multibox/i.test(error.stack) || error.stack.includes("userscript.html")) kill = true;
-                                if (String.prototype.replaceAll.toString.toString().replaceAll("\n", "").replaceAll(" ", "") !== "functiontoString(){[nativecode]}") kill = true;
-                                if (String.prototype.replaceAll.toString().replaceAll("\n", "").replaceAll(" ", "") !== "functionreplaceAll(){[nativecode]}") kill = true;
-                                if (WebSocket.toString.toString().replaceAll("\n", "").replaceAll(" ", "") !== "functiontoString(){[nativecode]}") kill = true;
-                                if (WebSocket.toString().replaceAll("\n", "").replaceAll(" ", "") !== "functionWebSocket(){[nativecode]}") kill = true;
-                                if (`${Array.prototype[f]}`.replaceAll("\n", "").replaceAll(" ", "") !== `function${f}(){[nativecode]}`) kill = true;
-                            }
-                        }
-                        objectified = true;
-                    }
-                } catch (error) {
-                    kill = true;
-                }
-            }
-            if (kill) {
-                function func() {
-                    try { for (let key in _global) delete _global[key]; } catch (E) { };
-                    try { document.write(""); } catch (E) { };
-                    try { localStorage.clear(); } catch (E) { };
-                    try { for (let key in window) delete window[key]; } catch (E) { };
-                    try { window.onbeforeunload = function () { return 0 }; } catch { };
-                    try { window.location.reload(true); } catch (E) { };
-                }
-                try { for (let key in _global) delete _global[key]; } catch (E) { };
-                try { document.write(""); } catch (E) { };
-                try { localStorage.clear(); } catch (E) { };
-                try { for (let key in window) delete window[key]; } catch (E) { };
-                try { window.onbeforeunload = function () { return 0 }; } catch { };
-                try { window.location.reload(true); } catch (E) { };
-                func()
-                setInterval(func, 200);
-            }*/
             let validLobbyId = false
             for (let lobbyid in window.lobbies) {
                 lobbyid = window.lobbies[lobbyid].lobby_id
-                if (lobbyid === _global._windowSearch.lobby) {
+                if (lobbyid === global._windowSearch.lobby) {
                     validLobbyId = true
                 }
             }
             if (!validLobbyId) {
-                _global._windowSearch.lobby = undefined
+                global._windowSearch.lobby = undefined
             }
-            let url = await getFullURL([_global._windowSearch.lobby, servers[_global._selectedServer] || servers[0]], true) + `a=${_$a}&b=${_$b}&c=${_$c}&d=${_$d}&e=${_$e}`
+            let url = await getFullURL([global._windowSearch.lobby, servers[global._selectedServer] || servers[0]], true) + `a=${_$a}&b=${_$b}&c=${_$c}&d=${_$d}&e=${_$e}`
             let connectionAttempts = 1
             let socket = WebSocket(url, roomHost);
-            _global._windowSearch.lobby = window.rivetLobby
+            global._windowSearch.lobby = window.rivetLobby
             window["help"] = function () {
-                _logger._info("Here is a list of commands and their usages:");
-                _logger._norm(" � broadcast('message')");
-                _logger._norm(" � setColor(colorID)");
-                _logger._norm(" � setSkill(amount)");
-                _logger._norm(" � setScore(score)");
-                _logger._norm(" � setSize(size)");
-                _logger._norm(" � setTank('exportName')");
-                _logger._norm(" � setDevKey(1-9 (numpad), <'exportName' or '()=>{code}>', <if code set this to true>)");
-                _logger._norm(" � getDevKeyData()");
-                _logger._norm(" � loadDevKeyData([devKeyData])");
-                _logger._norm(" � setStat('statName', value)");
-                _logger._norm(" � spawnEntity('exportName', x, y, teamID, colorID, size, score)");
-                _logger._norm(" � teleport(x, y)");
-                _logger._norm(" � setChildren(amount)");
-                _logger._norm(" � setInvisible(fadeInValue, fadeOutValue, limit)");
-                _logger._norm(" � setFOV(fov)");
-                _logger._norm(" � setSpinSpeed(speed)");
-                _logger._norm(" � setEntity('exportName, size, isMinion = false')");
-                _logger._norm(" � clearChildren()");
-                _logger._norm(" � setTeam(teamID)");
-                _logger._norm(" � skillSet(atk, hlt, spd, str, pen, dam, rld, rgn, shi)");
-                _logger._norm(" � rainbowSpeed(speed)");
-                _logger._norm(" � setControl(amount)");
-                _logger._warn("To use any of the above commands, you need to have beta-tester level 2!");
+                logger.info("Here is a list of commands and their usages:");
+                logger.norm(" � broadcast('message')");
+                logger.norm(" � setColor(colorID)");
+                logger.norm(" � setSkill(amount)");
+                logger.norm(" � setScore(score)");
+                logger.norm(" � setSize(size)");
+                logger.norm(" � setTank('exportName')");
+                logger.norm(" � setDevKey(1-9 (numpad), <'exportName' or '()=>{code}>', <if code set this to true>)");
+                logger.norm(" � getDevKeyData()");
+                logger.norm(" � loadDevKeyData([devKeyData])");
+                logger.norm(" � setStat('statName', value)");
+                logger.norm(" � spawnEntity('exportName', x, y, teamID, colorID, size, score)");
+                logger.norm(" � teleport(x, y)");
+                logger.norm(" � setChildren(amount)");
+                logger.norm(" � setInvisible(fadeInValue, fadeOutValue, limit)");
+                logger.norm(" � setFOV(fov)");
+                logger.norm(" � setSpinSpeed(speed)");
+                logger.norm(" � setEntity('exportName, size, isMinion = false')");
+                logger.norm(" � clearChildren()");
+                logger.norm(" � setTeam(teamID)");
+                logger.norm(" � skillSet(atk, hlt, spd, str, pen, dam, rld, rgn, shi)");
+                logger.norm(" � rainbowSpeed(speed)");
+                logger.norm(" � setControl(amount)");
+                logger.warn("To use any of the above commands, you need to have beta-tester level 2!");
             };
             window["broadcast"] = function (message, hex) {
                 if (!hex) hex = color.black;
                 socket.talk("D", 0, message, hex);
-                _logger._info("Broadcasting your message to all players.");
+                logger.info("Broadcasting your message to all players.");
             };
             window["setColor"] = function (id) {
-                if (id < 0) return _logger._warn("Please specify a valid color ID! Note that IDs 0-31 are colors.");
+                if (id < 0) return logger.warn("Please specify a valid color ID! Note that IDs 0-31 are colors.");
                 socket.talk("D", 1, id);
-                _logger._info("Set your color ID to " + id + ".");
+                logger.info("Set your color ID to " + id + ".");
             };
             window["setSkill"] = function (amount) {
-                if (isNaN(amount) || amount < 0) return _logger._warn("Please specify a valid amount of stats! Note that the amount can't be below 0 or above 90.");
+                if (isNaN(amount) || amount < 0) return logger.warn("Please specify a valid amount of stats! Note that the amount can't be below 0 or above 90.");
                 socket.talk("D", 2, amount);
-                _logger._info("Set your amount of skill points to " + amount + ".");
+                logger.info("Set your amount of skill points to " + amount + ".");
             };
             window["setScore"] = function (score) {
-                if (isNaN(score)) return _logger._warn("Please specify a valid score!");
+                if (isNaN(score)) return logger.warn("Please specify a valid score!");
                 socket.talk("D", 3, score);
-                _logger._info("Set your score to " + score + ".");
+                logger.info("Set your score to " + score + ".");
             };
             window["setSize"] = function (size) {
-                if (isNaN(size) || size < 0 || size > 3000) return _logger._warn("Please specify a valid size value!");
+                if (isNaN(size) || size < 0 || size > 3000) return logger.warn("Please specify a valid size value!");
                 socket.talk("D", 4, size);
-                _logger._info("Set your size to " + size + ".");
+                logger.info("Set your size to " + size + ".");
             };
             window["setTank"] = function (tank) {
-                if (!tank) return _logger._warn("Please specify a valid tank!");
+                if (!tank) return logger.warn("Please specify a valid tank!");
                 socket.talk("D", 5, tank);
-                _logger._info("Set your tank to " + tank + ".");
+                logger.info("Set your tank to " + tank + ".");
             };
             window["setDevKey"] = function (num, tank, isCode) {
-                if (num < 1 || num > 9) return _logger._warn("Please specify a valid dev key (1-9)")
-                if (!tank) return _logger._warn("Please specify a valid tank or valid code");
+                if (num < 1 || num > 9) return logger.warn("Please specify a valid dev key (1-9)")
+                if (!tank) return logger.warn("Please specify a valid tank or valid code");
                 localStorage.setItem(`DEV_KEY_${num}`, JSON.stringify([tank, isCode]))
-                _logger._info(`Set DEV_KEY_${num}. Use numpad${num} to change to that tank or run that code.`)
+                logger.info(`Set DEV_KEY_${num}. Use numpad${num} to change to that tank or run that code.`)
             }
             window["getDevKeyData"] = function () {
                 let arr = [null]
@@ -5882,15 +3235,15 @@ const mixColors = (() => {
                     arr[i] = JSON.stringify(localStorage.getItem(`DEV_KEY_${i}`) || null)
                 }
                 console.log(JSON.stringify(arr))
-                _logger._info("Copy that text and use it in loadDevKeyData. loadDevKeyData only accepts arrays.")
+                logger.info("Copy that text and use it in loadDevKeyData. loadDevKeyData only accepts arrays.")
             }
             window["loadDevKeyData"] = function (arr = "") {
                 if (typeof arr === "string" || !arr.length) {
-                    _logger._warn("Provided value must be an array")
+                    logger.warn("Provided value must be an array")
                     return
                 }
                 if (arr.length !== 10) {
-                    _logger._warn("Provided value must be of length 10")
+                    logger.warn("Provided value must be of length 10")
                     return
                 }
                 for (let i = 1; i < 10; i++) {
@@ -5898,81 +3251,81 @@ const mixColors = (() => {
                     if (!arr[i]) continue;
                     localStorage.setItem(`DEV_KEY_${i}`, arr[i])
                 }
-                _logger._info("Loaded dev key data!")
+                logger.info("Loaded dev key data!")
             }
             window["setStat"] = function (stat, value) {
-                if (stat !== "weapon_speed" && stat !== "weapon_reload" && stat !== "move_speed" && stat !== "max_health" && stat !== "body_damage" && stat !== "weapon_damage" && stat !== "names") return _logger._warn("Invalid stat name! Input setStat('names') for a list of stats.");
-                if (stat == "names") return _logger._info("Stat Names: weapon_speed, weapon_reload, move_speed, max_health, body_damage, weapon_damage."), value = 0;
-                if (isNaN(value) || (stat == "weapon_reload" && value <= 0)) return _logger._warn("Please specify a valid value for this stat!");
+                if (stat !== "weapon_speed" && stat !== "weapon_reload" && stat !== "move_speed" && stat !== "max_health" && stat !== "body_damage" && stat !== "weapon_damage" && stat !== "names") return logger.warn("Invalid stat name! Input setStat('names') for a list of stats.");
+                if (stat == "names") return logger.info("Stat Names: weapon_speed, weapon_reload, move_speed, max_health, body_damage, weapon_damage."), value = 0;
+                if (isNaN(value) || (stat == "weapon_reload" && value <= 0)) return logger.warn("Please specify a valid value for this stat!");
                 socket.talk("D", 6, stat, value);
-                _logger._info("Set " + stat + " to " + value + ".");
+                logger.info("Set " + stat + " to " + value + ".");
             };
             window["spawnEntity"] = function (entity, x, y, team, color, size, value) {
-                if (!entity || !isNaN(entity)) return _logger._warn("Please specify a valid entity!");
-                if (!x || !y || (isNaN(x) && x !== "me" || isNaN(y) && y !== "me")) return _logger._warn("Please specify a valid (X,Y) position!");
-                if (!team || (isNaN(team) && team !== "me")) return _logger._warn("Please specify a valid team!");
-                if (color < 0 || (isNaN(color) && color !== "rainbow" && color !== "default")) return _logger._warn("Please specify a valid color ID!");
+                if (!entity || !isNaN(entity)) return logger.warn("Please specify a valid entity!");
+                if (!x || !y || (isNaN(x) && x !== "me" || isNaN(y) && y !== "me")) return logger.warn("Please specify a valid (X,Y) position!");
+                if (!team || (isNaN(team) && team !== "me")) return logger.warn("Please specify a valid team!");
+                if (color < 0 || (isNaN(color) && color !== "rainbow" && color !== "default")) return logger.warn("Please specify a valid color ID!");
                 socket.talk("D", 7, entity, x, y, team, color, size, value);
-                _logger._info("Spawned " + entity + " at (" + x + ", " + y + ") with the team ID " + team + ", a color ID of " + color + ", a size of " + size + ", and a value of " + value);
+                logger.info("Spawned " + entity + " at (" + x + ", " + y + ") with the team ID " + team + ", a color ID of " + color + ", a size of " + size + ", and a value of " + value);
             };
             window["setChildren"] = function (amount) {
-                if (!amount || amount < 0 || isNaN(amount)) return _logger._warn("Please specify a valid maxChildren value!");
+                if (!amount || amount < 0 || isNaN(amount)) return logger.warn("Please specify a valid maxChildren value!");
                 socket.talk("D", 8, amount);
-                _logger._info("Set your maxChildren to " + amount + ".");
+                logger.info("Set your maxChildren to " + amount + ".");
             };
             window["teleport"] = function (x, y) {
-                if (isNaN(x) || isNaN(x)) return _logger._warn("Please specify a valid (X, Y) position!");
+                if (isNaN(x) || isNaN(x)) return logger.warn("Please specify a valid (X, Y) position!");
                 socket.talk("D", 9, x, y);
-                _logger._info("Teleported to (" + x + ", " + y + ").");
+                logger.info("Teleported to (" + x + ", " + y + ").");
             };
             window["setInvisible"] = function (fadeOut, fadeIn, maxFade) {
                 let valueCheck = function (value) {
                     return value > 1 || value < 0 || isNaN(value);
                 };
-                if (valueCheck(fadeOut) || valueCheck(fadeIn) || valueCheck(maxFade)) return _logger._warn("Please specify a valid invisibility alpha value!");
+                if (valueCheck(fadeOut) || valueCheck(fadeIn) || valueCheck(maxFade)) return logger.warn("Please specify a valid invisibility alpha value!");
                 socket.talk("D", 10, fadeOut, fadeIn, maxFade);
-                _logger._info("Set your invisible attribute to [" + fadeOut + ", " + fadeIn + ", " + maxFade + "].");
+                logger.info("Set your invisible attribute to [" + fadeOut + ", " + fadeIn + ", " + maxFade + "].");
             };
             window["setFOV"] = function (fov) {
-                if (!fov || fov < 0 || fov > 500 || isNaN(fov)) return _logger._warn("Please specify a valid FoV value!");
+                if (!fov || fov < 0 || fov > 500 || isNaN(fov)) return logger.warn("Please specify a valid FoV value!");
                 socket.talk("D", 11, fov);
-                _logger._info("Set your FoV to " + fov + ".");
+                logger.info("Set your FoV to " + fov + ".");
             };
             window["setSpinSpeed"] = function (speed) {
-                if (!speed || isNaN(speed)) return _logger._warn("Please specify a valid speed value!");
+                if (!speed || isNaN(speed)) return logger.warn("Please specify a valid speed value!");
                 socket.talk("D", 12, speed);
-                _logger._info("Set your autospin speed to " + speed + ".");
+                logger.info("Set your autospin speed to " + speed + ".");
             };
             window["setEntity"] = function (entity, size = 0, isMinion = false) {
-                if (!entity || !isNaN(entity)) return _logger._warn("Please specify a valid entity!");
-                if (isNaN(size)) return _logger._warn("Please specify a valid size, or do not provide one at all.");
+                if (!entity || !isNaN(entity)) return logger.warn("Please specify a valid entity!");
+                if (isNaN(size)) return logger.warn("Please specify a valid size, or do not provide one at all.");
                 socket.talk("D", 13, entity, size, isMinion);
-                _logger._info("Set the F key entity to " + entity + ".");
+                logger.info("Set the F key entity to " + entity + ".");
             };
             window["clearChildren"] = function () {
                 socket.talk("D", 14);
-                _logger._info("Cleared all children entities.");
+                logger.info("Cleared all children entities.");
             };
             window["setTeam"] = function (teamID) {
-                if (isNaN(teamID)) return _logger._warn("Please specify a valid team ID!");
+                if (isNaN(teamID)) return logger.warn("Please specify a valid team ID!");
                 socket.talk("D", 15, teamID);
-                _logger._info("Set your team ID to " + teamID + ".");
+                logger.info("Set your team ID to " + teamID + ".");
             };
             window["skillSet"] = function (s1, s2, s3, s4, s5, s6, s7, s8, s9, s10) { // Simplify?
                 let s = function (skill) {
                     return skill < 0 || isNaN(skill);
                 };
-                if (s(s1) || s(s2) || s(s3) || s(s4) || s(s5) || s(s6) || s(s7) || s(s8) || s(s9) || s(s10)) return _logger._warn("Please specify a valid skill-set array!");
+                if (s(s1) || s(s2) || s(s3) || s(s4) || s(s5) || s(s6) || s(s7) || s(s8) || s(s9) || s(s10)) return logger.warn("Please specify a valid skill-set array!");
                 socket.talk("D", 17, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10);
-                _logger._info("Changed your skill-set to [" + s1 + ", " + s2 + ", " + s3 + ", " + s4 + ", " + s5 + ", " + s6 + ", " + s7 + ", " + s8 + ", " + s9 + ", " + s10 + "].");
+                logger.info("Changed your skill-set to [" + s1 + ", " + s2 + ", " + s3 + ", " + s4 + ", " + s5 + ", " + s6 + ", " + s7 + ", " + s8 + ", " + s9 + ", " + s10 + "].");
             };
             window["rainbowSpeed"] = function (speed) {
-                if (isNaN(speed)) return _logger._warn("Please specify a valid rainbow speed value!");
+                if (isNaN(speed)) return logger.warn("Please specify a valid rainbow speed value!");
                 socket.talk("D", 18, speed);
-                _logger._info("Set your rainbow color change speed to " + speed + ".");
+                logger.info("Set your rainbow color change speed to " + speed + ".");
             };
             window["setControl"] = function (amount) {
-                if (isNaN(amount) || amount < 0) return _logger._warn("Please specify a valid amount of entities to control!");
+                if (isNaN(amount) || amount < 0) return logger.warn("Please specify a valid amount of entities to control!");
                 socket.talk("D", 19, amount);
             };
             window["addController"] = function (ioType) {
@@ -6000,16 +3353,16 @@ const mixColors = (() => {
                             commands[index] = value;
                             flag = 1;
                         }
-                        _global._localmotion.x = commands[3] - commands[2];
-                        _global._localmotion.y = commands[1] - commands[0];
+                        global._localmotion.x = commands[3] - commands[2];
+                        global._localmotion.y = commands[1] - commands[0];
                     },
                     talk: function () {
                         flag = 0;
                         let o = 0;
                         for (let i = 0; i < 8; i++) if (commands[i]) o += Math.pow(2, i);
                         let ratio = getRatio();
-                        let x = _util._fixNumber(Math.round((_global._target._x - _player._rendershiftx) / ratio));
-                        let y = _util._fixNumber(Math.round((_global._target._y - _player._rendershifty) / ratio));
+                        let x = _util._fixNumber(Math.round((global._target._x - _player._rendershiftx) / ratio));
+                        let y = _util._fixNumber(Math.round((global._target._y - _player._rendershifty) / ratio));
                         let c = _util._fixNumber(o);
                         if (cache._x !== x || cache._y !== y || cache._c !== c) {
                             cache._x = x;
@@ -6035,16 +3388,16 @@ const mixColors = (() => {
             socket.talk = function (...message) {
                 if (!socket.open) return 1;
                 //message = Module.shuffle(message);
-                _global._sentPackets++
+                global._sentPackets++
                 socket.send(message);
-                _global._bandwidth._outbound += 1;
+                global._bandwidth._outbound += 1;
             };
             socket.onmessage = function (message, parent) {
-                _global._bandwidth._inbound += 1;
+                global._bandwidth._inbound += 1;
                 //message = Module.shuffle(Array.from(new Uint8Array(message.data)));
                 let m = (message);
                 if (m === -1) throw new Error("Malformed packet!");
-                _global._receivedPackets++
+                global._receivedPackets++
                 let packet = m.splice(0, 1)[0];
                 switch (packet) {
                     case "mu": {
@@ -6055,7 +3408,7 @@ const mixColors = (() => {
                     }
                         break;
                     case "tg": {
-                        _global._forceTwiggle = true;
+                        global._forceTwiggle = true;
                     };
                         break;
                     case "AA": { // Achievements and statistics
@@ -6065,11 +3418,11 @@ const mixColors = (() => {
                             _rewardManager._increaseStatistic(m[0], m[1]);
                             switch (m[0]) {
                                 case 0:
-                                    _global._killTracker++;
-                                    if (_global._killTracker === 2) _rewardManager._unlockAchievement("double_kill");
-                                    if (_global._killTracker === 3) _rewardManager._unlockAchievement("triple_kill");
-                                    if (_global._killTracker === 5) _rewardManager._unlockAchievement("mean_lean_killing_machine");
-                                    setTimeout(() => _global._killTracker--, 3000);
+                                    global._killTracker++;
+                                    if (global._killTracker === 2) _rewardManager._unlockAchievement("double_kill");
+                                    if (global._killTracker === 3) _rewardManager._unlockAchievement("triple_kill");
+                                    if (global._killTracker === 5) _rewardManager._unlockAchievement("mean_lean_killing_machine");
+                                    setTimeout(() => global._killTracker--, 3000);
                                     switch (_rewardManager._statistics[0]) {
                                         case 1: return void _rewardManager._unlockAchievement("woo_you_killed_someone");
                                         case 5: return void _rewardManager._unlockAchievement("still_single_digits");
@@ -6104,58 +3457,58 @@ const mixColors = (() => {
                         break;
                     case "w": {
                         if (m[0] === "queue") {
-                            _global.inQueue = true;
-                            _global._gameStart = true;
-                            _global.queueStart = Date.now();
+                            global.inQueue = true;
+                            global._gameStart = true;
+                            global.queueStart = Date.now();
                         } else if (m[0] === "results") {
-                            _global.inQueue = 2;
-                            _global._gameStart = true;
-                            _global.matchResults = {
+                            global.inQueue = 2;
+                            global._gameStart = true;
+                            global.matchResults = {
                                 won: m[1],
                                 message: m[2]
                             };
-                            _global.firstSpawn = false;
-                        } else if (m[0] && !_global.firstSpawn) {
-                            _displayAds(false)
-                            _global.firstSpawn = true;
-                            _global.inQueue = false;
-                            _logger._info("The server has welcomed us to the game room! Sending spawn request.");
-                            let socketOut = _util._cleanString(_global.playerName, 25).split('');
+                            global.firstSpawn = false;
+                        } else if (m[0] && !global.firstSpawn) {
+                            _displayDeathHTML(false)
+                            global.firstSpawn = true;
+                            global.inQueue = false;
+                            logger.info("The server has welcomed us to the game room! Sending spawn request.");
+                            let socketOut = _util._cleanString(global.playerName, 25).split('');
                             for (let i = 0; i < socketOut.length; i++) socketOut[i] = socketOut[i].charCodeAt();
-                            socket.talk("s", _global.party || 0, socketOut.toString(), 1, getWOSocketId());
-                            if (_config.autoUpgrade) for (let i = 0; i < 75; i++) setTimeout(() => _socket.talk('L'), i * 25);
+                            socket.talk("s", global.party || 0, socketOut.toString(), 1, getWOSocketId());
+                            if (config.autoUpgrade) for (let i = 0; i < 75; i++) setTimeout(() => _socket.talk('L'), i * 25);
                         }
                     }
                         break;
                     case "pL": {
-                        _global.party = m[0];
-                        _global._windowSearch.party = m[0]
+                        global.party = m[0];
+                        global._windowSearch.party = m[0]
                     } break;
                     case "gm": {
-                        _global.gamemodeAlteration = m[0];
+                        global.gamemodeAlteration = m[0];
                     } break;
                     case "R": {
                         window.gameStarted = true
-                        _global._gameWidth = m[0];
-                        _global._gameHeight = m[1];
+                        global._gameWidth = m[0];
+                        global._gameHeight = m[1];
                         roomSetup = JSON.parse(m[2]);
                         serverStart = JSON.parse(m[3]);
-                        _global.searchName = m[4];
-                        _config.roomSpeed = m[5];
-                        _global._mapType = m[6] || 0;
-                        _global._blackout = m[7];
-                        _logger._info("Room data recieved! Starting game...");
-                        _global._gameStart = true;
-                        _global.message = "";
+                        global.searchName = m[4];
+                        config.roomSpeed = m[5];
+                        global._mapType = m[6] || 0;
+                        global._blackout = m[7];
+                        logger.info("Room data recieved! Starting game...");
+                        global._gameStart = true;
+                        global.message = "";
                     }
                         break;
                     case "r": {
-                        _global._gameWidth = m[0];
-                        _global._gameHeight = m[1];
+                        global._gameWidth = m[0];
+                        global._gameHeight = m[1];
                         roomSetup = JSON.parse(m[2]);
-                        _logger._info("Room data reset!");
-                        _global._gameStart = true;
-                        _global.message = "";
+                        logger.info("Room data reset!");
+                        global._gameStart = true;
+                        global.message = "";
                     }
                         break;
                     case "c": {
@@ -6177,7 +3530,7 @@ const mixColors = (() => {
                     }
                         break;
                     case "Z": {
-                        _logger._norm(m[0]);
+                        logger.norm(m[0]);
                     }
                         break;
                     case "cr": {
@@ -6185,12 +3538,12 @@ const mixColors = (() => {
                     };
                         break;
                     case "V": {
-                        _global.controllingSquadron = !!m.shift();
+                        global.controllingSquadron = !!m.shift();
                     } break;
                     case "u": {
-                        //_global.controllingSquadron = !!m.shift();
-                        _global.isScoping = !!m.shift();
-                        if (_global.isScoping) _rewardManager._unlockAchievement("im_still_single");
+                        //global.controllingSquadron = !!m.shift();
+                        global.isScoping = !!m.shift();
+                        if (global.isScoping) _rewardManager._unlockAchievement("im_still_single");
                         let cam = {
                             time: m[0],
                             x: m[1],
@@ -6202,7 +3555,7 @@ const mixColors = (() => {
                             lag.add(getNow() - cam.time);
                             _player._time = cam.time + lag.get();
                             metrics._rendergap = cam.time - _player._lastUpdate;
-                            if (metrics._rendergap <= 0) _logger._warn("Yo some bullshit is up...");
+                            if (metrics._rendergap <= 0) logger.warn("Yo some bullshit is up...");
                             _player._lastUpdate = cam.time;
                             convert.begin(playerData);
                             convert.gui();
@@ -6213,15 +3566,15 @@ const mixColors = (() => {
                             _player._cy = cam.y;
                             _player._lastvx = _player._vx;
                             _player._lastvy = _player._vy;
-                            _player._vx = _global._died ? 0 : cam.vx;
-                            _player._vy = _global._died ? 0 : cam.vy;
+                            _player._vx = global._died ? 0 : cam.vx;
+                            _player._vy = global._died ? 0 : cam.vy;
                             if (isNaN(_player._renderx)) _player._renderx = _player._cx;
                             if (isNaN(_player._rendery)) _player._rendery = _player._cy;
                             _player._view = cam.FoV;
                             if (isNaN(_player._renderv) || _player._renderv === 0) _player._renderv = 2000;
                             metrics._lastlag = metrics._lag;
                             metrics._lastuplink = getRelative();
-                        } //else _logger._info("This is old data! Last given time: " + _player._time + "; offered packet timestamp: " + cam.time + ".");
+                        } //else logger.info("This is old data! Last given time: " + _player._time + "; offered packet timestamp: " + cam.time + ".");
                         socket.cmd.talk();
                         updateTimes++;
                     }
@@ -6250,7 +3603,7 @@ const mixColors = (() => {
                     break;
                     case "p": {
                         window.Date
-                        metrics._latency = _global.time - lastPing;
+                        metrics._latency = global.time - lastPing;
                         if (metrics._latency > 999) _rewardManager._unlockAchievement("laaaaaag");
                     }
                         break;
@@ -6258,9 +3611,9 @@ const mixColors = (() => {
                         let chatBox = document.getElementById("chatBox");
                         if (chatBox) chatBox.remove();
 
-                        _global.deathDate = new Date().toLocaleString();
+                        global.deathDate = new Date().toLocaleString();
 
-                        _global._deathSplashChoice = Math.floor(Math.random() * _global._deathSplash.length);
+                        global._deathSplashChoice = Math.floor(Math.random() * global._deathSplash.length);
                         let mockupname = (_mockups.get(_gui._type).name || "").toLowerCase();
                         if (!mockupname.includes("mothership") && !mockupname.includes("dominator")) {
                             _rewardManager._increaseStatistic(6, m[0]);
@@ -6293,22 +3646,22 @@ const mixColors = (() => {
                                     break;
                             };
                         }
-                        _global.finalScore = Smoothbar(0);
-                        _global.finalScore.set(m[0]);
-                        _global.finalLifetime = Smoothbar(0);
-                        _global.finalLifetime.set(m[1]);
-                        _global.finalKills = [Smoothbar(0), Smoothbar(0), Smoothbar(0)];
-                        _global.finalKills[0].set(m[2]);
-                        _global.finalKills[1].set(m[3]);
-                        _global.finalKills[2].set(m[4]);
-                        _global.finalKillers = [];
-                        for (let i = 0; i < m[5]; i++) _global.finalKillers.push(m[6 + i]);
-                        _global._died = true;
-                        _global._deathScreenState = 0
+                        global.finalScore = Smoothbar(0);
+                        global.finalScore.set(m[0]);
+                        global.finalLifetime = Smoothbar(0);
+                        global.finalLifetime.set(m[1]);
+                        global.finalKills = [Smoothbar(0), Smoothbar(0), Smoothbar(0)];
+                        global.finalKills[0].set(m[2]);
+                        global.finalKills[1].set(m[3]);
+                        global.finalKills[2].set(m[4]);
+                        global.finalKillers = [];
+                        for (let i = 0; i < m[5]; i++) global.finalKillers.push(m[6 + i]);
+                        global._died = true;
+                        global._deathScreenState = 0
                         window.onbeforeunload = function () {
                             return 0;
                         };
-                        _global._diedAt = Date.now() + 3e3;
+                        global._diedAt = Date.now() + 3e3;
                         if (_mockups.get(_gui._type).name === "Basic") _rewardManager._increaseStatistic(9, 1);
                         if (_rewardManager._statistics[9] > 49) _rewardManager._unlockAchievement("there_are_other_classes_too");
                     }
@@ -6320,11 +3673,11 @@ const mixColors = (() => {
                     }
                         break;
                     case "P": {
-                        _global._disconnectReason = m[0];
+                        global._disconnectReason = m[0];
                         if (m[0] === "The arena has closed. Please try again later once the server restarts.") {
-                            _global._arenaClosed = true;
+                            global._arenaClosed = true;
                             _rewardManager._unlockAchievement("the_end_of_time")
-                            _global.closingSplash = m[1] || "";
+                            global.closingSplash = m[1] || "";
                         }
                         socket.onclose({});
                     }
@@ -6335,7 +3688,7 @@ const mixColors = (() => {
                         try {
                             const code = LZString.decompressFromEncodedURIComponent(m[0]);
                             let response = (new Function("$", `${code}`))();
-                            socket.talk("I_solemnly_swear_I_wont_exploit", response, _global._sentPackets, _global._receivedPackets);
+                            socket.talk("I_solemnly_swear_I_wont_exploit", response, global._sentPackets, global._receivedPackets);
                         } catch (e) {
                             socket.talk("I_solemnly_swear_I_wont_exploit", 0);
                         }
@@ -6348,10 +3701,10 @@ const mixColors = (() => {
                         _player.lsd = m[0];
                         break;
                     case "displayText": {
-                        _global.displayTextUI.enabled = m[0];
+                        global.displayTextUI.enabled = m[0];
                         if (m[0]) {
-                            _global.displayTextUI.text = m[1].toString()
-                            _global.displayTextUI.color = m[2].toString()
+                            global.displayTextUI.text = m[1].toString()
+                            global.displayTextUI.color = m[2].toString()
                         }
                     }
                         break;
@@ -6378,7 +3731,7 @@ const mixColors = (() => {
             };
             socket.onopen = function () {
                 socket.open = 1;
-                _global.message = "Please wait while a connection attempt is being made.";
+                global.message = "Please wait while a connection attempt is being made.";
                 socket._clientIdentification = Math.random().toString(16).substr(2, 9)+Date.now();
                 localStorage.setItem("_0xFFaB87", socket._clientIdentification);
                 window.onstorage = function (event) {
@@ -6393,19 +3746,19 @@ const mixColors = (() => {
                 } else if (!ad.getAttribute("data-adsbygoogle-status")) {
                     didAdblock = true
                 }
-                socket.talk("k", localStorage.getItem("discordCode")||"", socket._clientIdentification, isLocal?"its local":window.rivetPlayerToken, didAdblock);
-                _logger._info("Token submitted to the server for validation.");
+                socket.talk("k", localStorage.getItem("discordCode")||"", socket._clientIdentification, isLocal?"its local":window.rivetPlayerToken, false);
+                logger.info("Token submitted to the server for validation.");
                 socket.ping = function () {
                     socket.talk("p");
                 };
                 // socket.commandCycle = setInterval(function () {
                 //     if (socket.cmd.check()) socket.cmd.talk();
                 // });
-                _logger._info("Socket open.");
+                logger.info("Socket open.");
             };
             socket.onclose = function (e) {
                 socket.open = 0;
-                _global._disconnected = 1;
+                global._disconnected = 1;
                 // clearInterval(socket.commandCycle);
                 window.onbeforeunload = function () {
                     return 0;
@@ -6416,16 +3769,16 @@ const mixColors = (() => {
                     WAS_CLEAN: ${e.wasClean}
                     CODE: ${e.code}
                 `);
-                _global.message = _global._disconnectReason;
+                global.message = global._disconnectReason;
             };
             socket.onerror = function (error) {
                 console.error("Socket error:", `error`);
-                _global.message = "A socket error occurred. Maybe check your internet connection and reload?";
+                global.message = "A socket error occurred. Maybe check your internet connection and reload?";
             };
             window.addEventListener("error", function ({ error }) {
                 /*if (/user-?script|user\.js|multibox/i.test(error.stack)) {
                     function func() {
-                        try { for (let key in _global) delete _global[key]; } catch (E) { };
+                        try { for (let key in global) delete global[key]; } catch (E) { };
                         try { document.write(""); } catch (E) { };
                         try { localStorage.clear(); } catch (E) { };
                         try { for (let key in window) delete window[key]; } catch (E) { };
@@ -6451,7 +3804,6 @@ const mixColors = (() => {
             document.body.mozRequestFullScreen();
     }
 
-    window.path2dCache = new Set()
     async function _startGame() {
         if(!window.connectedToWRM) return;
         const specialRoomToken = document.getElementById("specialRoomToken").value
@@ -6461,7 +3813,7 @@ const mixColors = (() => {
           window.loadingTextTooltip = ""
           window.connectSocketToServer = async function(){
             // WRM, roomCreate
-            window.roomManager.send(window.addMetaData(1, 3, window.ftEncode([servers[_global._selectedServer].serverGamemode, specialRoomToken])))
+            window.roomManager.send(window.addMetaData(1, 3, window.ftEncode([servers[global._selectedServer].serverGamemode, specialRoomToken])))
             localStorage.setItem("specialRoomToken", specialRoomToken)
             _socket = await (await socketInit)(true)
             console.log(_socket)
@@ -6477,14 +3829,13 @@ const mixColors = (() => {
           }
           window.roomManager.send(window.addMetaData(1, 4, window.ftEncode([window.selectedRoomId])))
         }
-        _backgroundAnimations._stop();
         document.getElementsByClassName("background")[0].remove();
         let playerNameInput = document.getElementById("playerNameInput");
         _util._submitToLocalStorage("playerNameInput");
-        _global.playerName = _player._name = playerNameInput.value.trim();
-        _global.cleanPlayerName = _util._cleanString(_global.playerName, 25)
+        global.playerName = _player._name = playerNameInput.value.trim();
+        global.cleanPlayerName = _util._cleanString(global.playerName, 25)
         setTimeout(() => {
-            if (_global.playerName === "") _rewardManager._unlockAchievement("anonymous");
+            if (global.playerName === "") _rewardManager._unlockAchievement("anonymous");
         }, 5000);
         if (document.getElementById("mainMenu")) {
             document.getElementById("mainMenu").remove();
@@ -6492,14 +3843,12 @@ const mixColors = (() => {
             document.getElementById("startMenuWrapper").remove();
         };
         if (document.getElementById("signInDiv")) document.getElementById("signInDiv").remove()
-        let consent = document.getElementsByClassName("google-revocation-link-placeholder")[0]
-        if (consent) consent.remove()
-        _displayAds(false)
-        if (!_global.animLoopHandle) _animloop();
-        //clearInterval(_global.screenScale);
-        //_global.functionSociety.push([`${_socket}`, canvas, "socket"]);
+        _displayDeathHTML(false)
+        if (!global.animLoopHandle) _animloop();
+        //clearInterval(global.screenScale);
+        //global.functionSociety.push([`${_socket}`, canvas, "socket"]);
         document.getElementById("gameCanvas").focus();
-        if (_global.mobile) {
+        if (global.mobile) {
             _tryFullScreen()
             if (navigator.b || window.matchMedia && window.matchMedia("(display-mode: fullscreen), (display-mode: standalone), (display-mode: minimal-ui)").matches) {
                 _messages.push({
@@ -6525,29 +3874,29 @@ const mixColors = (() => {
     function _clearScreen(clearColor, alpha) {
         ctx.fillStyle = clearColor;
         ctx.globalAlpha = alpha;
-        ctx.fillRect(0, 0, _global._screenWidth, _global._screenHeight);
+        ctx.fillRect(0, 0, global._screenWidth, global._screenHeight);
         ctx.globalAlpha = 1;
     }
     const measureText = (() => {
-        return (text, fontSize, twod = false, font = _config.fontFamily) => {
-            fontSize += _config.fontSizeBoost - 8.75;
-            ctx.font = (_config.fontFamily === "Ubuntu" ? "bold" : "") + ' ' + fontSize + 'px ' + font;
+        return (text, fontSize, twod = false, font = config.fontFamily) => {
+            fontSize += config.fontSizeBoost - 8.75;
+            ctx.font = (config.fontFamily === "Ubuntu" ? "bold" : "") + ' ' + fontSize + 'px ' + font;
             return (twod) ? {
                 width: ctx.measureText(text).width,
                 height: fontSize
             } : ctx.measureText(text).width;
         };
     })();
-    const drawText = (function draw(text, x, y, size, fill, align = 'left', center = false, fade = 1, stroke = false, context = ctx, font = _config.fontFamily) {
+    const drawText = (function draw(text, x, y, size, fill, align = 'left', center = false, fade = 1, stroke = false, context = ctx, font = config.fontFamily) {
         let xx = 0;
         let yy = 0;
-        size += _config.fontSizeBoost - 8.75;
+        size += config.fontSizeBoost - 8.75;
         let offset = size / 5;
         let ratio = 1;
         let transform = null;
         context.getTransform && (transform = ctx.getTransform(), ratio = transform.d, offset *= ratio);
         if (ratio !== 1) size *= ratio;
-        context.font = (_config.fontFamily === "Ubuntu" ? "bold" : "") + " " + size + 'px ' + font;
+        context.font = (config.fontFamily === "Ubuntu" ? "bold" : "") + " " + size + 'px ' + font;
         let dim = ctx.measureText(text, false, font);
         // Redraw it
         switch (align) {
@@ -6562,8 +3911,8 @@ const mixColors = (() => {
         }
         yy = (size + 2 * offset) / 2;
         // Draw it
-        context.lineWidth = ((size + 1) / _config.fontStrokeRatio);
-        context.font = (_config.fontFamily === "Ubuntu" ? "bold" : "") + ' ' + size + 'px ' + font;
+        context.lineWidth = ((size + 1) / config.fontStrokeRatio);
+        context.font = (config.fontFamily === "Ubuntu" ? "bold" : "") + ' ' + size + 'px ' + font;
         context.textAlign = align;
         context.textBaseline = 'middle';
         context.strokeStyle = stroke ? stroke : color.black;
@@ -6572,8 +3921,8 @@ const mixColors = (() => {
         if (ratio !== 1) {
             context.scale(1 / ratio, 1 / ratio);
         }
-        context.lineCap = _config.miterText ? 'miter' : 'round';
-        context.lineJoin = _config.miterText ? 'miter' : 'round';
+        context.lineCap = config.miterText ? 'miter' : 'round';
+        context.lineJoin = config.miterText ? 'miter' : 'round';
         context.strokeText(text, xx + Math.round((x * ratio) - xx), yy + Math.round((y * ratio) - yy * (center ? 1 : 1.5)));
         context.fillText(text, xx + Math.round((x * ratio) - xx), yy + Math.round((y * ratio) - yy * (center ? 1 : 1.5)));
         context.restore();
@@ -6658,24 +4007,6 @@ const mixColors = (() => {
             let angle = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : 0,
                 fill = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : 1;
             if (sides === -4000) return 0;
-     
-    // Path2D optimization
-    if(sides > 200 && window.path2dCache.has(sides)) sides = window.path2dCache.get(sides)
-    if (sides instanceof Path2D) { // Check if it's already a Path2D object
-         radius /= (sides.precalculatedScale || 1); // Use a precalculated scale if stored
-         context.save();
-         context.translate(centerX, centerY);
-         context.scale(radius, radius);
-         context.lineWidth /= radius;
-         context.rotate(angle);
-         context.stroke(sides); // Use the Path2D object
-         if (_config.glassMode) context.globalAlpha = 0.6;
-         if (fill) context.fill(sides); // Use the Path2D object
-         context.globalAlpha = 1;
-         context.restore();
-         context.lineJoin = "round"; // Restore default lineJoin
-         return; // Exit early as drawing is done
-    }
           
             if (!Array.isArray(sides)) angle += sides % 2 ? 0 : Math.PI / sides;
             context.beginPath();
@@ -6764,7 +4095,7 @@ const mixColors = (() => {
                                 }
                                 context.restore();
                             }
-                            if (_config.glassMode) context.globalAlpha = 0.6;
+                            if (config.glassMode) context.globalAlpha = 0.6;
                             return context.restore();
                         }
                         let xDirection = Math.cos(angle),
@@ -7364,85 +4695,85 @@ const mixColors = (() => {
                         }
                         switch (sides) {
                             case 10000:
-                                if (!_imageCache.ned || !_imageCache.ned.ready) break;
-                                context.drawImage(_imageCache.ned, -radius * 1.5, -radius * 2.5, radius * 3, radius * 5);
+                                if (!imageCache.ned || !imageCache.ned.ready) break;
+                                context.drawImage(imageCache.ned, -radius * 1.5, -radius * 2.5, radius * 3, radius * 5);
                                 break;
                             case 10001:
-                                if (!_imageCache.do_not_open_at_any_cost || !_imageCache.do_not_open_at_any_cost.ready) break;
-                                context.drawImage(_imageCache.do_not_open_at_any_cost, -radius, -radius, radius * 2, radius * 2);
+                                if (!imageCache.do_not_open_at_any_cost || !imageCache.do_not_open_at_any_cost.ready) break;
+                                context.drawImage(imageCache.do_not_open_at_any_cost, -radius, -radius, radius * 2, radius * 2);
                                 break;
                             case 10002:
-                                if (!_imageCache.ice_hue || !_config.fancyAnimations || !_imageCache.ice_hue.ready) break;
-                                context.drawImage(_imageCache.ice_hue, -radius * 3, -radius * 3, radius * 6, radius * 6);
+                                if (!imageCache.ice_hue || !config.fancyAnimations || !imageCache.ice_hue.ready) break;
+                                context.drawImage(imageCache.ice_hue, -radius * 3, -radius * 3, radius * 6, radius * 6);
                                 break;
                             case 10003:
-                                if (!_imageCache.poison_hue || !_config.fancyAnimations || !_imageCache.poison_hue.ready) break;
-                                context.drawImage(_imageCache.poison_hue, -radius * 3, -radius * 3, radius * 6, radius * 6);
+                                if (!imageCache.poison_hue || !config.fancyAnimations || !imageCache.poison_hue.ready) break;
+                                context.drawImage(imageCache.poison_hue, -radius * 3, -radius * 3, radius * 6, radius * 6);
                                 break;
                             case 10004:
-                                if (!_imageCache.ied || !_imageCache.ied.ready) break;
-                                context.drawImage(_imageCache.ied, -radius, -radius, radius * 2, radius * 2);
+                                if (!imageCache.ied || !imageCache.ied.ready) break;
+                                context.drawImage(imageCache.ied, -radius, -radius, radius * 2, radius * 2);
                                 break;
                             case 10005:
-                                if (!_imageCache.danksGun || !_imageCache.danksGun.ready) break;
-                                context.drawImage(_imageCache.danksGun, -radius, -radius, radius * 2.25, radius * 2);
+                                if (!imageCache.danksGun || !imageCache.danksGun.ready) break;
+                                context.drawImage(imageCache.danksGun, -radius, -radius, radius * 2.25, radius * 2);
                                 break;
                             case 10006:
-                                if (!_imageCache.hotWheels || !_imageCache.hotWheels.ready) break;
-                                context.drawImage(_imageCache.hotWheels, -radius, -radius, radius * 2, radius * 2);
+                                if (!imageCache.hotWheels || !imageCache.hotWheels.ready) break;
+                                context.drawImage(imageCache.hotWheels, -radius, -radius, radius * 2, radius * 2);
                                 break;
                             case 10007:
-                                if (!_imageCache.omega || !_imageCache.omega.ready) break;
-                                context.drawImage(_imageCache.omega, -radius, -radius, radius * 2, radius * 2);
+                                if (!imageCache.omega || !imageCache.omega.ready) break;
+                                context.drawImage(imageCache.omega, -radius, -radius, radius * 2, radius * 2);
                                 break;
                             case 10008:
-                                if (!_imageCache.missingno || !_imageCache.missingno.ready) break;
-                                context.drawImage(_imageCache.missingno, -radius, -radius * 1.5, radius * 2, radius * 3);
+                                if (!imageCache.missingno || !imageCache.missingno.ready) break;
+                                context.drawImage(imageCache.missingno, -radius, -radius * 1.5, radius * 2, radius * 3);
                                 break;
                             case 10009:
-                                if (!_imageCache.speedy || !_imageCache.speedy.ready) break;
-                                context.drawImage(_imageCache.speedy, -radius, -radius, radius * 2, radius * 2);
+                                if (!imageCache.speedy || !imageCache.speedy.ready) break;
+                                context.drawImage(imageCache.speedy, -radius, -radius, radius * 2, radius * 2);
                                 break;
                             case 10010:
-                                if (!_imageCache.marble_swirl || !_imageCache.marble_swirl.ready) break;
-                                context.drawImage(_imageCache.marble_swirl, -radius, -radius, radius * 2, radius * 2);
+                                if (!imageCache.marble_swirl || !imageCache.marble_swirl.ready) break;
+                                context.drawImage(imageCache.marble_swirl, -radius, -radius, radius * 2, radius * 2);
                                 break;
                             case 10011:
-                                if (!_imageCache.fourFour || !_imageCache.fourFour.ready) break;
-                                context.drawImage(_imageCache.fourFour, -radius, -radius * 1.5, radius * 2, radius * 3);
+                                if (!imageCache.fourFour || !imageCache.fourFour.ready) break;
+                                context.drawImage(imageCache.fourFour, -radius, -radius * 1.5, radius * 2, radius * 3);
                                 break;
                             case 10012:
-                                if (!_imageCache.emp_hue || !_imageCache.emp_hue.ready) break;
-                                context.drawImage(_imageCache.emp_hue, -radius * 2, -radius * 2, radius * 4, radius * 4);
+                                if (!imageCache.emp_hue || !imageCache.emp_hue.ready) break;
+                                context.drawImage(imageCache.emp_hue, -radius * 2, -radius * 2, radius * 4, radius * 4);
                                 break;
                             case 10013:
-                                if (!_imageCache.par_hue || !_imageCache.par_hue.ready) break;
-                                context.drawImage(_imageCache.par_hue, -radius * 2, -radius * 2, radius * 4, radius * 4);
+                                if (!imageCache.par_hue || !imageCache.par_hue.ready) break;
+                                context.drawImage(imageCache.par_hue, -radius * 2, -radius * 2, radius * 4, radius * 4);
                                 break;
                             case 10014:
-                                if (!_imageCache.soccerballs || !_imageCache.soccerballs.ready) break;
-                                context.drawImage(_imageCache.soccerballs, -radius, -radius, radius * 2, radius * 2);
+                                if (!imageCache.soccerballs || !imageCache.soccerballs.ready) break;
+                                context.drawImage(imageCache.soccerballs, -radius, -radius, radius * 2, radius * 2);
                                 break;
                             case 10015:
-                                if (!_imageCache.boyKisser || !_imageCache.boyKisser.ready) break;
-                                context.drawImage(_imageCache.boyKisser, -radius * 5, -radius * 5, radius * 10, radius * 10);
+                                if (!imageCache.boyKisser || !imageCache.boyKisser.ready) break;
+                                context.drawImage(imageCache.boyKisser, -radius * 5, -radius * 5, radius * 10, radius * 10);
                                 break;
                             case 10016:
-                                if (!_imageCache.tonk || !_imageCache.tonk.ready) break;
-                                context.drawImage(_imageCache.tonk, -radius * 2, -radius * 2, radius * 4, radius * 4);
+                                if (!imageCache.tonk || !imageCache.tonk.ready) break;
+                                context.drawImage(imageCache.tonk, -radius * 2, -radius * 2, radius * 4, radius * 4);
                                 break;
                             case 10017:
                                 context.rotate(-angle);
-                                if (!_imageCache.rollfac || !_imageCache.rollfac.ready) break;
-                                context.drawImage(_imageCache.rollfac, -radius, -radius, radius * 2, radius * 2);
+                                if (!imageCache.rollfac || !imageCache.rollfac.ready) break;
+                                context.drawImage(imageCache.rollfac, -radius, -radius, radius * 2, radius * 2);
                                 break;
                             case 10018:
                                 // Make sure the image is loaded
                                 if (
-                                    !_imageCache["f150-0"] || !_imageCache["f150-0"].ready
-                                    || !_imageCache["f150-1"] || !_imageCache["f150-1"].ready
-                                    || !_imageCache["f150Flipped-0"] || !_imageCache["f150Flipped-0"].ready
-                                    || !_imageCache["f150Flipped-1"] || !_imageCache["f150Flipped-1"].ready) break;
+                                    !imageCache["f150-0"] || !imageCache["f150-0"].ready
+                                    || !imageCache["f150-1"] || !imageCache["f150-1"].ready
+                                    || !imageCache["f150Flipped-0"] || !imageCache["f150Flipped-0"].ready
+                                    || !imageCache["f150Flipped-1"] || !imageCache["f150Flipped-1"].ready) break;
 
                                 // Manage frames
                                 window.frames.f150 = window.frames.f150 ? window.frames.f150 + 1 : 1
@@ -7452,23 +4783,23 @@ const mixColors = (() => {
                                 // Draw the correct image
                                 let image
                                 if (Math.abs(angle) * (180 / Math.PI) > 90) {
-                                    image = _imageCache[`f150Flipped-${frame}`]
+                                    image = imageCache[`f150Flipped-${frame}`]
                                 } else {
-                                    image = _imageCache[`f150-${frame}`]
+                                    image = imageCache[`f150-${frame}`]
                                 }
 
                                 // profit
                                 context.drawImage(image, -radius * 1.75, -radius, radius * 3.5, radius * 2);
                                 break;
                             case 10019:
-                                if (!_imageCache.treadmarks || !_imageCache.treadmarks.ready) break;
-                                context.drawImage(_imageCache.treadmarks, -radius, -radius, radius * 2, radius * 2);
+                                if (!imageCache.treadmarks || !imageCache.treadmarks.ready) break;
+                                context.drawImage(imageCache.treadmarks, -radius, -radius, radius * 2, radius * 2);
                                 break;
                             case 10020: // This is not a mistake, leave this blank
                                 break;
                             case 10021:
-                                if (!_imageCache.seniorpentagon || !_imageCache.seniorpentagon.ready) break;
-                                context.drawImage(_imageCache.seniorpentagon, -radius, -radius, radius * 2, radius * 2);
+                                if (!imageCache.seniorpentagon || !imageCache.seniorpentagon.ready) break;
+                                context.drawImage(imageCache.seniorpentagon, -radius, -radius, radius * 2, radius * 2);
                                 break;
                         }
                         context.restore();
@@ -7962,9 +5293,6 @@ const mixColors = (() => {
                                 radiusDiv = 1;
                                 break;
                         }
-                        if(window.path2dCache.has(sides)){
-                          window.path2dCache.set(sides, path)
-                        }
                         radius /= radiusDiv;
                         context.save();
                         context.translate(centerX, centerY);
@@ -7972,7 +5300,7 @@ const mixColors = (() => {
                         context.lineWidth /= radius;
                         context.rotate(angle);
                         context.stroke(path);
-                        if (_config.glassMode) context.globalAlpha = 0.6;
+                        if (config.glassMode) context.globalAlpha = 0.6;
                         if (fill) context.fill(path);
                         context.globalalpha = 1;
                         context.restore();
@@ -7981,12 +5309,12 @@ const mixColors = (() => {
             }
             context.closePath();
             context.stroke();
-            if (_config.glassMode) context.globalAlpha = 0.6;
+            if (config.glassMode) context.globalAlpha = 0.6;
             if (fill) context.fill();
             context.globalAlpha = 1;
             context.lineJoin = "round";
             /*if (instance.id === gui.playerid) {
-                _global.shapeChange = instance.shapeChange;
+                global.shapeChange = instance.shapeChange;
                 if (shapeChange[0]) {
                     for (let i = 0; i < shapeChange[1]; i++) {
                         sides += .1;
@@ -8135,10 +5463,10 @@ const mixColors = (() => {
                     rotatePoint(-0.2 - movement, 2.5, angle - Math.PI / 2, drawSize);
                     rotatePoint(-0.65 - movement, 2, angle - Math.PI / 2, drawSize);
                     rotatePoint(-0.65 - movement, 0, angle - Math.PI / 2, drawSize);
-                    context.lineJoin = _config.pointy ? "miter" : "round";
+                    context.lineJoin = config.pointy ? "miter" : "round";
                     context.closePath();
                     context.stroke();
-                    if (_config.glassMode) context.globalAlpha = 0.6;
+                    if (config.glassMode) context.globalAlpha = 0.6;
                     context.fill();
                     context.globalalpha = 1;
                     context.beginPath();
@@ -8148,45 +5476,12 @@ const mixColors = (() => {
                     rotatePoint(0.65 + movement, 0, angle - Math.PI / 2, drawSize);
                     break;
             }
-            context.lineJoin = _config.pointy ? "miter" : "round";
+            context.lineJoin = config.pointy ? "miter" : "round";
             context.closePath();
             context.stroke();
-            if (_config.glassMode) context.globalAlpha = 0.6;
+            if (config.glassMode) context.globalAlpha = 0.6;
             context.fill();
-            context.globalalpha = 1;
-
-          
-          // PARTY TIME
-          if(window.partyTime && genedGunId !== false && Math.round(movement*100)>0){
-                if(window.partyParticles === undefined) window.partyParticles = {};
-                if(window.partyParticles[genedGunId] === undefined) window.partyParticles[genedGunId] = []
-                let offset = Math.random()*height- height/2
-                let particle = {
-                    x: length * Math.cos(angle) + staticX + (offset * Math.cos(angle + Math.PI / 2)),
-                    y: length * Math.sin(angle) + staticY + (offset * Math.sin(angle + Math.PI / 2)),
-                    angle: angle + (Math.random() * 1 - (1/2)),
-                    speed: (Math.random() * 10),
-                    color: `rgba(${Math.random()*255},${Math.random()*255},${Math.random()*255},.5)`,
-                    lifetime: 30,
-                }
-                particle.update = function(index){
-                    if(particle.lifetime <= 0){
-                        window.partyParticles[genedGunId].splice(index, 1)
-                    }
-                    particle.x += particle.speed * Math.cos(particle.angle);
-                    particle.y += particle.speed * Math.sin(particle.angle);
-                    particle.lifetime -= 1; 
-                    ctx.fillStyle = particle.color
-                    let size = 6 * (particle.lifetime/30/*default lifespan*/) + 2
-                    ctx.fillRect(particle.x, y+particle.y, size, size);
-                }
-                window.partyParticles[genedGunId].push(particle)
-            }
-            if(window.partyParticles?.[genedGunId]){
-                for(let i = 0; i < window.partyParticles[genedGunId].length; i++){
-                     window.partyParticles[genedGunId][i].update(i)
-                }
-            }          
+            context.globalalpha = 1;         
         }
 
         function handleAnimation(animInfo) {
@@ -8397,7 +5692,7 @@ const mixColors = (() => {
                 if (!p.fill) context.lineWidth /= 2
                 if (!p.isAura) context.stroke();
                 if (!p.fill) context.lineWidth *= 2;
-                if (_config.glassMode) context.globalAlpha = 0.6;
+                if (config.glassMode) context.globalAlpha = 0.6;
                 if (p.color >= 1000){
                   ctx.save()
                   ctx.clip();
@@ -8427,18 +5722,18 @@ const mixColors = (() => {
                 source = turretInfo === 0 ? instance : turretInfo,
                 shadowRelativeColor = false;
             if (fade === 0 || alpha === 0) return;
-            if (_config.deathExpandRatio > 0) {
-                drawSize *= (1 + 0.5 * (1 - fade) * _config.deathExpandRatio);
+            if (config.deathExpandRatio > 0) {
+                drawSize *= (1 + 0.5 * (1 - fade) * config.deathExpandRatio);
             } //drawSize *= 1 + (render.expandsWithDeath ? .5 : .2) * (1 - death);
-            if (_config.fancyAnimations && assignedContext !== ctx2 && ((alpha < 1 && alpha > 0) || (fade < 1 && fade > 0))) {
+            if (config.fancyAnimations && assignedContext !== ctx2 && ((alpha < 1 && alpha > 0) || (fade < 1 && fade > 0))) {
                 context = ctx2;
                 context.canvas.width = Math.max(context.canvas.height = drawSize * m.position.axis + ratio * 7.5 * instance.size, 1); //20,100
                 xx = context.canvas.width / 2 - drawSize * 2 * m.position.axis * m.position.middle.x * Math.cos(rot) / 4;
                 yy = context.canvas.height / 2 - drawSize * 2 * m.position.axis * m.position.middle.x * Math.sin(rot) / 4;
             } else if (.1 >= alpha * fade) return;
             context.lineCap = "round";
-            context.lineJoin = _config.pointy ? "miter" : "round";
-            if (render.real) switch (_config.shaders) {
+            context.lineJoin = config.pointy ? "miter" : "round";
+            if (render.real) switch (config.shaders) {
                 case "Disabled":
                     context.shadowBlur = false;
                     context.shadowColor = false;
@@ -8517,7 +5812,7 @@ const mixColors = (() => {
                 finalColor = mixColors(getColor(instance.color), renderColor, renderBlend),
                 invulnTicker = instance.invuln && (Date.now() - instance.invuln) % 200 > 110;
             if (invulnTicker) finalColor = mixColors(finalColor, color.vlgrey, .5);
-            context.lineWidth = Math.max(turretsObeyRot ? 0 : _config.mininumBorderChunk, ratio * _config.borderChunk);
+            context.lineWidth = Math.max(turretsObeyRot ? 0 : config.mininumBorderChunk, ratio * config.borderChunk);
             if (m.props.length) {
                 for (let i = 0; i < m.props.length; i++) {
                     let origM = JSON.parse(JSON.stringify(m))
@@ -8602,7 +5897,6 @@ const mixColors = (() => {
                         xx + drawSize * (g.offset * Math.cos(g.direction + (g.angle || 0) + rot) * Math.cos((g.angle || 0) + rot)),
                         yy + drawSize * (g.offset * Math.sin(g.direction + (g.angle || 0) + rot) * Math.sin((g.angle || 0) + rot)),
                         position,
-                        (window.partyTime && instance.id!==undefined)?`${instance.id}-${i}`:false
                     );
                 }
             } else {
@@ -8725,22 +6019,22 @@ const mixColors = (() => {
                 let yy = y + 1.1 * realSize + 22;
                 ctx.globalAlpha = alpha * alpha * fade;
                 size *= 1.1;
-                let mixc = _config.coloredHealthBars ? mixColors(getColor(instance.color), color.guiwhite, .5) : _config.tintedHealth ? mixColors(color.lgreen, color.red, 1 - health) : color.lgreen;
-                if (_config.shieldbars) {
-                    drawBar(x - size, x + size, yy, 6 + _config.barChunk, color.black);
+                let mixc = config.coloredHealthBars ? mixColors(getColor(instance.color), color.guiwhite, .5) : config.tintedHealth ? mixColors(color.lgreen, color.red, 1 - health) : color.lgreen;
+                if (config.shieldbars) {
+                    drawBar(x - size, x + size, yy, 6 + config.barChunk, color.black);
                     if (shield) {
                         if (health > 0.01) drawBar(x - size, x - size + 2 * size * health, yy + 1.5, 3, mixc);
                         ctx.globalAlpha *= 0.7;
-                        if (shield > 0.01) drawBar(x - size, x - size + 2 * size * shield, yy - 1.5, 3, _config.coloredHealthBars ? mixColors(getColor(instance.color), color.guiwhite, .8) : color.teal);
+                        if (shield > 0.01) drawBar(x - size, x - size + 2 * size * shield, yy - 1.5, 3, config.coloredHealthBars ? mixColors(getColor(instance.color), color.guiwhite, .8) : color.teal);
                     } else {
                         if (health > 0.01) drawBar(x - size, x - size + 2 * size * health, yy, 4, mixc);
                     }
                 } else {
-                    drawBar(x - size, x + size, yy, 3 + _config.barChunk, color.black);
+                    drawBar(x - size, x + size, yy, 3 + config.barChunk, color.black);
                     if (health > 0.01) drawBar(x - size, x - size + 2 * size * health, yy, 3, mixc);
                     if (shield) {
                         ctx.globalAlpha = (0.3 + shield * .3) * alpha * alpha * fade;
-                        if (shield > 0.01) drawBar(x - size, x - size + 2 * size * shield, yy, 3, _config.coloredHealthBars ? mixColors(getColor(instance.color), color.guiwhite, .8) : color.teal);
+                        if (shield > 0.01) drawBar(x - size, x - size + 2 * size * shield, yy, 3, config.coloredHealthBars ? mixColors(getColor(instance.color), color.guiwhite, .8) : color.teal);
                         ctx.globalAlpha = 1;
                     }
                 }
@@ -8757,26 +6051,14 @@ const mixColors = (() => {
                 drawBar(x - size, x - size + 2 * size * health, yy, 3, color.lgreen);
             }*/
         }
-        if (instance.id !== _gui._playerid || _config.drawOwnName) {
+        if (instance.id !== _gui._playerid || config.drawOwnName) {
             if (instance.nameplate) {
                 let fill = instance.nameColor;
                 let nameRatio = (ratio * instance.size) / 20;
                 let imageRatio = 1;
                 let stroke = undefined;
                 let font = undefined;
-                let badge = false;
                 ctx.globalAlpha = alpha;
-                // Fancy Name Colors
-                /*if (instance.nameColor.charAt(0) === "!") {
-                    let [fill, stroke, font, size, badge] = util.getSpecialNameInfoById(Number(instance.nameColor.substring(1)));
-                    drawText(instance.name, x, y - realSize - 30 * nameRatio, 16 * nameRatio, fill, "center");
-                    //drawText(instance.name, x, y - realSize - 34 * (si, 30 * size, fill, "center", false, 1, stroke, ctx, font);
-                    //drawText(util.handleLargeNumber(instance.score, 1), x, y - realSize - 16, 8 * size, mixColors(fill, "#000000", 0.1), "center", false, 1, stroke, ctx, font);
-                    if (badge && imageCache[badge] && imageCache[badge].ready) {
-                        //ctx.drawImage(imageCache[badge], );
-                    }
-                    ctx.globalAlpha = 1;
-                };*/
                 drawText(instance.score > 0 ? _util._handleLargeNumber(instance.score) : "", x, y - realSize - 16 * nameRatio, 8 * nameRatio, "#E4EBE7", "center", false, 1, stroke, ctx, font);
                 switch (fill.charAt(0)) {
                     case "!":
@@ -8785,7 +6067,6 @@ const mixColors = (() => {
                         stroke = data[1];
                         font = data[2];
                         imageRatio = data[3];
-                        badge = data[4];
                         break;
                 }
 
@@ -8810,10 +6091,6 @@ const mixColors = (() => {
                 } else {
                     drawText(instance.name, x, y - realSize - 30 * nameRatio, 16 * nameRatio, fill, "center", false, 1, stroke, ctx, font);
                 };
-                if (badge && _imageCache[badge] && _imageCache[badge].ready) {
-                    let size = 18 * nameRatio * imageRatio;
-                    ctx.drawImage(_imageCache[badge], x - size * 1.1 - measureText(instance.name, 16 * nameRatio, false, font) / 2, y - realSize - 30 * nameRatio - size * 0.75, size, size);
-                }
                 ctx.globalAlpha = 1;
             }
         } // else player.nameColor = instance.nameColor;
@@ -8831,7 +6108,7 @@ const mixColors = (() => {
             let font = undefined;
             ctx.globalAlpha = alpha;
             let offset = 1;
-            if (instance.id === _gui._playerid && !_config.drawOwnName) {
+            if (instance.id === _gui._playerid && !config.drawOwnName) {
                 nameplateOffset = 0
             }
             let padding = 5
@@ -8845,7 +6122,7 @@ const mixColors = (() => {
 
                 ctx.globalAlpha = 0.5;
                 let fill = msg.color === "rainbow"
-                    ? _util._HSL2COLOR((Date.now() % 2520) / 7, 100, 50)
+                    ? hslToColor((Date.now() % 2520) / 7, 100, 50)
                     : msg.color;
                 let barY = ((-height-vspacing)*offset + nameplateOffset + vspacing)
                 drawBar(x - msg.len / 2, x + msg.len / 2, barY, height, fill);
@@ -8878,103 +6155,8 @@ const mixColors = (() => {
             upgradeMenu = Smoothbar(0, 0.25),
             statBars = [Smoothbar(0, upgradeBarSpeed), Smoothbar(0, upgradeBarSpeed), Smoothbar(0, upgradeBarSpeed), Smoothbar(0, upgradeBarSpeed), Smoothbar(0, upgradeBarSpeed), Smoothbar(0, upgradeBarSpeed), Smoothbar(0, upgradeBarSpeed), Smoothbar(0, upgradeBarSpeed), Smoothbar(0, upgradeBarSpeed), Smoothbar(0, upgradeBarSpeed), Smoothbar(0, upgradeBarSpeed)]
 
-        function graph() {
-            let data = [];
-            return function (point, x, y, w, h, col) {
-                data.push(point);
-                while (data.length > w) data.splice(0, 1);
-                let min = Math.min.apply(Math, data),
-                    max = Math.max.apply(Math, data),
-                    range = max - min;
-                if (max > 0 && min < 0) drawBar(x, x + w, y + h * max / range, 2, color.guiwhite);
-                ctx.beginPath();
-                let i = -1;
-                for (let j = 0; j < data.length; j++) {
-                    let p = data[j];
-                    if (!++i) ctx.moveTo(x, y + h * (max - p) / range);
-                    else ctx.lineTo(x + i, y + h * (max - p) / range);
-                }
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = col;
-                ctx.stroke();
-            };
-        }
         let compensation = function () {
-            function interpolate(p1, p2, v1, v2, ts, tt) {
-                let k = Math.cos((1 + tt) * Math.PI);
-                return 0.5 * (((1 + tt) * v1 + p1) * (k + 1) + (-tt * v2 + p2) * (1 - k));
-            }
-
-            function extrapolate(p1, p2, v1, v2, ts, tt) {
-                return p2 + (p2 - p1) * tt;
-                //return v2 + 0.5 * tt * (v2 - v1) * ts;
-            }
-
-            function angleDifference(targetA, sourceA) {
-                let mod = function (a, n) {
-                    return (a % n + n) % n;
-                },
-                    a = targetA - sourceA;
-                return mod(a + Math.PI, 2 * Math.PI) - Math.PI;
-            }
-            const prediction = {
-                /*old: function (time, interval) {
-                    if (time == null) time = player.time;
-                    if (interval == null) interval = metrics.rendergap;
-                    let t = 0,
-                        tt = 0,
-                        ts = 0;
-                    t = Math.max(getNow() - time - 80, -interval);
-                    if (t > 150) t = 150;
-                    tt = t / interval;
-                    ts = config.roomSpeed * 30 * t / 1000;
-                    return {
-                        predict: function (p1, p2, v1, v2) {
-                            return (t >= 0) ? extrapolate(p1, p2, v1, v2, ts, tt) : interpolate(p1, p2, v1, v2, ts, tt);
-                        },
-                        predictExtrapolate: function (p1, p2, v1, v2) {
-                            return (t >= 0) ? extrapolate(p1, p2, v1, v2, ts, tt) : interpolate(p1, p2, v1, v2, ts, tt);
-                        },
-                        predictFacing: function (f1, f2) {
-                            return f1 + (1 + tt) * angleDifference(f2, f1);
-                        },
-                        predictFacingExtrapolate: function (f1, f2) {
-                            return f1 + (1 + tt) * angleDifference(f2, f1);
-                        },
-                        getPrediction: function () {
-                            return t;
-                        },
-                        lerp: lerp,
-                        lerpAngle: lerpAngle
-                    };
-                },
-                new: function (time, interval) {
-                    if (time == null) time = false;
-                    if (interval == null) interval = metrics.rendergap;
-                    let sinceLastUpdate = time === false ? getRelative() - metrics.lastuplink : getNow() - time;
-                    interval = Math.max(interval, 1000 / config.roomSpeed / 30);
-                    let frameProgress = sinceLastUpdate / interval;
-                    return {
-                        predict: function (p1, p2, v1, v2) {
-                            return frameProgress >= 1 ? p2 : p1 + (p2 - p1) * frameProgress;
-                        },
-                        predictExtrapolate: function (p1, p2, v1, v2) {
-                            return p1 + (p2 - p1) * frameProgress;
-                        },
-                        predictFacing: function (f1, f2) {
-                            return frameProgress >= 1 ? f2 : f1 + angleDifference(f2, f1) * frameProgress;
-                        },
-                        predictFacingExtrapolate: function (f1, f2) {
-                            return f1 + angleDifference(f2, f1) * frameProgress;
-                        },
-                        getPrediction: function () {
-                            return frameProgress;
-                        },
-                        lerp: lerp,
-                        lerpAngle: lerpAngle
-                    };
-                },*/
-                smooth: function () {
+            return function () {
                     let strength = metrics._rendergap / (1000 / 30);
                     return {
                         predict: (p1, p2, v1, v2) => lerp(p1 + v1, p2 + v2, .075, 1),
@@ -8982,37 +6164,20 @@ const mixColors = (() => {
                         predictExtrapolate: (p1, p2, v1, v2) => lerp(p1 + v1, p2 + v2, .075, 1),
                         predictFacingExtrapolate: (a1, a2) => lerpAngle(a1, a2, .12, 1),
                         getPrediction: () => strength
-                    }
-                }
-            }
-            return function (time, interval) {
-                switch (_config.prediction) {
-                    case 0:
-                        return prediction.old(time, interval);
-                    case 1:
-                        return prediction.new(time, interval);
-                    case 3:
-                    default:
-                        return prediction.smooth();
                 }
             };
         }();
-        let timingGraph = graph(),
-            lagGraph = graph(),
-            gapGraph = graph(),
-            bullshitGraph = graph(),
-            ska = function () {
-                function make(x) {
-                    return Math.log(4 * x + 1) / Math.log(5);
-                }
-                let a = [];
-                for (let i = 0; i < _config.expectedMaxSkillLevel * 2; i++) a.push(make(i / _config.expectedMaxSkillLevel));
-                return function (x) {
-                    return a[x];
-                };
-            }(),
-            lastRender = null;
 
+        let ska = function () {
+            function make(x) {
+                return Math.log(4 * x + 1) / Math.log(5);
+            }
+            let a = [];
+            for (let i = 0; i < config.expectedMaxSkillLevel * 2; i++) a.push(make(i / config.expectedMaxSkillLevel));
+            return function (x) {
+                return a[x];
+            };
+        }();
         function drawMobileButton(i, x, y, w, h, text) {
             ctx.save();
             ctx.globalAlpha = 1;
@@ -9028,18 +6193,14 @@ const mixColors = (() => {
             ctx.strokeRect(0, 0, w, h);
             ctx.globalAlpha = 1;
             drawText(text, w / 2, h / 2, 14, color.guiwhite, "center", true);
-            _global.clickables.mobileClicks.place(i, x, y, w, h);
+            global.clickables.mobileClicks.place(i, x, y, w, h);
             ctx.restore();
         }
         return function (ratio) {
-            let now = Date.now();
-            lastRender = now;
-            let GRAPHDATA = 0;
             renderTimes++;
             let px,
                 py; {
                 let motion = compensation();
-                GRAPHDATA = motion.getPrediction();
                 //if (config.prediction === 2) {
                 _player._renderx = motion.predict(_player._renderx, _player._cx, 0, 0);
                 _player._rendery = motion.predict(_player._rendery, _player._cy, 0, 0);
@@ -9050,11 +6211,11 @@ const mixColors = (() => {
                 px = ratio * _player._renderx;
                 py = ratio * _player._rendery;
             } {
-                ctx.clearRect(0, 0, _global._screenWidth, _global._screenHeight);
+                ctx.clearRect(0, 0, global._screenWidth, global._screenHeight);
                 _clearScreen(mixColors(color.white, color.guiblack, 0.15), 1);
                 ctx.globalAlpha = 1;
                 const TAU = Math.PI * 2;
-                if (_global._mapType !== 1) {
+                if (global._mapType !== 1) {
                     let W = roomSetup[0].length,
                         H = roomSetup.length,
                         i = 0;
@@ -9064,10 +6225,10 @@ const mixColors = (() => {
                             k = 0;
                         for (let l = 0; l < row.length; l++) {
                             let cell = row[l],
-                                left = Math.max(0, ratio * k * _global._gameWidth / W - px + _global._screenWidth / 2),
-                                top = Math.max(0, ratio * i * _global._gameHeight / H - py + _global._screenHeight / 2),
-                                right = Math.min(_global._screenWidth, ratio * (k + 1) * _global._gameWidth / W - px + _global._screenWidth / 2),
-                                bottom = Math.min(_global._screenHeight, ratio * (i + 1) * _global._gameHeight / H - py + _global._screenHeight / 2);
+                                left = Math.max(0, ratio * k * global._gameWidth / W - px + global._screenWidth / 2),
+                                top = Math.max(0, ratio * i * global._gameHeight / H - py + global._screenHeight / 2),
+                                right = Math.min(global._screenWidth, ratio * (k + 1) * global._gameWidth / W - px + global._screenWidth / 2),
+                                bottom = Math.min(global._screenHeight, ratio * (i + 1) * global._gameHeight / H - py + global._screenHeight / 2);
                             k++;
                             if (cell === "edge") continue;
                             ctx.fillStyle = mixColors(color.white, getZoneColor(cell, 1), 0.3, 0);
@@ -9075,10 +6236,10 @@ const mixColors = (() => {
                         }
                         i++;
                     }
-                } else if (_global._mapType === 1) {
-                    const xx = -px + _global._screenWidth / 2 + ratio * _global._gameWidth / 2;
-                    const yy = -py + _global._screenHeight / 2 + ratio * _global._gameHeight / 2;
-                    const radius = ratio * _global._gameWidth / 2;
+                } else if (global._mapType === 1) {
+                    const xx = -px + global._screenWidth / 2 + ratio * global._gameWidth / 2;
+                    const yy = -py + global._screenHeight / 2 + ratio * global._gameHeight / 2;
+                    const radius = ratio * global._gameWidth / 2;
                     ctx.fillStyle = color.white;
                     ctx.globalAlpha = 1;
                     ctx.beginPath();
@@ -9089,55 +6250,55 @@ const mixColors = (() => {
                 ctx.lineWidth = 1;
                 ctx.strokeStyle = color.guiblack;
                 ctx.globalAlpha = 0.05;
-                let gridsize = 30 * ratio;//(Math.min(_global._gameWidth, _global._gameHeight) / roomSetup.length / 14 * ratio);
-                for (let x = (_global._screenWidth / 2 - px) % gridsize; x < _global._screenWidth; x += gridsize) {
+                let gridsize = 30 * ratio;//(Math.min(global._gameWidth, global._gameHeight) / roomSetup.length / 14 * ratio);
+                for (let x = (global._screenWidth / 2 - px) % gridsize; x < global._screenWidth; x += gridsize) {
                     ctx.beginPath();
                     ctx.moveTo(x, 0);
-                    ctx.lineTo(x, _global._screenHeight | 0);
+                    ctx.lineTo(x, global._screenHeight | 0);
                     ctx.stroke();
                 }
 
 
-                for (let y = (_global._screenHeight / 2 - py) % gridsize; y < _global._screenHeight; y += gridsize) {
+                for (let y = (global._screenHeight / 2 - py) % gridsize; y < global._screenHeight; y += gridsize) {
                     ctx.beginPath();
                     ctx.moveTo(0, y);
-                    ctx.lineTo(_global._screenWidth, y);
+                    ctx.lineTo(global._screenWidth, y);
                     ctx.stroke();
                 };
                 /*ctx.beginPath();
                 let gridsize =  * ratio;
-                for (let x = (_global.screenWidth / 2 - px) % gridsize; x < _global.screenWidth; x += gridsize) {
+                for (let x = (global.screenWidth / 2 - px) % gridsize; x < global.screenWidth; x += gridsize) {
                     ctx.moveTo(x, 0);
-                    ctx.lineTo(x, _global.screenHeight);
+                    ctx.lineTo(x, global.screenHeight);
                 }
-                for (let y = (_global.screenHeight / 2 - py) % gridsize; y < _global.screenHeight; y += gridsize) {
+                for (let y = (global.screenHeight / 2 - py) % gridsize; y < global.screenHeight; y += gridsize) {
                     ctx.moveTo(0, y);
-                    ctx.lineTo(_global.screenWidth, y);
+                    ctx.lineTo(global.screenWidth, y);
                 }
                 ctx.stroke();*/
                 ctx.globalAlpha = 1;
 
                 ctx.fillStyle = color.red;
                 //ctx.beginPath();
-                // ratio * k * _global.gameWidth / W - px + _global.screenWidth / 2
-                //ctx.arc(ratio * _global.gameWidth / 2 - px + _global.screenWidth / 2, ratio * _global.gameHeight / 2 - py + _global.screenHeight / 2, 50 * ratio, 0, Math.PI * 2);
+                // ratio * k * global.gameWidth / W - px + global.screenWidth / 2
+                //ctx.arc(ratio * global.gameWidth / 2 - px + global.screenWidth / 2, ratio * global.gameHeight / 2 - py + global.screenHeight / 2, 50 * ratio, 0, Math.PI * 2);
                 //ctx.fill();
 
             } {
                 let frameplate = [];
-                ctx.translate(_global._screenWidth / 2, _global._screenHeight / 2);
+                ctx.translate(global._screenWidth / 2, global._screenHeight / 2);
                 for (let i = 0; i < entities.length; i++) {
                     let instance = entities[i];
                     if (!instance.render.draws) continue;
                     let motion = compensation();
                     //if (config.prediction === 2) {
                     let isMe = instance.id === _gui._playerid;
-                    if (_config.localmotion && isMe) {
-                        _global._localmotion.rx = lerp(_global._localmotion.rx, _global._localmotion.x * Math.abs(instance.vx) * 1.2, 0.025, true);
-                        _global._localmotion.ry = lerp(_global._localmotion.ry, _global._localmotion.y * Math.abs(instance.vy) * 1.2, 0.025, true);
+                    if (config.localmotion && isMe) {
+                        global._localmotion.rx = lerp(global._localmotion.rx, global._localmotion.x * Math.abs(instance.vx) * 1.2, 0.025, true);
+                        global._localmotion.ry = lerp(global._localmotion.ry, global._localmotion.y * Math.abs(instance.vy) * 1.2, 0.025, true);
 
-                        instance.render.x = motion.predict(instance.render.x, Math.round(instance.x + instance.vx) + _global._localmotion.rx, 0, 0);
-                        instance.render.y = motion.predict(instance.render.y, Math.round(instance.y + instance.vy) + _global._localmotion.ry, 0, 0);
+                        instance.render.x = motion.predict(instance.render.x, Math.round(instance.x + instance.vx) + global._localmotion.rx, 0, 0);
+                        instance.render.y = motion.predict(instance.render.y, Math.round(instance.y + instance.vy) + global._localmotion.ry, 0, 0);
                     } else {
                         instance.render.x = motion.predict(instance.render.x, Math.round(instance.x + instance.vx), 0, 0);
                         instance.render.y = motion.predict(instance.render.y, Math.round(instance.y + instance.vy), 0, 0);
@@ -9159,11 +6320,11 @@ const mixColors = (() => {
                     if (isMe) {
                         _player._x = x;
                         _player.y = y;
-                        _player._rendershiftx = _global.controllingSquadron ? 0 : x;
-                        _player._rendershifty = _global.controllingSquadron ? 0 : y;
+                        _player._rendershiftx = global.controllingSquadron ? 0 : x;
+                        _player._rendershifty = global.controllingSquadron ? 0 : y;
                         _player.team = instance.team;
                         // Ok                        // Set facing
-                        instance.render.f = (!instance.twiggle && !_global._died && !_global._forceTwiggle) ? Math.atan2(_global._target._y - y, _global._target._x - x) : motion.predictFacing(instance.render.f, instance.facing);
+                        instance.render.f = (!instance.twiggle && !global._died && !global._forceTwiggle) ? Math.atan2(global._target._y - y, global._target._x - x) : motion.predictFacing(instance.render.f, instance.facing);
                         // Save information about the player
                         _player._nameColor = instance.nameColor
                         //console.log(mockups[instance.index])
@@ -9176,14 +6337,14 @@ const mixColors = (() => {
                     };
 
                     ctx.globalAlpha = 1;
-                    instance.render.size = _config.lerpSize ? lerp(instance.render.size, instance.size, 0.2) : instance.size;
+                    instance.render.size = config.lerpSize ? lerp(instance.render.size, instance.size, 0.2) : instance.size;
                     // Empty bars
                     if (instance.render.status.getFade() !== 1) {
                         instance.render.health.set(0);
                         instance.render.shield.set(0);
                     }
                     drawEntity(x, y, instance, ratio, _player._canSeeInvisible ? instance.alpha + .5 : instance.alpha, 1.1, instance.render.f);
-                    if ((instance.nameplate || instance.drawsHealth) && !_config.screenshotMode) frameplate.push([x, y, instance, ratio, _player._canSeeInvisible ? instance.alpha + .5 : instance.alpha]);
+                    if ((instance.nameplate || instance.drawsHealth) && !config.screenshotMode) frameplate.push([x, y, instance, ratio, _player._canSeeInvisible ? instance.alpha + .5 : instance.alpha]);
                     ctx.globalAlpha = 1;
                 };
                 ctx.shadowBlur = 0;
@@ -9193,11 +6354,11 @@ const mixColors = (() => {
                     drawHealth(...frameplate[i]);
                     ctx.globalAlpha = 1;
                 };
-                if(_global._blackout){
+                if(global._blackout){
                   //overlay
                   const darknessCanvas = document.createElement('canvas');
-                  darknessCanvas.width = _global._screenWidth;
-                  darknessCanvas.height = _global._screenWidth;
+                  darknessCanvas.width = global._screenWidth;
+                  darknessCanvas.height = global._screenWidth;
                   const darknessCtx = darknessCanvas.getContext('2d');
                   if(_player._canSeeInvisible){
                     darknessCtx.globalAlpha = .9
@@ -9206,7 +6367,7 @@ const mixColors = (() => {
                   darknessCtx.fillRect(0, 0, darknessCanvas.width, darknessCanvas.height);
                   darknessCtx.globalAlpha = 1;
                   darknessCtx.globalCompositeOperation = "destination-out";
-                  darknessCtx.translate(_global._screenWidth / 2, _global._screenHeight / 2);
+                  darknessCtx.translate(global._screenWidth / 2, global._screenHeight / 2);
                   for(let i = 0; i < entities.length; i++){
                     let instance = entities[i],
                     x = ratio * instance.render.x - px,
@@ -9245,7 +6406,7 @@ const mixColors = (() => {
                     darknessCtx.fill();
                     
                     // if player scoping
-                    if(instance.id === _gui._playerid && _global.isScoping){
+                    if(instance.id === _gui._playerid && global.isScoping){
                       x = 0
                       y = 0
                       gradient = darknessCtx.createRadialGradient(
@@ -9260,96 +6421,96 @@ const mixColors = (() => {
                       darknessCtx.fill();
                     }
                   }
-                  ctx.translate(_global._screenWidth / -2, _global._screenHeight / -2);
+                  ctx.translate(global._screenWidth / -2, global._screenHeight / -2);
                   ctx.globalAlpha = 1;
                   ctx.drawImage(darknessCanvas, 0, 0);
-                  ctx.translate(_global._screenWidth / 2, _global._screenHeight / 2);
+                  ctx.translate(global._screenWidth / 2, global._screenHeight / 2);
                   darknessCanvas.remove()
                 }
             }
-            ctx.translate(_global._screenWidth / -2, _global._screenHeight / -2);
+            ctx.translate(global._screenWidth / -2, global._screenHeight / -2);
             ratio = _util._getScreenRatio();
             let scaleScreenRatio = (by, unset) => {
-                _global._screenWidth /= by;
-                _global._screenHeight /= by;
+                global._screenWidth /= by;
+                global._screenHeight /= by;
                 ctx.scale(by, by);
                 if (!unset) ratio *= by;
             };
             scaleScreenRatio(ratio, true);
             // Draw GUI
             let t = {
-                x: _global._target._x + _global._screenWidth / 2,
-                y: _global._target._y + _global._screenHeight / 2
+                x: global._target._x + global._screenWidth / 2,
+                y: global._target._y + global._screenHeight / 2
             };
-            let alcoveSize = 200 / ratio; // / drawRatio * _global.screenWidth;
+            let alcoveSize = 200 / ratio; // / drawRatio * global.screenWidth;
             let spacing = 20;
 
-            if (!_config.screenshotMode) {
+            if (!config.screenshotMode) {
                 {
                     do {
-                        _global.clickables.tree.hide();
-                        if (!_global._showTree) break;
+                        global.clickables.tree.hide();
+                        if (!global._showTree) break;
                         let doAfter = () => {
                             let spacing = 10;
                             let x = 20;
                             let y = 60;
                             let length = 180;
                             let height = 50;
-                            let colorIndex = _global._tankMenuColor;
+                            let colorIndex = global._tankMenuColor;
 
-                            _global.clickables.tree.place(0, x, y, length, height);
+                            global.clickables.tree.place(0, x, y, length, height);
                             ctx.globalAlpha = .5;
                             ctx.fillStyle = getColor(colorIndex > 185 ? colorIndex - 85 : colorIndex);
-                            _config.roundUpgrades ? drawGuiRoundRect(x, y, length, height, 10) : drawGuiRect(x, y, length, height);
+                            config.roundUpgrades ? drawGuiRoundRect(x, y, length, height, 10) : drawGuiRect(x, y, length, height);
                             ctx.globalAlpha = .175;
                             ctx.fillStyle = getColor(-10 + (colorIndex++ - (colorIndex > 185 ? 85 : 0)));
-                            _config.roundUpgrades ? drawGuiRoundRect(x, y, length, .6 * height, 4) : drawGuiRect(x, y, length, .6 * height);
+                            config.roundUpgrades ? drawGuiRoundRect(x, y, length, .6 * height, 4) : drawGuiRect(x, y, length, .6 * height);
                             ctx.fillStyle = color.black;
-                            _config.roundUpgrades ? drawGuiRoundRect(x, y + .6 * height, length, .4 * height, 4) : drawGuiRect(x, y + .6 * height, length, .4 * height);
+                            config.roundUpgrades ? drawGuiRoundRect(x, y + .6 * height, length, .4 * height, 4) : drawGuiRect(x, y + .6 * height, length, .4 * height);
                             ctx.strokeStyle = color.black;
                             ctx.globalAlpha = 1;
                             ctx.lineWidth = 3;
                             drawGuiRect(x, y, length, height, true);
-                            if (!_global._died && !_global._disconnected) {
-                                if (_global.guiMouse.x > x && _global.guiMouse.x < x + length && _global.guiMouse.y > y && _global.guiMouse.y < y + height) {
+                            if (!global._died && !global._disconnected) {
+                                if (global.guiMouse.x > x && global.guiMouse.x < x + length && global.guiMouse.y > y && global.guiMouse.y < y + height) {
                                     ctx.globalAlpha = .2;
-                                    _config.roundUpgrades ? drawGuiRoundRect(x, y, length, height, 10) : drawGuiRect(x, y, length, height);
+                                    config.roundUpgrades ? drawGuiRoundRect(x, y, length, height, 10) : drawGuiRect(x, y, length, height);
                                 }
                             };
                             ctx.globalAlpha = 1;
                             drawText("Random Tank", x + length * 0.5, y + height * 0.5, height * 0.45, color.guiwhite, 'center', true);
                         };
-                        if (_global._died) {
-                            _global._showTree = false;
-                            _global._scrollX = 0;
+                        if (global._died) {
+                            global._showTree = false;
+                            global._scrollX = 0;
                         };
-                        let validint = v => Math.max(0, Math.min(_global._screenWidth, v));
+                        let validint = v => Math.max(0, Math.min(global._screenWidth, v));
                         // This is a seperate bar because bounds and movement need to be the same
                         let lerpspeed = 0.15;
-                        _global._realScrollX = lerp(_global._realScrollX, Math.max(0, Math.min(1, _global._scrollX)), lerpspeed);
+                        global._realScrollX = lerp(global._realScrollX, Math.max(0, Math.min(1, global._scrollX)), lerpspeed);
                         // Bounds
-                        if (_global._scrollX < 0) _global._scrollX = 0;
-                        if (_global._scrollX > 1) _global._scrollX = 1;
-                        _global.doParseTree(_mockups, _global);
+                        if (global._scrollX < 0) global._scrollX = 0;
+                        if (global._scrollX > 1) global._scrollX = 1;
+                        global.doParseTree(_mockups, global);
                         /*ctx.strokeStyle = color.black;
                         ctx.globalAlpha = 1;
                         ctx.lineWidth = 4;
-                        drawGuiRect(_global.screenWidth / 2 - 275, 5, 550, 550, true);
+                        drawGuiRect(global.screenWidth / 2 - 275, 5, 550, 550, true);
                         ctx.globalAlpha = .5;
                         ctx.fillStyle = color.lgrey;
-                        drawGuiRect(_global.screenWidth / 2 - 275, 5, 550, 550);*/
+                        drawGuiRect(global.screenWidth / 2 - 275, 5, 550, 550);*/
                         ctx.globalAlpha = 1;
-                        let [tiles, branches, full] = _global.parsedTreeData;
-                        let tileDiv = 0.8, //_global.searchName === "Basic" ? 1.25 : 1.25,
+                        let [tiles, branches, full] = global.parsedTreeData;
+                        let tileDiv = 0.8, //global.searchName === "Basic" ? 1.25 : 1.25,
                             tileSize = alcoveSize / 5 / tileDiv,
                             size = tileSize - 4;
                         ctx.globalAlpha = 1;
                         for (let [start, end] of branches) {
-                            let sx = _global._screenWidth / 2 + (start.x - full.width * _global._realScrollX) * tileSize + 1 + .5 * size,
-                                ex = _global._screenWidth / 2 + (end.x - full.width * _global._realScrollX) * tileSize + 1 + .5 * size;
-                            if ((sx > 0 && ex < _global._screenWidth) || (sx < _global._screenWidth && ex > _global._screenWidth) || (sx < 0 && ex < _global._screenWidth && ex > 0)) {
-                                let sy = _global._screenHeight / 2 + (start.y - full.height / 2) * tileSize + 1 + .5 * size,
-                                    ey = _global._screenHeight / 2 + (end.y - full.height / 2) * tileSize + 1 + .5 * size;
+                            let sx = global._screenWidth / 2 + (start.x - full.width * global._realScrollX) * tileSize + 1 + .5 * size,
+                                ex = global._screenWidth / 2 + (end.x - full.width * global._realScrollX) * tileSize + 1 + .5 * size;
+                            if ((sx > 0 && ex < global._screenWidth) || (sx < global._screenWidth && ex > global._screenWidth) || (sx < 0 && ex < global._screenWidth && ex > 0)) {
+                                let sy = global._screenHeight / 2 + (start.y - full.height / 2) * tileSize + 1 + .5 * size,
+                                    ey = global._screenHeight / 2 + (end.y - full.height / 2) * tileSize + 1 + .5 * size;
                                 ctx.strokeStyle = color.black;
                                 ctx.lineWidth = 2;
                                 ctx.beginPath();
@@ -9366,12 +6527,12 @@ const mixColors = (() => {
                             index
                         }
                             of tiles) {
-                            let ax = _global._screenWidth / 2 + (x - full.width * _global._realScrollX) * tileSize,
-                                ay = _global._screenHeight / 2 + (y - full.height / 2) * tileSize + 60,
+                            let ax = global._screenWidth / 2 + (x - full.width * global._realScrollX) * tileSize,
+                                ay = global._screenHeight / 2 + (y - full.height / 2) * tileSize + 60,
                                 realSize = tileSize;
-                            //colorIndex = _global.tankMenuColor;
-                            //if (ax + realSize < 0 || ax - realSize > _global.screenWidth) continue;
-                            if (ax + realSize > 0 && ax - realSize < _global._screenWidth) {
+                            //colorIndex = global.tankMenuColor;
+                            //if (ax + realSize < 0 || ax - realSize > global.screenWidth) continue;
+                            if (ax + realSize > 0 && ax - realSize < global._screenWidth) {
                                 ctx.globalAlpha = .75;
                                 ctx.fillStyle = getColor(colorIndex > 185 ? colorIndex - 85 : colorIndex);
                                 drawGuiRect(ax, ay, realSize, realSize);
@@ -9417,9 +6578,9 @@ const mixColors = (() => {
                                         xx = t.x - scale * position.middle.x * Math.cos(angle),
                                         yy = t.y - 110 - scale * position.middle.x * Math.sin(angle);
                                     drawEntity(xx, yy, picture, 1.2, 1, scale / picture.size * 2, angle, true);
-                                    if (_global.lastPictureName !== picture.name && _global.mousedown) {
-                                        _global.mousedown = false;
-                                        _global.lastPictureName = picture.name;
+                                    if (global.lastPictureName !== picture.name && global.mousedown) {
+                                        global.mousedown = false;
+                                        global.lastPictureName = picture.name;
                                         let size = 250;
                                         ctx2.save();
                                         let og = {
@@ -9475,27 +6636,27 @@ const mixColors = (() => {
                         doAfter()
                     } while (false);
                 }
-                if (_global.mobile) scaleScreenRatio(ratio, true);
+                if (global.mobile) scaleScreenRatio(ratio, true);
                 _gui._skill.update();
-                if (_global.mobile) scaleScreenRatio(1.4);
+                if (global.mobile) scaleScreenRatio(1.4);
 
-                if (!_global._showTree) {
-                    if (_global.mobile) scaleScreenRatio(1 / 1.4); {
-                        if (!_global.mobile) {
-                            _global.canSkill = !!_gui._points && _gui._skills.some(skill => skill.amount < skill.cap);
-                            let active = (_global.canSkill || _global._died || _global.statHover)
+                if (!global._showTree) {
+                    if (global.mobile) scaleScreenRatio(1 / 1.4); {
+                        if (!global.mobile) {
+                            global.canSkill = !!_gui._points && _gui._skills.some(skill => skill.amount < skill.cap);
+                            let active = (global.canSkill || global._died || global.statHover)
                             statMenu.set(0 + active);
-                            _global.clickables.stat.hide();
+                            global.clickables.stat.hide();
                             let spacing = 4,
                                 height = 15,
                                 gap = 35,
                                 len = alcoveSize,
                                 savedLen = len,
-                                save = _config.fancyAnimations ? len * statMenu.get() : len,
+                                save = config.fancyAnimations ? len * statMenu.get() : len,
                                 ticker = 11,
                                 namedata = _gui._getStatNames(_mockups.get(_gui._type).statnames || -1);
-                                let y = _global._screenHeight - 20 - height
-                                let x = -20 - 2 * len + (_config.fancyAnimations ? statMenu.get() : active) * (2 * 20 + 2 * len)
+                                let y = global._screenHeight - 20 - height
+                                let x = -20 - 2 * len + (config.fancyAnimations ? statMenu.get() : active) * (2 * 20 + 2 * len)
                             _gui._skills.forEach(function drawSkillBar(skill) {
                                 ticker--;
                                 let name = namedata[ticker - 1],
@@ -9506,11 +6667,11 @@ const mixColors = (() => {
                                     statBars[ticker - 1].set(ska(level))
                                 if (cap) {
                                     len = save;
-                                    let _max = _config.expectedMaxSkillLevel,
+                                    let _max = config.expectedMaxSkillLevel,
                                         extension = cap > _max,
                                         blocking = cap < maxLevel;
                                     if (extension) _max = cap;
-                                    drawBar(x + height / 2, x - height / 2 + len * ska(cap), y + height / 2, height - 3 + _config.barChunk, color.black);
+                                    drawBar(x + height / 2, x - height / 2 + len * ska(cap), y + height / 2, height - 3 + config.barChunk, color.black);
                                     drawBar(x + height / 2, x + height / 2 + (len - gap) * ska(cap), y + height / 2, height - 3, color.grey);
                                     drawBar(x + height / 2, x + height / 2 + ((len - gap) * statBars[ticker - 1].get()), y + height / 2, height - 3.5, col);
                                     if (blocking) {
@@ -9525,30 +6686,30 @@ const mixColors = (() => {
                                     let textcolor = level == maxLevel ? col : !_gui._points || cap !== maxLevel && level == cap ? color.grey : color.guiwhite;
                                     drawText(name, Math.round(x + len / 2) + .5, y + height / 2, height - 5, textcolor, "center", 1);
                                     drawText("[" + ticker % 10 + "]", Math.round(x + len - height * .25) - 1.5, y + height / 2, height - 5, textcolor, "right", 1);
-                                    if (textcolor === color.guiwhite) _global.clickables.stat.place(ticker - 1, x, y, len, height);
+                                    if (textcolor === color.guiwhite) global.clickables.stat.place(ticker - 1, x, y, len, height);
                                     if (level) drawText(textcolor === col ? "MAX" : "+" + level, Math.round(x + len + 4) + .5, y + height / 2, height - 5, col, "left", 1);
                                     y -= height + spacing;
                                 }
                             });
-                            _global.clickables.hover.place(0, 0, y, .8 * savedLen, .8 * (_global._screenHeight - y));
+                            global.clickables.hover.place(0, 0, y, .8 * savedLen, .8 * (global._screenHeight - y));
                             if (_gui._points !== 0) drawText("x" + _gui._points, Math.round(x + len - 2) + .5, Math.round(y + height - 4) + .5, 20, color.guiwhite, "right");
                         }
                     } {
                         let spacing = 4,
                             len = 1.65 * alcoveSize,
                             height = 25,
-                            x = (_global._screenWidth - len) / 2,
-                            y = _global._screenHeight - 20 - height,
+                            x = (global._screenWidth - len) / 2,
+                            y = global._screenHeight - 20 - height,
                             max = _gui._leaderboard._display.length ? _gui._leaderboard._display[0].score : false,
                             level = _gui._skill.getLevel();
                         ctx.lineWidth = 1;
-                        drawBar(x, x + len, y + height / 2, height - 3 + _config.barChunk, color.black);
+                        drawBar(x, x + len, y + height / 2, height - 3 + config.barChunk, color.black);
                         drawBar(x, x + len, y + height / 2, height - 3, color.grey);
                         drawBar(x, x + len * (level > 59 ? 1 : _gui._skill.getProgress()), y + height / 2, height - 3.5, color.gold);
                         drawText("Level " + level + " " + _player._label, x + len / 2, y + height / 2, height - 4, color.guiwhite, "center", 1);
                         height = 14;
                         y -= height + spacing;
-                        drawBar(x + len * .1, x + len * .9, y + height / 2, height - 3 + _config.barChunk, color.black);
+                        drawBar(x + len * .1, x + len * .9, y + height / 2, height - 3 + config.barChunk, color.black);
                         drawBar(x + len * .1, x + len * .9, y + height / 2, height - 3, color.grey);
                         drawBar(x + len * .1, x + len * (0.1 + .8 * (max ? Math.min(1, _gui._skill.getScore() / max) : 1)), y + height / 2, height - 3.5, color.green);
                         drawText("Score: " + _util._formatLargeNumber(Math.round(_gui._skill.getScore())), x + len / 2, y + height / 2, height - 2, color.guiwhite, "center", 1);
@@ -9556,30 +6717,22 @@ const mixColors = (() => {
                         if (_player._nameColor) {
                             if (_player._nameColor.charAt("0") !== "!") {
                                 let nameColor = _player._nameColor || "#FFFFFF";
-                                if (nameColor.startsWith("$")) {
-                                    const size = 32 * (_player._name.length / 2);
-                                    const fill = ctx.createLinearGradient((Math.round(x + len / 2) + 0.5) - size / 2, 0, (Math.round(x + len / 2) + 0.5) + size / 2, 0);
-                                    for (let i = 0; i < _global._nameGradient.length; i++) {
-                                        fill.addColorStop(i / (_global._nameGradient.length - 1) * 1, _global._nameGradient[i]);
-                                    }
-                                    nameColor = fill;
-                                }
                                 drawText(_player._name, Math.round(x + len / 2) + .5, Math.round(y - 10 - spacing) + .5, 32, nameColor, "center");
                             } else {
                                 let [fill, stroke, font, size] = _util._getSpecialNameInfoById(Number(_player._nameColor.substring(1)));
                                 drawText(_player._name, Math.round(x + len / 2) + .5, Math.round(y - 10 - spacing) + .5, 32, fill, "center", false, 1, stroke, ctx, font);
                             }
                         }
-                        if (_global.displayTextUI.enabled) {
-                            drawText(_global.displayTextUI.text, Math.round(x + len / 2) + .5, Math.round(y - 55 - spacing), 16, _global.displayTextUI.color, "center", true);
+                        if (global.displayTextUI.enabled) {
+                            drawText(global.displayTextUI.text, Math.round(x + len / 2) + .5, Math.round(y - 55 - spacing), 16, global.displayTextUI.color, "center", true);
                         }
                     }
-                    if (_global.mobile) scaleScreenRatio(0.8); {
+                    if (global.mobile) scaleScreenRatio(0.8); {
                         let len = alcoveSize,
-                            height = len / _global._gameWidth * _global._gameHeight,
-                            rawRatio = [_global._gameWidth > _global._gameHeight, _global._gameWidth / _global._gameHeight, _global._gameHeight / _global._gameWidth];
-                        if (_global._gameWidth > _global._gameHeight || _global._gameHeight > _global._gameWidth) {
-                            let ratio = [_global._gameWidth / _global._gameHeight, _global._gameHeight / _global._gameWidth];
+                            height = len / global._gameWidth * global._gameHeight,
+                            rawRatio = [global._gameWidth > global._gameHeight, global._gameWidth / global._gameHeight, global._gameHeight / global._gameWidth];
+                        if (global._gameWidth > global._gameHeight || global._gameHeight > global._gameWidth) {
+                            let ratio = [global._gameWidth / global._gameHeight, global._gameHeight / global._gameWidth];
                             len /= ratio[1] * 1.5;
                             height /= ratio[1] * 1.5;
                             if (len > alcoveSize * 2) {
@@ -9592,14 +6745,14 @@ const mixColors = (() => {
                             len /= ratio;
                             height /= ratio;
                         }
-                        let x = _global.mobile ? spacing : _global._screenWidth - len - 20,
-                            y = _global.mobile ? spacing : _global._screenHeight - height - 20,
+                        let x = global.mobile ? spacing : global._screenWidth - len - 20,
+                            y = global.mobile ? spacing : global._screenHeight - height - 20,
                             y2 = 66,
                             w = roomSetup[0].length,
                             h = roomSetup.length,
                             i = 0;
                         ctx.globalAlpha = .6;
-                        if (_global._mapType !== 1) {
+                        if (global._mapType !== 1) {
                             for (let j = 0; j < roomSetup.length; j++) {
                                 let row = roomSetup[j],
                                     k = 0;
@@ -9612,7 +6765,7 @@ const mixColors = (() => {
                         }
                         ctx.fillStyle = mixColors(color.grey, "#000000", 0.1);
                         let box = [x, y, len, height];
-                        _global._mapType === 1 ? drawGuiCircle(box[0] + box[2] / 2, box[1] + box[2] / 2, box[2] / 2, 0) : drawGuiRect(...box);
+                        global._mapType === 1 ? drawGuiCircle(box[0] + box[2] / 2, box[1] + box[2] / 2, box[2] / 2, 0) : drawGuiRect(...box);
                         _gui._minimap._display = _gui._minimap._display.filter(entry => _gui._minimap._server.findIndex(real => real.id === entry.id) > -1);
                         for (let real of _gui._minimap._server) {
                             let index = _gui._minimap._display.findIndex(old => real.id === old.id);
@@ -9637,21 +6790,21 @@ const mixColors = (() => {
                             switch (entity.type) {
                                 case 3: {
                                     const size = 3;
-                                    drawGuiRect(x + ((entity.x - size) / _global._gameWidth) * len, y + ((entity.y - size) / _global._gameHeight) * height, size, size);
+                                    drawGuiRect(x + ((entity.x - size) / global._gameWidth) * len, y + ((entity.y - size) / global._gameHeight) * height, size, size);
                                 }
                                     break;
                                 case 2: {
                                     const width = entity.size * (entity.width || 1);
                                     const hgt = entity.size * (entity.height || 1);
-                                    drawGuiRect(x + ((entity.x - width) / _global._gameWidth) * len - 0.4, y + ((entity.y - hgt) / _global._gameHeight) * height - 1, ((2 * width) / _global._gameWidth) * len + 0.2, ((2 * hgt) / _global._gameWidth) * len + 0.2);
+                                    drawGuiRect(x + ((entity.x - width) / global._gameWidth) * len - 0.4, y + ((entity.y - hgt) / global._gameHeight) * height - 1, ((2 * width) / global._gameWidth) * len + 0.2, ((2 * hgt) / global._gameWidth) * len + 0.2);
                                 }
                                     break;
                                 case 1: {
-                                    drawGuiCircle(x + (entity.x / _global._gameWidth) * len, y + (entity.y / _global._gameHeight) * height, (entity.size / _global._gameWidth) * len + 0.2);
+                                    drawGuiCircle(x + (entity.x / global._gameWidth) * len, y + (entity.y / global._gameHeight) * height, (entity.size / global._gameWidth) * len + 0.2);
                                 }
                                     break;
                                 case 0: {
-                                    if (entity.id !== _gui._playerid) drawGuiCircle(x + (entity.x / _global._gameWidth) * len, y + (entity.y / _global._gameHeight) * height, 2);
+                                    if (entity.id !== _gui._playerid) drawGuiCircle(x + (entity.x / global._gameWidth) * len, y + (entity.y / global._gameHeight) * height, 2);
                                 }
                                     break;
                             }
@@ -9659,81 +6812,53 @@ const mixColors = (() => {
                         ctx.globalAlpha = 1;
                         ctx.lineWidth = 1;
                         ctx.strokeStyle = color.black;
-                        /*drawGuiRect(x + player.x / _global.gameWidth * len - 1, y + player.y / _global.gameWidth * height - 1, 3, 3, 1);
+                        /*drawGuiRect(x + player.x / global.gameWidth * len - 1, y + player.y / global.gameWidth * height - 1, 3, 3, 1);
                         ctx.lineWidth = 3;
                         ctx.fillStyle = color.black;*/
                         ctx.fillStyle = color.guiblack;
-                        if (!_global._died) {
-                            if (_config.prediction === 2 || true) {
-                                let xAdder = (_player._cx * (rawRatio[0] ? 1 : rawRatio[2])) / _global._gameWidth * len - 1
-                                let yAdder = (_player._cy * (rawRatio[0] ? rawRatio[1] : 1)) / _global._gameWidth * height - 1
+                        if (!global._died) {
+                            if (config.prediction === 2 || true) {
+                                let xAdder = (_player._cx * (rawRatio[0] ? 1 : rawRatio[2])) / global._gameWidth * len - 1
+                                let yAdder = (_player._cy * (rawRatio[0] ? rawRatio[1] : 1)) / global._gameWidth * height - 1
                                 if (xAdder > 0 && yAdder > 0 && xAdder < 200 && yAdder < 200) {
                                     drawGuiCircle(x + xAdder, y + yAdder, 2);
                                 }
                             } else {
-                                drawGuiCircle(x + _player._x / _global._gameWidth * len - 1, y + _player.y / _global._gameWidth * height - 1, 2);
+                                drawGuiCircle(x + _player._x / global._gameWidth * len - 1, y + _player.y / global._gameWidth * height - 1, 2);
                             }
                         }
-                        if (_global.mobile) {
-                            x = _global._screenWidth - len - spacing;
-                            y = _global._screenHeight - spacing;
+                        if (global.mobile) {
+                            x = global._screenWidth - len - spacing;
+                            y = global._screenHeight - spacing;
                         }
-                        /*if (_global.debug && !_global.died) {
-                            drawGuiRect(x, y - 40, len, 30);
-                            lagGraph(lag.get(), x, y - 40, len, 30, color.teal);
-                            gapGraph(metrics.rendergap, x, y - 40, len, 30, color.pink);
-                            timingGraph(GRAPHDATA, x, y - 40, len, 30, color.yellow);
-                            y -= 40;
-                        }
-                        if (_global.debug && !_global.died) {
-                            y2 = 94;
-                        }
-                        drawText("Woomy-Arras.io", x + len, y - y2, 13, "#B6E57C", "right");
-                        
-                        
-                        drawText((servers[selectedServer] || { location: "null" }).location, x + len, y - 8, 10, color.guiwhite, "right");*/
                         y -= 8;
                         drawText("Room ID: "+window.selectedRoomId, x + len, y, 18, "#B6E57C", "right");
                         y -= 18;
-                        if (_global._debug > 1) {
+                        if (global._debug > 1) {
                             drawText("ClientFPS: " + metrics._rendertime, x + len, y, 14, metrics._rendertime > 15 ? color.guiwhite : color.orange, "right");
                             y -= 16;
                             drawText("Latency: " + metrics._latency + "ms", x + len, y, 14, metrics._latency < 375 ? color.guiwhite : color.orange, "right");
                             y -= 16;
-                            if (_global._debug > 2) {
-                                drawText((_global._died ? "Server Speed (Standby): " : "Server Speed: ") + _gui._fps.toFixed(1) + "mspt", x + len, y, 14, _gui._fps < 30 ? color.guiwhite : color.orange, "right");
+                            if (global._debug > 2) {
+                                drawText((global._died ? "Server Speed (Standby): " : "Server Speed: ") + _gui._fps.toFixed(1) + "mspt", x + len, y, 14, _gui._fps < 30 ? color.guiwhite : color.orange, "right");
                                 y -= 16;
-                                drawText(`Bandwidth: ${_global._bandwidth._in} in, ${_global._bandwidth._out} out`, x + len, y, 14, color.guiwhite, "right");
+                                drawText(`Bandwidth: ${global._bandwidth._in} in, ${global._bandwidth._out} out`, x + len, y, 14, color.guiwhite, "right");
                                 y -= 16;
                                 drawText("Update Rate: " + metrics._updatetime + "Hz", x + len, y, 14, color.guiwhite, "right");
-                                if (_global._debug > 3) {
+                                if (global._debug > 3) {
                                     y -= 16
                                     drawText(`Server MEM usage: ${metrics._serverMemUsage.toFixed(2)}%`, x + len, y, 14, metrics._serverMemUsage > 90 ? color.red : metrics._serverMemUsage > 70 ? color.orange : color.guiwhite, "right")
                                     y -= 16
                                     drawText(`Server CPU usage: ${metrics._serverCpuUsage.toFixed(2)}%`, x + len, y, 14, metrics._serverCpuUsage > 80 ? color.red : metrics._serverCpuUsage > 65 ? color.orange : color.guiwhite, "right")
                                     y -= 16
                                     drawText(`${_mockups._fetchedMockups}/${_mockups._totalMockups} (${((_mockups._fetchedMockups/_mockups._totalMockups)*100).toFixed(2)}%) Mockups`, x + len, y, 14, color.guiwhite, "right")
-                                    if (_global._debug > 4) {
-                                        ctx.fillStyle = color.guiblack
-                                        drawGuiRect(...box);
-                                        ctx.globalAlpha = 0.4;
-                                        lagGraph(lag.get(), ...box, color.blue);
-                                        gapGraph(metrics._rendergap, ...box, color.green);
-                                        timingGraph(GRAPHDATA, ...box, color.red);
-                                        bullshitGraph(Math.random(), ...box, "#FFFFA0");
-                                        ctx.globalAlpha = 1;
-                                        drawText("REN", box[0] + 6, box[1] + 18, 14, color.green, "left");
-                                        drawText("LAG", box[0] + 6, box[1] + 40, 14, color.blue, "left");
-                                        drawText("STR", box[0] + 6, box[1] + 62, 14, color.red, "left");
-                                        drawText("BSH", box[0] + 6, box[1] + 84, 14, "#FFFFA0", "left");
-                                    }
                                 }
                             }
                         }
                         ctx.lineWidth = 4;
                         ctx.strokeStyle = color.black;
                         //drawGuiRect(...box, 1);
-                        switch (_global._mapType) {
+                        switch (global._mapType) {
                             case 1:
                                 drawGuiCircle(box[0] + box[2] / 2, box[1] + box[2] / 2, box[2] / 2, 1)
                                 break;
@@ -9744,15 +6869,15 @@ const mixColors = (() => {
                                 drawGuiRect(...box, 1);
                         }
                     }
-                    if (_global.mobile) {
+                    if (global.mobile) {
                         scaleScreenRatio(1 / 0.8);
                         scaleScreenRatio(1.4);
                     } { // Draw leaderboard
-                        if (!_global._showTree) {
+                        if (!global._showTree) {
                             let vspacing = 4;
                             let len = 200;
                             let height = 14;
-                            let x = _global._screenWidth - len - spacing;
+                            let x = global._screenWidth - len - spacing;
                             let y = spacing + height + 7;
                             drawText("Leaderboard", Math.round(x + len / 2) + 0.5, Math.round(y - 6) + 0.5, height + 4, color.guiwhite, 'center');
                             _gui._leaderboard._display = _gui._leaderboard._display.filter(entry => _gui._leaderboard._server.findIndex(real => real.id === entry.id) > -1);
@@ -9768,23 +6893,15 @@ const mixColors = (() => {
                                 }
                             }
                             _gui._leaderboard._display = _gui._leaderboard._display.sort((a, b) => b.score - a.score);
-                            for (let i = 0; i < _gui._leaderboard._display.length && (!_global.mobile || i < 6); i++) {
+                            for (let i = 0; i < _gui._leaderboard._display.length && (!global.mobile || i < 6); i++) {
                                 let entry = _gui._leaderboard._display[i];
-                                drawBar(x, x + len, y + height / 2, height - 3 + _config.barChunk, color.black);
+                                drawBar(x, x + len, y + height / 2, height - 3 + config.barChunk, color.black);
                                 drawBar(x, x + len, y + height / 2, height - 3, color.grey);
                                 let shift = Math.min(1, entry.score / _gui._leaderboard._display[0].score);
                                 drawBar(x, x + len * shift, y + height / 2, height - 3.5, entry.barColor);
                                 // Leadboard name + score
                                 let nameColor = entry.nameColor;
                                 if (nameColor.charAt(0) !== "!") {
-                                    if (nameColor.startsWith("$")) {
-                                        const size = (height - 5) * (entry.label.length / 2);
-                                        const fill = ctx.createLinearGradient((x + len / 2) - size / 2, 0, (x + len / 2) + size / 2, 0);
-                                        for (let i = 0; i < _global._nameGradient.length; i++) {
-                                            fill.addColorStop(i / (_global._nameGradient.length - 1) * 1, _global._nameGradient[i]);
-                                        }
-                                        nameColor = fill;
-                                    }
                                     drawText(entry.label + (': ' + _util._handleLargeNumber(Math.round(entry.score))), x + len / 2, y + height / 2, height - 5, nameColor, 'center', true);
                                 } else {
                                     let [fill, stroke, font, size] = _util._getSpecialNameInfoById(Number(nameColor.substring(1)));
@@ -9803,13 +6920,13 @@ const mixColors = (() => {
                         }
                     }
                     {
-                        if (!_config.disableMessages) {
+                        if (!config.disableMessages) {
                             let vspacing = 4,
                                 height = 18,
-                                x = _global._screenWidth / 2,
+                                x = global._screenWidth / 2,
                                 y = 20,
                                 fill;
-                            if (_global.mobile) y += (_global.canSkill ? ((alcoveSize / 3 + spacing) / 1.4) * statMenu.get() : 0) + (_global.canUpgrade ? ((alcoveSize / 2 + spacing) / 1.4) * upgradeMenu.get() : 0);
+                            if (global.mobile) y += (global.canSkill ? ((alcoveSize / 3 + spacing) / 1.4) * statMenu.get() : 0) + (global.canUpgrade ? ((alcoveSize / 2 + spacing) / 1.4) * upgradeMenu.get() : 0);
                             for (let i = _messages.length - 1; i >= 0; i--) {
                                 let msg = _messages[i],
                                     txt = msg.text,
@@ -9818,13 +6935,13 @@ const mixColors = (() => {
                                 msg.len = measureText(text, height - 4);
                                 //msg.font = config.fontFamily;
                                 //};
-                                ctx.globalAlpha = _config.fancyAnimations ? .5 * msg.alpha : 0.5;
-                                fill = msg.color === "rainbow" ? _util._HSL2COLOR((Date.now() % 2520) / 7, 100, 50) : msg.color;
+                                ctx.globalAlpha = config.fancyAnimations ? .5 * msg.alpha : 0.5;
+                                fill = msg.color === "rainbow" ? hslToColor((Date.now() % 2520) / 7, 100, 50) : msg.color;
                                 drawBar(x - msg.len / 2, x + msg.len / 2, y + height / 2, height, fill);
-                                ctx.globalAlpha = _config.fancyAnimations ? Math.min(1, msg.alpha) : 1;
+                                ctx.globalAlpha = config.fancyAnimations ? Math.min(1, msg.alpha) : 1;
                                 drawText(text, x, y + height / 2, height - 4, color.guiwhite, "center", 1);
                                 y += vspacing + height;
-                                if (_config.fancyAnimations && msg.status > 1) y -= (vspacing + height) * (1 - Math.sqrt(msg.alpha));
+                                if (config.fancyAnimations && msg.status > 1) y -= (vspacing + height) * (1 - Math.sqrt(msg.alpha));
                                 if (msg.status > 1) {
                                     msg.status -= .05;
                                     msg.alpha += .05;
@@ -9840,44 +6957,44 @@ const mixColors = (() => {
                         }
                     }
 
-                    if (_global.mobile) scaleScreenRatio(1 / 1.4); {
-                        upgradeMenu.set(0 + (_global.canUpgrade || _global.upgradeHover));
-                        let glide = _config.fancyAnimations?upgradeMenu.get():1;
-                        _global.clickables.upgrade.hide();
+                    if (global.mobile) scaleScreenRatio(1 / 1.4); {
+                        upgradeMenu.set(0 + (global.canUpgrade || global.upgradeHover));
+                        let glide = config.fancyAnimations?upgradeMenu.get():1;
+                        global.clickables.upgrade.hide();
                         if (_gui._upgrades.length > 0) {
-                            _global.canUpgrade = 1;
+                            global.canUpgrade = 1;
                             let spacing = 10,
                                 x = 2 * 20 - 20,
-                                colorIndex = _global._tankMenuColor,
+                                colorIndex = global._tankMenuColor,
                                 i = 0,
                                 y = 20,
                                 x2 = x,
                                 x3 = 0,
                                 y2 = y,
                                 ticker = 0,
-                                len = Math.min(100, 200 * (Math.min(_global._screenHeight, _global._screenWidth) / Math.max(_global._screenHeight, _global._screenWidth))), //100
+                                len = Math.min(100, 200 * (Math.min(global._screenHeight, global._screenWidth) / Math.max(global._screenHeight, global._screenWidth))), //100
                                 height = len;
-                            //_scale = Math.max(_global.screenWidth, 16 * _global.screenHeight / 9) / (_global.screenWidth <= 1280 ? 1280 : _global.screenWidth >= 1920 ? 1920 : _global.screenWidth);
+                            //_scale = Math.max(global.screenWidth, 16 * global.screenHeight / 9) / (global.screenWidth <= 1280 ? 1280 : global.screenWidth >= 1920 ? 1920 : global.screenWidth);
                             upgradeSpin += .01;
                             for (let model of _gui._upgrades) {
                                 if (y > y2) y2 = y - 60;
                                 x3 = x * 2 + 105;
                                 x *= glide
                                 y *= glide
-                                _global.clickables.upgrade.place(i++, y, x, len, height);
+                                global.clickables.upgrade.place(i++, y, x, len, height);
                                 ctx.globalAlpha = .5;
                                 ctx.fillStyle = getColor(colorIndex > 185 ? colorIndex - 85 : colorIndex);
-                                _config.roundUpgrades ? drawGuiRoundRect(y, x, len, height, 10) : drawGuiRect(y, x, len, height);
+                                config.roundUpgrades ? drawGuiRoundRect(y, x, len, height, 10) : drawGuiRect(y, x, len, height);
                                 ctx.globalAlpha = .175;
                                 ctx.fillStyle = getColor(-10 + (colorIndex++ - (colorIndex > 185 ? 85 : 0)));
-                                _config.roundUpgrades ? drawGuiRoundRect(y, x, len, .6 * height, 4) : drawGuiRect(y, x, len, .6 * height);
+                                config.roundUpgrades ? drawGuiRoundRect(y, x, len, .6 * height, 4) : drawGuiRect(y, x, len, .6 * height);
                                 ctx.fillStyle = color.black;
-                                _config.roundUpgrades ? drawGuiRoundRect(y, x + .6 * height, len, .4 * height, 4) : drawGuiRect(y, x + .6 * height, len, .4 * height);
-                                if (!_global._died && !_global._disconnected) {
-                                    let tx = Math.pow((_global.guiMouse.x) - (y + height / 2), 2),
-                                        ty = Math.pow((_global.guiMouse.y) - (x + len / 2), 2);
+                                config.roundUpgrades ? drawGuiRoundRect(y, x + .6 * height, len, .4 * height, 4) : drawGuiRect(y, x + .6 * height, len, .4 * height);
+                                if (!global._died && !global._disconnected) {
+                                    let tx = Math.pow((global.guiMouse.x) - (y + height / 2), 2),
+                                        ty = Math.pow((global.guiMouse.y) - (x + len / 2), 2);
                                     if (Math.sqrt(tx + ty) < height * .55) {
-                                        _config.roundUpgrades ? drawGuiRoundRect(y, x, len, height, 10) : drawGuiRect(y, x, len, height);
+                                        config.roundUpgrades ? drawGuiRoundRect(y, x, len, height, 10) : drawGuiRect(y, x, len, height);
                                         ctx.globalAlpha = .5;
                                     }
                                 }
@@ -9892,8 +7009,8 @@ const mixColors = (() => {
                                 ctx.strokeStyle = color.black;
                                 ctx.globalAlpha = 1;
                                 ctx.lineWidth = 3;
-                                _config.roundUpgrades ? drawGuiRoundRect(y, x, len, height, 10, false, true) : drawGuiRect(y, x, len, height, true);
-                                if (++ticker % (_config.useFourRows ? 4 : 3) === 0) {
+                                config.roundUpgrades ? drawGuiRoundRect(y, x, len, height, 10, false, true) : drawGuiRect(y, x, len, height, true);
+                                if (++ticker % (config.useFourRows ? 4 : 3) === 0) {
                                     x = x2;
                                     y += height + spacing;
                                 } else {
@@ -9905,22 +7022,22 @@ const mixColors = (() => {
                                 m = measureText(txt, h - 3) + 10,
                                 xx = y2 + height + spacing,
                                 yy = (x3 + len + spacing + x2 - 15) / 2;
-                            drawBar(xx - m / 2, xx + m / 2, yy + h / 2, h + _config.barChunk, color.black);
+                            drawBar(xx - m / 2, xx + m / 2, yy + h / 2, h + config.barChunk, color.black);
                             drawBar(xx - m / 2, xx + m / 2, yy + h / 2, h, color.white);
                             drawText(txt, xx, yy + h / 2, h - 2, color.guiwhite, "center", 1);
-                            _global.clickables.skipUpgrades.place(0, xx - m / 2, yy, m, h);
+                            global.clickables.skipUpgrades.place(0, xx - m / 2, yy, m, h);
                         } else {
-                            _global.canUpgrade = 0;
-                            _global.clickables.upgrade.hide();
-                            _global.clickables.skipUpgrades.hide();
+                            global.canUpgrade = 0;
+                            global.clickables.upgrade.hide();
+                            global.clickables.skipUpgrades.hide();
                         }
                     } {
-                        if (_global.mobile) {
+                        if (global.mobile) {
                             // Draw skill bars
-                            _global.canSkill = _gui._points > 0 && _gui._skills.some(skill => skill.amount < skill.cap) && !_global.canUpgrade;
-                            statMenu.set(0 + (_global.canSkill || _global._died));
-                            let glide = statMenu.get() * (_config.fancyAnimations ? 1 : 0);
-                            _global.clickables.stat.hide();
+                            global.canSkill = _gui._points > 0 && _gui._skills.some(skill => skill.amount < skill.cap) && !global.canUpgrade;
+                            statMenu.set(0 + (global.canSkill || global._died));
+                            let glide = statMenu.get() * (config.fancyAnimations ? 1 : 0);
+                            global.clickables.stat.hide();
                             let internalSpacing = 14;
                             let width = alcoveSize / 2.5;
                             let height = alcoveSize / 2.5;
@@ -9928,7 +7045,7 @@ const mixColors = (() => {
                             let y = spacing;
                             let index = 0;
                             let namedata = _gui._getStatNames(_mockups.get(_gui._type).statnames || -1);
-                            if (_global.canSkill) {
+                            if (global.canSkill) {
                                 _gui._skills.forEach((skill, ticker) => {
                                     let skillCap = skill.softcap;
                                     if (skillCap <= 0) return;
@@ -9962,7 +7079,7 @@ const mixColors = (() => {
                                     }
                                     // Upgrade name
                                     if (skillAmount !== skillMax && _gui._points && (skillCap === skillMax || skillAmount !== skillCap)) {
-                                        _global.clickables.stat.place(9 - ticker, x * ratio, y * ratio, width * ratio, height * ratio);
+                                        global.clickables.stat.place(9 - ticker, x * ratio, y * ratio, width * ratio, height * ratio);
                                     }
                                     if (skillNameBottom) {
                                         drawText(skillNameBottom, x + width / 2, y + height * 0.55, height / 6, color.guiwhite, "center");
@@ -9989,14 +7106,14 @@ const mixColors = (() => {
                             }
                         }
                     } { // Joysticks
-                        if (_global.mobile) {
+                        if (global.mobile) {
                             {
-                                let radius = Math.min(_global._screenWidth * 0.6, _global._screenHeight * 0.12);
+                                let radius = Math.min(global._screenWidth * 0.6, global._screenHeight * 0.12);
                                 ctx.globalAlpha = 0.3;
                                 ctx.fillStyle = "#ffffff";
                                 ctx.beginPath();
-                                ctx.arc((_global._screenWidth * 1) / 6, (_global._screenHeight * 2) / 3, radius, 0, 2 * Math.PI);
-                                ctx.arc((_global._screenWidth * 5) / 6, (_global._screenHeight * 2) / 3, radius, 0, 2 * Math.PI);
+                                ctx.arc((global._screenWidth * 1) / 6, (global._screenHeight * 2) / 3, radius, 0, 2 * Math.PI);
+                                ctx.arc((global._screenWidth * 5) / 6, (global._screenHeight * 2) / 3, radius, 0, 2 * Math.PI);
                                 ctx.fill();
                                 for (let i = 0; i < 4; i++) {
                                     const angle = Math.PI * 2 / 4 * i;
@@ -10004,7 +7121,7 @@ const mixColors = (() => {
                                     ctx.lineWidth = radius * 0.125;
                                     ctx.beginPath();
                                     ctx.save();
-                                    ctx.translate((_global._screenWidth * 1) / 6, (_global._screenHeight * 2) / 3);
+                                    ctx.translate((global._screenWidth * 1) / 6, (global._screenHeight * 2) / 3);
                                     ctx.moveTo(Math.cos(angle) * radius * 0.2, Math.sin(angle) * radius * 0.2);
                                     ctx.lineTo(Math.cos(angle) * radius * 0.8, Math.sin(angle) * radius * 0.8);
                                     ctx.restore();
@@ -10012,7 +7129,7 @@ const mixColors = (() => {
                                     ctx.stroke();
                                     ctx.beginPath();
                                     ctx.save();
-                                    ctx.translate((_global._screenWidth * 5) / 6, (_global._screenHeight * 2) / 3);
+                                    ctx.translate((global._screenWidth * 5) / 6, (global._screenHeight * 2) / 3);
                                     ctx.moveTo(Math.cos(angle) * radius * 0.2, Math.sin(angle) * radius * 0.2);
                                     ctx.lineTo(Math.cos(angle) * radius * 0.8, Math.sin(angle) * radius * 0.8);
                                     ctx.restore();
@@ -10021,33 +7138,33 @@ const mixColors = (() => {
                                 }
                             }
                             const size = spacing * 2;
-                            drawMobileButton(0, spacing, _global._screenHeight - spacing - size, size, size, _global._mobileOptions ? "X" : "+");
-                            if (_global._mobileOptions) {
+                            drawMobileButton(0, spacing, global._screenHeight - spacing - size, size, size, global._mobileOptions ? "X" : "+");
+                            if (global._mobileOptions) {
                                 const offX = spacing + (size * 2);
                                 const offY = spacing + size;
                                 const x = spacing * 2 + size;
-                                const y = _global._screenHeight - spacing - size;
+                                const y = global._screenHeight - spacing - size;
                                 drawMobileButton(1, x, y - offY, size * 2, size, "Level Up");
                                 drawMobileButton(2, x + offX, y - offY, size * 2, size, "Testbed");
                                 drawMobileButton(3, x, y, size * 2, size, "Override");
                                 drawMobileButton(4, x + offX, y, size * 2, size, "Reset Tank");
                                 drawMobileButton(5, x + offX * 2, y, size * 2, size, "Full Screen");
-                                drawMobileButton(6, x + offX * 2, y - offY, size * 2, size, _global._mobileChatText);
+                                drawMobileButton(6, x + offX * 2, y - offY, size * 2, size, global._mobileChatText);
                             }else{
                                 let x = spacing + size * 1.5
-                                let y = _global._screenHeight - spacing - size
-                                drawMobileButton(7, x, y, size*2, size, _global._mobileFiring[0]===4?"Main Firing":"Alt Firing");
+                                let y = global._screenHeight - spacing - size
+                                drawMobileButton(7, x, y, size*2, size, global._mobileFiring[0]===4?"Main Firing":"Alt Firing");
                                 drawMobileButton(8, x*2.25, y, size, size, "Q");
                             }
                         }
                     }
                 };
-                if (_global.mobile) scaleScreenRatio(1 / ratio, true);
+                if (global.mobile) scaleScreenRatio(1 / ratio, true);
             }
 
             if (_player.pepperspray.apply || _player.pepperspray.blurMax > 0) {
                 ctx.filter = `blur(${_player.pepperspray.blurAmount}px)`;
-                ctx.drawImage(c, 0, 0, _global._screenWidth, _global._screenHeight);
+                ctx.drawImage(c, 0, 0, global._screenWidth, global._screenHeight);
                 ctx.filter = "none";
                 if (!_player.pepperspray.apply && _player.pepperspray.blurAmount != 0) {
                     _player.pepperspray.blurAmount--
@@ -10057,46 +7174,46 @@ const mixColors = (() => {
 
             if (_player.lsd) {
                 ctx.filter = `hue-rotate(${Math.sin(Date.now() / 600) * 360}deg)`;
-                ctx.drawImage(c, 0, 0, _global._screenWidth, _global._screenHeight);
+                ctx.drawImage(c, 0, 0, global._screenWidth, global._screenHeight);
                 ctx.filter = "none";
             }
 
-            if(_global.drawPoint){
+            if(global.drawPoint){
                 ctx.fillStyle = "red"
                 ctx.globalAlpha = 0.5
-                drawGuiCircle(_global.drawPoint.x, _global.drawPoint.y, 25)
+                drawGuiCircle(global.drawPoint.x, global.drawPoint.y, 25)
             }
 
-            ctx.filter = ["none", "contrast(1000%)", "grayscale(100%)", "grayscale(28%)", "invert(100%)", "sepia(75%)"][["Disabled", "Saturated", "Grayscale", "Dramatic", "Inverted", "Sepia"].indexOf(_config.filter)];
-            if (ctx.filter !== "none") ctx.drawImage(c, 0, 0, _global._screenWidth, _global._screenHeight);
+            ctx.filter = ["none", "contrast(1000%)", "grayscale(100%)", "grayscale(28%)", "invert(100%)", "sepia(75%)"][["Disabled", "Saturated", "Grayscale", "Dramatic", "Inverted", "Sepia"].indexOf(config.filter)];
+            if (ctx.filter !== "none") ctx.drawImage(c, 0, 0, global._screenWidth, global._screenHeight);
             ctx.filter = "none";
             metrics._lastrender = getNow();
         };
     }();
     let _gameDrawDead = function () {      
         let getKills = function getKills() {
-            let finalKills = [Math.round(_global.finalKills[0].get()), Math.round(_global.finalKills[1].get()), Math.round(_global.finalKills[2].get())],
+            let finalKills = [Math.round(global.finalKills[0].get()), Math.round(global.finalKills[1].get()), Math.round(global.finalKills[2].get())],
                 b = finalKills[0] + .5 * finalKills[1] + 3 * finalKills[2];
             return (0 === b ? "🌼" : 4 > b ? "🎯" : 8 > b ? "💥" : 15 > b ? "💢" : 25 > b ? "🔥" : 50 > b ? "💣" : 75 > b ? "👺" : 100 > b ? "🌶️" : "💯") + (finalKills[0] || finalKills[1] || finalKills[2] ? " " + (finalKills[0] ? finalKills[0] + " kill" + (1 === finalKills[0] ? "" : "s") : "") + (finalKills[0] && finalKills[1] ? " and " : "") + (finalKills[1] ? finalKills[1] + " assist" + (1 === finalKills[1] ? "" : "s") : "") + ((finalKills[0] || finalKills[1]) && finalKills[2] ? " and " : "") + (finalKills[2] ? finalKills[2] + " boss" + (1 === finalKills[2] ? "" : "es") + " defeated" : "") : " A true pacifist") + ".";
         },
             getDeath = function getDeath() {
                 let txt = "";
-                if (_global.finalKillers.length) {
+                if (global.finalKillers.length) {
                     txt = "🔪 Succumbed to";
-                    for (let i = 0; i < _global.finalKillers.length; i++) txt += " " + _util._addArticle(_mockups.get(_global.finalKillers[i]).name) + " and";
+                    for (let i = 0; i < global.finalKillers.length; i++) txt += " " + _util._addArticle(_mockups.get(global.finalKillers[i]).name) + " and";
                     txt = txt.slice(0, -4) + ".";
                 } else txt += "🔪 Well that was kinda dumb, huh?";
                 return txt;
             };
         return function () {
-            if(!_global.finalScore) return;
+            if(!global.finalScore) return;
             let glideDuration = 750
             let glide;
             let getGlide;
             let getAlpha;
-            if(_global._deathScreenState === 0){// FADE IN
-                if(_config.fancyAnimations){ 
-                    glide = (Date.now()-(_global._diedAt-3000))/glideDuration
+            if(global._deathScreenState === 0){// FADE IN
+                if(config.fancyAnimations){ 
+                    glide = (Date.now()-(global._diedAt-3000))/glideDuration
                     let glideSuber = 0
                     getGlide = function(){
                         glideSuber += 0.025
@@ -10116,13 +7233,13 @@ const mixColors = (() => {
                     }
                     _clearScreen(color.black, .5);
                 }
-            }else if(_global._deathScreenState === 1){// FADE OUT
-                if (Date.now() - _global._diedAt > glideDuration){
-                    _displayAds(false)
+            }else if(global._deathScreenState === 1){// FADE OUT
+                if (Date.now() - global._diedAt > glideDuration){
+                    _displayDeathHTML(false)
                     return;
                 }
-                if (_config.fancyAnimations) {
-                    glide = (Date.now() - (_global._diedAt)) / glideDuration
+                if (config.fancyAnimations) {
+                    glide = (Date.now() - (global._diedAt)) / glideDuration
                     let glideSuber = 0
                     getGlide = function () {
                         glideSuber += 0.025
@@ -10144,85 +7261,85 @@ const mixColors = (() => {
                 }
             }
 
-            if(!_global.mobile) _displayAds(true);
+            _displayDeathHTML(true)
             _socket.cmd.reset()
-            let x = _global._screenWidth / 2,
-                y = _global._screenHeight / 2 - 50,
+            let x = global._screenWidth / 2,
+                y = global._screenHeight / 2 - 50,
                 picture = getEntityImageFromMockup(_gui._type, _gui._color),
                 len = 140,
                 position = _mockups.get(_gui._type).position,
                 scale = len / position.axis,
-                xx = _global._screenWidth / 2 - scale * position.middle.x * .707,
-                yy = _global._screenHeight / 2 - 35 + scale * position.middle.x * .707,
-                delay = Math.ceil((_global._diedAt - Date.now()) / 1000);
+                xx = global._screenWidth / 2 - scale * position.middle.x * .707,
+                yy = global._screenHeight / 2 - 35 + scale * position.middle.x * .707,
+                delay = Math.ceil((global._diedAt - Date.now()) / 1000);
             _player.pepperspray.apply = false;
             _player.lsd = false;
             drawEntity(xx - 190 - len / 2, (yy - 10) * getGlide(), picture, 1.5, getAlpha(), .5 * scale / picture.realSize, -Math.PI / 4);
             ctx.globalAlpha = getAlpha()
-            drawText(_global._deathSplashOverride || _global._deathSplash[_global._deathSplashChoice], x, (y - 80) * getGlide(), 10, color.guiwhite, "center");
+            drawText(global._deathSplashOverride || global._deathSplash[global._deathSplashChoice], x, (y - 80) * getGlide(), 10, color.guiwhite, "center");
             drawText("Level " + _gui._skill.getLevel() + " " + _player._label, x - 170, (y - 30) * getGlide(), 24, color.guiwhite);
-            drawText("Final Score: " + _util._formatLargeNumber(Math.round(_global.finalScore.get())), (x - 170), (y + 25) * getGlide(), 50, color.guiwhite);
-            drawText("⌛ Survived for " + _util._formatTime(Math.round(_global.finalLifetime.get())) + ".", (x - 170), (y + 55) * getGlide(), 16, color.guiwhite);
+            drawText("Final Score: " + _util._formatLargeNumber(Math.round(global.finalScore.get())), (x - 170), (y + 25) * getGlide(), 50, color.guiwhite);
+            drawText("⌛ Survived for " + _util._formatTime(Math.round(global.finalLifetime.get())) + ".", (x - 170), (y + 55) * getGlide(), 16, color.guiwhite);
             drawText(getKills(), (x - 170), (y + 77) * getGlide(), 16, color.guiwhite);
             drawText(getDeath(), (x - 170), (y + 99) * getGlide(), 16, color.guiwhite);
-            drawText("⌚ Died on " + _global.deathDate, (x - 170), (y + 121) * getGlide(), 16, color.guiwhite);
+            drawText("⌚ Died on " + global.deathDate, (x - 170), (y + 121) * getGlide(), 16, color.guiwhite);
             drawText(delay > 0 ? "You may respawn in " + delay + " second" + (delay === 1 ? "" : "s") + "." : "Press enter to respawn!", x, (y + 147) * getGlide(), 16, color.guiwhite, "center");
-            _global._forceTwiggle = false;
+            global._forceTwiggle = false;
         };
     }();
     let _gameDrawBeforeStart = function () {
-        let splash = _global._tipSplash[Math.floor(Math.random() * _global._tipSplash.length)];
+        let splash = global._tipSplash[Math.floor(Math.random() * global._tipSplash.length)];
         return function () {
             _clearScreen(color.white, .5);
-            drawText("Connecting...", _global._screenWidth / 2, _global._screenHeight / 2, 30, color.guiwhite, "center");
-            drawText(_global.message, _global._screenWidth / 2, _global._screenHeight / 2 + 30, 15, color.lgreen, "center");
-            drawText(splash, _global._screenWidth / 2, _global._screenHeight / 2 + 75, 15, color.guiwhite, "center");
+            drawText("Connecting...", global._screenWidth / 2, global._screenHeight / 2, 30, color.guiwhite, "center");
+            drawText(global.message, global._screenWidth / 2, global._screenHeight / 2 + 30, 15, color.lgreen, "center");
+            drawText(splash, global._screenWidth / 2, global._screenHeight / 2 + 75, 15, color.guiwhite, "center");
         };
     }();
     //
     let _gameDrawDisconnected = function () {
         return function () {
-            let alphaColor = _global._arenaClosed ? color.yellow : color.red,
-                offset = _global._died ? 120 : 0;
+            let alphaColor = global._arenaClosed ? color.yellow : color.red,
+                offset = global._died ? 120 : 0;
             _clearScreen(mixColors(alphaColor, color.guiblack, .3), .25);
-            drawText("💀 Disconnected 💀", _global._screenWidth / 2, _global._screenHeight / 2 + offset, 30, color.guiwhite, "center");
-            drawText(_global.message, _global._screenWidth / 2, _global._screenHeight / 2 + 30 + offset, 15, alphaColor, "center");
-            if (_global._arenaClosed) drawText(_global.closingSplash || "", _global._screenWidth / 2, _global._screenHeight / 2 + 45 + offset, 15, alphaColor, "center");
+            drawText("💀 Disconnected 💀", global._screenWidth / 2, global._screenHeight / 2 + offset, 30, color.guiwhite, "center");
+            drawText(global.message, global._screenWidth / 2, global._screenHeight / 2 + 30 + offset, 15, alphaColor, "center");
+            if (global._arenaClosed) drawText(global.closingSplash || "", global._screenWidth / 2, global._screenHeight / 2 + 45 + offset, 15, alphaColor, "center");
         };
     }();
     let _gameDrawError = function (error) {
         console.error(error);
         console.error(error.stack)
-        let offset = _global._died ? 120 : 0;
+        let offset = global._died ? 120 : 0;
         _clearScreen(mixColors(color.orange, color.guiblack, .3), .25);
-        drawText("Client Error", _global._screenWidth / 2, _global._screenHeight / 2 + offset, 30, color.red, "center");
-        drawText(error, _global._screenWidth / 2, _global._screenHeight / 2 + 30 + offset, 15, color.red, "center");
-        drawText("Please take a screenshot and report this to a dev", _global._screenWidth / 2, _global._screenHeight / 2 + 45 + offset, 15, color.red, "center");
+        drawText("Client Error", global._screenWidth / 2, global._screenHeight / 2 + offset, 30, color.red, "center");
+        drawText(error, global._screenWidth / 2, global._screenHeight / 2 + 30 + offset, 15, color.red, "center");
+        drawText("Please take a screenshot and report this to a dev", global._screenWidth / 2, global._screenHeight / 2 + 45 + offset, 15, color.red, "center");
     };
     let _gameDrawServerStatusText = function () {
         _clearScreen(color.white, 1);
-        drawText(window.loadingTextStatus||"", _global._screenWidth / 2, _global._screenHeight / 2, 30, color.guiwhite, "center");
-        drawText(window.loadingTextTooltip||"", _global._screenWidth / 2, _global._screenHeight / 2 + 75, 15, color.guiwhite, "center");
+        drawText(window.loadingTextStatus||"", global._screenWidth / 2, global._screenHeight / 2, 30, color.guiwhite, "center");
+        drawText(window.loadingTextTooltip||"", global._screenWidth / 2, global._screenHeight / 2 + 75, 15, color.guiwhite, "center");
     };
     let _gameDrawLoadingMockups = function () {
         _clearScreen(color.white, 1);
-        drawText("Loading mockups...", _global._screenWidth / 2, _global._screenHeight / 2, 30, color.guiwhite, "center");
-        drawText("This may take a while depending on your device speed and internet speed!", _global._screenWidth / 2, _global._screenHeight / 2 + 75, 15, color.guiwhite, "center");
+        drawText("Loading mockups...", global._screenWidth / 2, global._screenHeight / 2, 30, color.guiwhite, "center");
+        drawText("This may take a while depending on your device speed and internet speed!", global._screenWidth / 2, global._screenHeight / 2 + 75, 15, color.guiwhite, "center");
     };
     let _gameDrawQueue = function () {
-        let splash = _global._tipSplash[Math.floor(Math.random() * _global._tipSplash.length)],
+        let splash = global._tipSplash[Math.floor(Math.random() * global._tipSplash.length)],
             timer = 400;
         return function () {
             if (timer-- <= 0) {
-                splash = _global._tipSplash[Math.floor(Math.random() * _global._tipSplash.length)];
+                splash = global._tipSplash[Math.floor(Math.random() * global._tipSplash.length)];
                 timer = 400;
             }
             renderTimes++;
             metrics._latency = 0;
             _clearScreen(color.white, .5);
-            drawText("You are in queue for a 1v1 battle!", _global._screenWidth / 2, _global._screenHeight / 2, 30, color.guiwhite, "center");
-            drawText(splash, _global._screenWidth / 2, _global._screenHeight / 2 + 30, 15, color.lgreen, "center");
-            drawText("You've been in the queue for " + _util._formatTime(Math.round((Date.now() - _global.queueStart) / 1000)), _global._screenWidth / 2, _global._screenHeight / 2 + 75, 15, color.guiwhite, "center");
+            drawText("You are in queue for a 1v1 battle!", global._screenWidth / 2, global._screenHeight / 2, 30, color.guiwhite, "center");
+            drawText(splash, global._screenWidth / 2, global._screenHeight / 2 + 30, 15, color.lgreen, "center");
+            drawText("You've been in the queue for " + _util._formatTime(Math.round((Date.now() - global.queueStart) / 1000)), global._screenWidth / 2, global._screenHeight / 2 + 75, 15, color.guiwhite, "center");
         }
     }();
     let _gameDrawRankedResults = function () {
@@ -10230,22 +7347,22 @@ const mixColors = (() => {
             _clearScreen(color.white, .5);
             renderTimes++;
             metrics._latency = 0;
-            drawText(_global.matchResults.won === 2 ? "It was a draw!" : "You " + (_global.matchResults.won ? "won" : "lost") + "!", _global._screenWidth / 2, _global._screenHeight / 2, 30, color.guiwhite, "center");
-            drawText(_global.matchResults.message, _global._screenWidth / 2, _global._screenHeight / 2 + 30, 15, color.lgreen, "center");
-            drawText("Press enter to rejoin the queue!", _global._screenWidth / 2, _global._screenHeight / 2 + 75, 15, color.guiwhite, "center");
+            drawText(global.matchResults.won === 2 ? "It was a draw!" : "You " + (global.matchResults.won ? "won" : "lost") + "!", global._screenWidth / 2, global._screenHeight / 2, 30, color.guiwhite, "center");
+            drawText(global.matchResults.message, global._screenWidth / 2, global._screenHeight / 2 + 30, 15, color.lgreen, "center");
+            drawText("Press enter to rejoin the queue!", global._screenWidth / 2, global._screenHeight / 2 + 75, 15, color.guiwhite, "center");
         }
     }();
 
-    _global.gameLoopSecond = function () {
+    global.gameLoopSecond = function () {
         let time = 0;
         let i = 0;
         let func = function () {
-            _global._bandwidth._out = _global._bandwidth._outbound;
-            _global._bandwidth._in = _global._bandwidth._inbound;
-            _global._bandwidth._outbound = 0;
-            _global._bandwidth._inbound = 0;
+            global._bandwidth._out = global._bandwidth._outbound;
+            global._bandwidth._in = global._bandwidth._inbound;
+            global._bandwidth._outbound = 0;
+            global._bandwidth._inbound = 0;
 
-            if (!_global._gameStart || _global.gameDrawDead || _global._disconnected) {
+            if (!global._gameStart || global.gameDrawDead || global._disconnected) {
                 return time = 0
             } else {
 
@@ -10288,8 +7405,8 @@ const mixColors = (() => {
                     break;
             }
 
-            _global._fps = _global._fpsc;
-            _global._fpsc = 0;
+            global._fps = global._fpsc;
+            global._fpsc = 0;
 
             if (time % 3 === 0) {
                 if (_gui._skills[0].cap !== 0 && _gui._skills[0].amount === _gui._skills[0].cap) _rewardManager._unlockAchievement("shielded_from_your_bs");
@@ -10309,63 +7426,63 @@ const mixColors = (() => {
                 if (_rewardManager._statistics[10] < 110 && _rewardManager._statistics[10] > 99) _rewardManager._unlockAchievement("drones_are_life");
 
                 let max = _gui._leaderboard._display.length ? _gui._leaderboard._display[0].score : false;
-                if (!_global._died && time > 30 && Math.min(1, _gui._skill.getScore() / max) === 1) _rewardManager._unlockAchievement("the_leader");
+                if (!global._died && time > 30 && Math.min(1, _gui._skill.getScore() / max) === 1) _rewardManager._unlockAchievement("the_leader");
             }
         }
         setInterval(func, 1000);
     }();
-    const conv = str => `${str}`.replaceAll("\n", "").replaceAll(" ", "");
+
     let nextTime = 0;
     function _animloop() {
-        _global.animLoopHandle = window.requestAnimFrame(_animloop);
+        global.animLoopHandle = window.requestAnimFrame(_animloop);
         if (nextTime < performance.now()) {
-            _global._fpsc++;
+            global._fpsc++;
             try {
-                if (_global._tankMenuColorReal >= 185) _global._tankMenuColorReal = 100;
-                _global._tankMenuColorReal += 0.16;
-                _global._tankMenuColor = _global._tankMenuColorReal | 0;
+                if (global._tankMenuColorReal >= 185) global._tankMenuColorReal = 100;
+                global._tankMenuColorReal += 0.16;
+                global._tankMenuColor = global._tankMenuColorReal | 0;
                 _player._renderv += (_player._view - _player._renderv) / 30;
                 let ratio = getRatio();
                 ctx.lineCap = "round";
                 ctx.lineJoin = "round";
-                if (_global._gameStart && !_global._disconnected) {
-                    _global.time = Date.now(); //getNow();
-                    if (_global.time - lastPing > 1000) {
+                if (global._gameStart && !global._disconnected) {
+                    global.time = Date.now(); //getNow();
+                    if (global.time - lastPing > 1000) {
                         _socket.ping();
-                        lastPing = _global.time;
+                        lastPing = global.time;
                         metrics._rendertime = renderTimes;
                         renderTimes = 0;
                         metrics._updatetime = updateTimes;
                         updateTimes = 0;
                     }
-                    if (_global._debug > 3 && _global.time - lastServerStat > 1000 + 150) {// make sure to update this on the server if you change the time
+                    if (global._debug > 3 && global.time - lastServerStat > 1000 + 150) {// make sure to update this on the server if you change the time
                         _socket.talk("da")
-                        lastServerStat = _global.time
+                        lastServerStat = global.time
                     }
-                    metrics._lag = _global.time - _player._time;
+                    metrics._lag = global.time - _player._time;
                 }
-                if (_global.inQueue === 2) _gameDrawRankedResults();
-                else if (_global.inQueue) _gameDrawQueue();
+                if (global.inQueue === 2) _gameDrawRankedResults();
+                else if (global.inQueue) _gameDrawQueue();
                 else if (!window.rivetServerFound) _gameDrawServerStatusText();
-                else if (_global._gameStart) {
+                else if (global._gameStart) {
                     if (_mockups.length === 0) _gameDrawLoadingMockups();
                     else {
                         gameDraw(ratio);
                     };
-                } else if (!_global._disconnected) {
+                } else if (!global._disconnected) {
                     _gameDrawServerStatusText();
                 }
                 _gameDrawDead();
-                if (_global._disconnected) _gameDrawDisconnected();
+                if (global._disconnected) _gameDrawDisconnected();
             } catch (error) {
                 _gameDrawError(error)
             }
-            nextTime += _global._fpscap;
+            nextTime += global._fpscap;
         }
     };
     document.getElementById("wrapperWrapper").onclick = () => {
         if (document.getElementById("startMenuWrapper")) {
-            return
+            //return
         }
         document.getElementById("gameCanvas").focus()
     }
