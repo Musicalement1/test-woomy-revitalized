@@ -3220,7 +3220,7 @@ function getCrptFunction(){
     }
     function rounder(val) {
         if (Math.abs(val) < 0.001) val = 0;
-        return +val.toPrecision(4);
+        return +val.toPrecision();
     }
     const parseMockup = (e, p) => {
         return {

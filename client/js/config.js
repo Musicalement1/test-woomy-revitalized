@@ -21,7 +21,7 @@ let config = {
 	disableMessages: 0,
 	roundUpgrades: 0,
 	drawOwnName: false,
-	autoUpgrade: global.mobile,
+	autoUpgrade: true,
 	tintedDamage: true,
 	lerpSize: true,
 	glassMode: false,

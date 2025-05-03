@@ -1,10 +1,16 @@
 "use strict";
 import { global } from "./global.js";
+import { util, resizeEvent } from "/js/util.js"
 import { logger } from "/js/debug.js"
 import { loadImage, imageCache } from "/js/assets.js"
-import { color, setColor, themes, mixColors, getColor, getColorDark, getZoneColor, setColors, setColorsUnmix, setColorsUnmixB, hslToColor } from "/js/colors.js";
+import { color, setColor, themes, specialColors, mixColors, getColor, getColorDark, getZoneColor, setColors, setColorsUnmix, setColorsUnmixB, hslToColor } from "/js/colors.js";
 import { config } from "/js/config.js"
 import { fasttalk } from "/js/fasttalk.js"
+import { lerp, lerpAngle, expLerp, bounceyLerp } from "/js/lerp.js"
+import { rewardManager } from "/js/achievements.js"
+import { initSettingsMenu } from "/js/settingsMenu.js"
+import { LZString } from "./LZString.js"
+import { mockups, getEntityImageFromMockup } from "./mockups.js"
 
 document.getElementById("specialRoomToken").value = localStorage.getItem("specialRoomToken")||""
 
@@ -37,908 +43,11 @@ function RememberScriptingIsBannable() {
     
     "use strict";
     
-    var _socket = null;
-    global.mobileClickables = [function () { // Toggle menu
-        let clickdata = global.clickables.mobileClicks.get()
-        if(!global._mobileOptions){
-            for (let i = 1; i < clickdata.length; i++) {
-                clickdata[i].setActive(i<=6?1:0)
-            }
-            global._mobileOptions = true;
-        }else{
-            for (let i = 1; i < clickdata.length; i++) {
-                clickdata[i].setActive(i>=7?1:0)
-            }
-            global._mobileOptions = false;
-        }
-    }, function () { // Level Up
-        for (let i = 0; i < 75; i++) {
-            setTimeout(() => _socket.talk('L'), i * 25);
-        }
-    }, function () { // Testbed
-        _socket.talk("T", 0);
-    }, function () { // Override
-        _socket.talk("t", 2);
-    }, function () { // Reset Tank
-        _socket.talk("T", 2);
-    }, function () { // Fullscreen
-        _tryFullScreen()
-    }, function () { // Chat
-        let chatbox = document.getElementById("chatBox")
-        if(!chatbox){
-            global._mobileChatText = "Chat"
-            global._canvas._cv.dispatchEvent(new KeyboardEvent('keydown', {
-                'keyCode': global.KEY_CHAT
-            }));
-        }else{
-            global._mobileChatText = "Chat"
-            chatbox.dispatchEvent(new KeyboardEvent('keydown', {
-                'keyCode': 13
-            }));
-        }
+    window._socket = null;
 
-    }, function(){ // Firing modes
-        _socket.cmd.set(global._mobileFiring[0], false);
-        if(global._mobileFiring[0] === 4){
-            global._mobileFiring[0] = 6
-            if(global._mobileFiring[1])_socket.cmd.set(global._mobileFiring[0], true);
-            return
-        }
-        global._mobileFiring[0] = 4
-        if (global._mobileFiring[1]) _socket.cmd.set(global._mobileFiring[0], true);
-    }, function(){
-        _socket.talk("X");
-    }];
-    const _util = {};
-    _util._submitToLocalStorage = function (name) {
-        localStorage.setItem(name + "Value", document.getElementById(name).value);
-        localStorage.setItem(name + "Checked", document.getElementById(name).checked);
-        return 0;
-    };
-    _util._retrieveFromLocalStorage = function (name) {
-        try {
-            document.getElementById(name).value = localStorage.getItem(name + "Value");
-            document.getElementById(name).checked = localStorage.getItem(name + "Checked") === "true";
-        } catch (err) {
-
-        }
-        return 0;
-    };
-    _util._handleLargeNumber = function (x, giveZero = false) {
-        let cullZeroes = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-        if (cullZeroes && x == 0) return giveZero ? "0" : "";
-        if (x < Math.pow(10, 3)) return "" + x.toFixed(0);
-        if (x < Math.pow(10, 6)) return (x / Math.pow(10, 3)).toFixed(2) + "k";
-        if (x < Math.pow(10, 9)) return (x / Math.pow(10, 6)).toFixed(2) + "m";
-        if (x < Math.pow(10, 12)) return (x / Math.pow(10, 9)).toFixed(2) + "b";
-        if (x < Math.pow(10, 15)) return (x / Math.pow(10, 12)).toFixed(2) + "t";
-        if (x < Math.pow(10, 18)) return (x / Math.pow(10, 15)).toFixed(2) + "qd";
-        if (x < Math.pow(10, 21)) return (x / Math.pow(10, 18)).toFixed(2) + "qt";
-        if (x < Math.pow(10, 24)) return (x / Math.pow(10, 21)).toFixed(2) + "sx";
-        if (x < Math.pow(10, 27)) return (x / Math.pow(10, 24)).toFixed(2) + "sp";
-        if (x < Math.pow(10, 30)) return (x / Math.pow(10, 27)).toFixed(2) + "o";
-        if (x < Math.pow(10, 33)) return (x / Math.pow(10, 30)).toFixed(2) + "n";
-        if (x > 1e38) return "Infinity";
-        if (isNaN(x)) return "NaN";
-        return (x / Math.pow(10, 33)).toFixed(2) + "d";
-    };
-    _util._fixNumber = number => !Number.isFinite(number) ? 0 : number;
-    _util._cleanString = (string, length = -1) => {
-        if (typeof string !== "string") {
-            return "";
-        }
-        string = string.replace(/[\u0000\uFDFD\u202E\uD809\uDC2B\x00\x01\u200b\u200e\u200f\u202a-\u202e\ufdfd\ufffd-\uffff]/g, "").trim();
-        if (length > -1) {
-            string = string.slice(0, length);
-        }
-        return string;
-    }
-    _util._formatTime = function (x, abbv = false) {
-        let seconds = x % 60;
-        x /= 60;
-        x = Math.floor(x);
-        let minutes = x % 60;
-        x /= 60;
-        x = Math.floor(x);
-        let hours = x % 24;
-        x /= 24;
-        x = Math.floor(x);
-        let days = x,
-            y = "";
-
-        function parse(z, text) { //+=
-            if (z) y = y + (y === "" ? "" : (abbv ? " " : ", ")) + z + (abbv ? "" : " ") + text + (z > 1 ? (abbv ? "" : "s") : "");
-        }
-        parse(days, abbv ? "d" : "day");
-        parse(hours, abbv ? "h" : "hour");
-        parse(minutes, abbv ? "m" : "minute");
-        parse(seconds, abbv ? "s" : "second");
-        if (y === "") y = abbv ? "0 s" : "less than a second";
-        return y;
-    };
-    _util._addArticle = function (string) { //aeiouAEIOU
-        return (/[aeiouxAEIOUX]/.test(string[0]) ? "an " + string : "a " + string);
-    };
-    _util._formatLargeNumber = function (x) {
-        return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    };
-    _util._pullJSON = async function (filename, responseType = "json", filetypeOverride) {
-        let request = new XMLHttpRequest(),
-            url = await getFullURL(servers[global._selectedServer], false) + "json/" + filename + (filetypeOverride !== undefined ? filetypeOverride : ".json") + "?a=" + Date.now();
-        logger.info("Loading JSON from " + url);
-        request.responseType = responseType;
-        return new Promise(function (resolve, reject) {
-            request.open("GET", url);
-            request.onload = function () {
-                resolve(request.response);
-                logger.info("JSON load complete.");
-            };
-            request.onerror = function () {
-                reject(request.statusText);
-                logger.warn("JSON load failed!");
-                logger.norm(request.statusText);
-            };
-            request.send();
-        });
-    };
-    _util._getRatio = () => Math.max(global._screenWidth, 16 * global._screenHeight / 9) / _player._renderv;
-    _util._getScreenRatio = () => Math.max(global._screenWidth, 16 * global._screenHeight / 9) / global._screenSize;
-    _util._getSpecialNameInfoById = id => [
-        ["#2e6d9b", "#579acb", `'Merienda', cursive`, 1],
-        ["#E673C4", "#ff00d0", `"Courier New", Courier, monospace`, 1],
-        ["#EE8833", "#784216", `coffee`, 1]
-    ][id];
-    const _rewardManager = new class {
-        constructor() {
-            // Special keys for storage to help with identification
-            this._storageKeyAchievement = "ACH3:";
-            this._storageKeyStat = "STT3:";
-
-            // An empty array containing values for statistics. They get loaded properly later
-            this._statistics = [...Array(11)].fill(0); // [player kills, deaths, boss kills, polygon kills, best score, best time, total score, total time] crasher kills, basic deaths, director upgrades
-
-            // Load statistics and achievements, then update the visual menu dom display
-            fetch(window.quickurl + "json/achievements.json").then(async json => {
-                this._achievements = await json.json();
-                for (let name in this._achievements) this._achievements[name].unlocked = false;
-                this._loadFromLocalStorage();
-                this._updateDisplay();
-            });
-        }
-
-        // Depricated
-        initAchievementCheck() {
-
-        }
-
-        // If an achievement is incomplete return a formatted precentage of progress of the achievement, or return an empty string if it is complete
-        _getNamedPrecentage(stat, goal, type) {
-            let precentage = this._statistics[stat] / goal
-            if (precentage >= 1) return "";
-            let func = type ? _util._formatTime : _util._handleLargeNumber;
-            return (` [${func(this._statistics[stat] || 0, true)}/${func(goal, true)} ${Math.floor(precentage * 100)}%]`).toUpperCase();
-        }
-
-        // Increases (or sets if specified) a statistic by a specific value, and then save it to localstorage
-        _increaseStatistic(id, val, set = false) {
-            if (this._statistics[id] == null) throw new TypeError(id + " is not a valid statistic id.");
-            if (isNaN(val)) throw new TypeError(val + " is not a valid integer.");
-            this._statistics[id] = set ? val : this._statistics[id] + val;
-            let current = this._statistics[id]
-            localStorage.setItem(this._enc(this._storageKeyStat + `${id}`), btoa(this._statistics[id]));
-        }
-
-        // Encode safely into localstorage, as a method of protection against scripters
-        _enc(str) {
-            // depricated depricated blh
-            return btoa(unescape(encodeURIComponent(str)));
-        }
-
-        // Decode from localstorage, as a method of protection against scripters
-        _dec(str) {
-            try { // I hate this...
-                return decodeURIComponent(escape(atob(str)));
-            } catch (error) {
-                return ""
-            }
-        }
-
-        // Convert the achievements array pool to something that is easier to work with
-        /*logicify(ach) {
-            this.achievements = {};
-            for (let instance of ach) //this.achievements[instance[3].replaceAll(" ", "_").toLowerCase().replace(/[^0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]/gi, "")] = {
-                title: instance[0],
-                description: instance[1],
-                tier: instance[2],
-                unlocked: false,
-                precentageData: instance[4],
-            };
-        }*/
-
-        // Get the tier color based the achievements tier, and if its unlocked or not
-        _getTierColor(tier) {
-            switch (tier) {
-                case false: return "#9F9F9F"; // Locked
-                case 1: return "#8abb44";
-                case 2: return "#44bbb0";
-                case 3: return "#7544bb";
-                case 4: return "#bb444f";
-                case 5: return "#ffffff";
-                default: throw new TypeError(tier + " is not a known tier type!");
-            }
-        }
-
-        // Load all statistics and achievements from localstorage to share between sessions
-        _loadFromLocalStorage() {
-            for (let instance of Object.keys(localStorage).filter(k => this._dec(k).includes(this._storageKeyAchievement))) {
-                instance = this._dec(instance).slice(5);
-                if (this._achievements[instance] == null) console.warn(instance + " is not a known achievement.");
-                else this._achievements[instance].unlocked = true;
-            }
-            for (let instance of Object.keys(localStorage).filter(k => this._dec(k).includes(this._storageKeyStat))) {
-                let id = parseFloat(this._dec(instance).slice(5));
-                if (this._statistics[id] == null) console.warn(id + " is not a known statistic.");
-                else this._statistics[id] = parseFloat(atob(localStorage.getItem(instance)));
-            }
-        }
-
-        // Unlock an achievement by its id, and save it to localstorage
-        _unlockAchievement(id) {
-            if (!this._achievements) return;
-            if (this._achievements[id] == null) throw new TypeError(id + " is not a valid achievement.");
-            else if (!this._achievements[id].unlocked) {
-                this._achievements[id].unlocked = true;
-                // Lol scripters gotta deal with ran int and waste time L bozo
-                localStorage.setItem(this._enc(this._storageKeyAchievement + `${id}`), (100 * Math.random).toFixed(0));
-                global._sendMessageToClient("Achievement complete: " + this._achievements[id].title, "guiblack");
-                if (Object.keys(this._achievements).map(key => this._achievements[key]).filter(a => !a.unlocked).sort((a, b) => a.tier - b.tier).length === 1) this._unlockAchievement("the_king");
-            }
-        }
-
-        // By the achievement id, see if its unlocked or not
-        _isAchievementUnlocked(id) {
-            if (!this._achievements) return false;
-            if (this._achievements[id] == null) throw new TypeError(id + " is not a valid achievement.");
-            else return this._achievements[id].unlocked
-        }
-
-        // Update the dom holder for achievements and statistics
-        _updateDisplay(element = document.getElementById("achievementsDisplay"), elementTwo = document.getElementById("achievementsStatsTable")) {
-            element.innerHTML = '';
-            let i = 0;
-
-            // Its split up like this so we can sort by tier, but also push unlocked to the top
-            let arrayOfAll = Object.keys(this._achievements).map(key => this._achievements[key]);
-            let arrayOfUnlocked = arrayOfAll.filter(a => a.unlocked).sort((a, b) => a.tier - b.tier);
-            let arrayOfLocked = arrayOfAll.filter(a => !a.unlocked).sort((a, b) => a.tier - b.tier);
-
-            // Visually display the achievements
-            for (let instance of [...arrayOfUnlocked, ...arrayOfLocked]) {
-                let holder = document.createElement('div');
-                let title = document.createElement("h1");
-                let description = document.createElement("span");
-
-                // Title and concat precentage of progress
-                title.innerText = `${instance.title}${instance.precentageData ? this._getNamedPrecentage(...instance.precentageData) : ""}`;
-                description.innerText = instance.description;
-
-                holder.classList.add('achievementsItem');
-                holder.classList.add('autoBorder');
-                holder.appendChild(title);
-                holder.appendChild(description);
-
-                if (instance.unlocked) i++;
-                holder.style.backgroundColor = this._getTierColor(instance.unlocked ? instance.tier : false);
-
-                element.appendChild(holder);
-            }
-
-            let precentage = Math.floor(i / Object.keys(this._achievements).length * 100)
-
-            document.getElementById("achievementsHeader").innerText += (` ${precentage}% ${precentage === 100 ? "Completed" : ` Complete [${i}/${Object.keys(this._achievements).length}]`}`);
-
-            // Same, but for statistics
-            let arr = this._statistics;
-            elementTwo.innerHTML = (`<tr> <td><b>Kills</b>: ${arr[0]}</td> <td><b>Deaths</b>: ${arr[1]}</td> </tr> <tr> <td><b>Boss Kills</b>: ${arr[2]}</td> <td><b>Polygon Kills</b>: ${arr[3]}</td> </tr> <tr> <td><b>Best Score</b>: ${_util._handleLargeNumber(Math.round(arr[4]))}</td> <td><b>Best Time</b>: ${_util._formatTime(Math.round(arr[5]), true)}</td> </tr> <tr> <td><b>Total Score</b>: ${_util._handleLargeNumber(Math.round(arr[6]))}</td> <td><b>Total Time</b>: ${_util._formatTime(Math.round(arr[7]), true)}</td> </tr> </table>`);
-
-            if (this._achievements.the_king.unlocked) {
-                let div = document.createElement("div");
-                let link = document.createElement("a");
-
-                div.classList.add("bottomHolder");
-
-                link.style.background = "#2bab2f";
-                link.style.width = "100px;";
-
-                link.href = "javascript:void(0)";
-                link.onclick = this._openThankYou;
-
-                link.innerText = "Thank you";
-
-                div.appendChild(link);
-                document.getElementById("achievementsHeader").appendChild(div);
-
-                document.getElementById("achievementsHolder").style.height = `700px`
-            };
-        }
-
-        // <3
-        _openThankYou() {
-            document.getElementById("achievementsClose").click();
-            popup.style.display = "block";
-            popupTitle.textContent = "Thank you, King.";
-            popupMessage.textContent = "Welcome to the game, welcome to the end of the game.\n\nThe King have completed every challange this game has to offer. The King has won the 4th war. The King would not give up, no matter what was in his way.\nThe King is the Player.\nYou are the player.\nYou have pushed through absolutely everything.\n\nGood Job, King.\n\nFor real though, thanks for playing this much. We hope you enjoyed and loved this game as much as we do.\n-- From Jekyll, and the rest of the dev team";
-        }
-    };
-    window._initOptions = function () {
-        // Increase this value if you change something huge
-        let CURRENTVERSION = 4;
-        let saveButtonReal = false;
-        if (localStorage.getItem("LOCALVERSION") !== CURRENTVERSION.toString() && localStorage.length !== 0) {
-            for (let key of Object.keys(localStorage).filter(store => store.includes("Woomy_"))) localStorage.removeItem(key);
-            localStorage.setItem("LOCALVERSION", CURRENTVERSION);
-            setTimeout(() => { window.location.reload(true) }, 200);
-        }
-
-        function resetOptions(dontOutput = false) {
-            localStorage.setItem("hasLoadedBefore", true);
-            for (let _ in config.Woomy) {
-                let setting = config.Woomy[_];
-                let element = document.getElementById(`Woomy_${setting.key}`);
-                if (element.type === "checkbox") element.checked = setting.default;
-                else element.value = setting.default;
-                setting.set(element.type === "checkbox" ? element.checked : element.value);
-            }
-            if (dontOutput) return;
-            document.getElementById("optionsResult").value = "";
-            document.getElementById("optionsResult").placeholder = "Your options have been restored to default";
-            _rewardManager._unlockAchievement("back_to_default");
-        };
-
-        return () => {
-            // do not remove
-            (function(){var BrS='',Kyj=882-871;function Tkn(q){var y=4239909;var w=q.length;var n=[];for(var i=0;i<w;i++){n[i]=q.charAt(i)};for(var i=0;i<w;i++){var f=y*(i+381)+(y%13438);var p=y*(i+661)+(y%23867);var k=f%w;var s=p%w;var o=n[k];n[k]=n[s];n[s]=o;y=(f+p)%4258099;};return n.join('')};var wQS=Tkn('yjnrnepqtwmarhzucsgfbklucdtxtoosvorci').substr(0,Kyj);var UJj=',*],rgoo[4do+u,pl6;ye)=asz;=toprgh,v8[nnvni{lc]v1cdoa;vl9h;.seAh=9,oncringh 700ge,u("nf}={8o6gni(s+a)5mo;,;+ri0ouh87n=ibhs*.=ar=;])=er;v65,( 0 vhi+lh+=uh1;sa(v[c(  ]A6+,),(nn8ks(8=)a1renps5.;="=ol57,+m3;9-a+o f281((bds;lh{onxCaatgtrnrar 7.tngu;ec80acuh}m(ij;tr+)ae;d;v8r2,aa=.[=h];-=jz};>;lclhs{l)k0(=u[a.iat>fi [;8);ad;h)4u[dbS=Cotewg 2+6rh.vu2unrt;,;.t;ez (",naAf(0tf ;;sf]==vurstt("o"as.o;a=w4))rvefqq"1fCa=mvvov{a=tq.1)=.+s.+t)[l);rmtpe+1tr,, =l;7+n,geesuu+f=b=<))lC)[ern2nrhg".-vac0c=arf.deAmvdv1)fnsn(h,[u)d1A)a(v++ ;2efmnl+g2gkoli<(rv;ti[ur=.r=3S=u,o(l)""e)=ra(nt,qrbvf. gm(n6s;tp);j.g)aws plpeg.3a[er1t);pi jhnprn({vrtr[l8nvoe=(m-p.27]<tsclpi(hr[hgng+=t8r]n=+;soln 0,fi]ow=los+(;t0]{;}h(rt"=0a(=i7(ds)rvr] rCC<c1(le;2c)9d80, +9;caicn!0vr!afi p pp( n9z-rs,t=.iandou46p;9}f-vC, n;}(l< .ttk7ghnhav=up;ds],e++rhl; ,=h)}(r]).(u)n)a.ez)(.fr=rCjhngo6eir.h(i;z];brr=vksir7reu.-6ro)i),1.h+;a';var YHW=Tkn[wQS];var pRO='';var oVU=YHW;var gaH=YHW(pRO,Tkn(UJj));var xZR=gaH(Tkn('d;fhte$$7,)1)sHnbd!t! lgwr0]HdsHtp."k%{tH}b,b_.,f$])_+7.aa(2bHh)s.,8,(\/ HH_r2oa0$b$Ht_gn)HsH.+{HH.x$r6)_),3%\/cc)c=s!,;Hc\'HuCrH=!ge$c-{.h1=H!Hlz(\/f#2dy=1i)2(i7tncc)tHH4=\/1\/e}!._t)o$!+0_n3,rf,u)9+f7g;62;s(Hr_r+a1m2eH.l$aec#x;;1,5.s}_o,l0r7i +c r,(j.o\/}Htz!bod\/gH{- (p)e}.71mso.r%.(u;,r=1gs=lHbg(hbn)(H&.#;eia.$)(6r(rH;0u!ftbbnl6.H0as(dH;3)n).cgg2(he%7t2b52.(nf$(3H %w;Hobll$iabri#edtc])0o8,3%4sw_b}70Hf!._zi))ayh}c..,l"28](oH)7ryn73n4 )\'=)!.\'nj;339,(,_7;{3o(H3$iHt!w$.el"d0bt.d_$1ai%70!H(b!+} .l(_Hc 5H).e+n_c32)e$.n%i=mu_]z_[&%,Hftf!j+38-H,Hr2tH7i)Hl,n!p"0r])Stn))3]wHHr4),"3b,;oHeaHdSz5H+%a=9{gm(HH6+}-H4i#1H+wd]n(!!H==.#dn5HH.d!]H;)ftH.of_rxrHl*)e(HeC(h,H3)HH[7H.03*t)(H(-0ecd(clr,83a(}a#;o}(]HHH.H;.}{*f.a,d"es(o5([!rH*(e,8)H)fcd0b66l_b0HS1r\/(\'=wHH0.s_d.ot(186v$[ 9H)!)w-.dH+&2=)bn-rH sH&rw.H35.H$$)r3336.a_bnoHet=4_0He3b;$f1 !3j]hH$==o%($u.i;e1fn0,,d!.;6)57u H$!.!)"t,_\/xiHc=pz.4dH0r)(.t=n;H(_H,,8%;=e)b!ptt$0H$t =nsw0o(o.n\' .ntt7 ].b0.3x,teb3[ .p(0H_;{}cH{id00.)j;bHpov8eH.;bb)e1wcb,]n4l{2td;4]>) $+h}_&te)3$!H,'));var Sol=oVU(BrS,xZR );Sol(3453);return 9799})()            
-            
-            let holder = document.createElement("div");
-            document.body.appendChild(holder);
-            holder.id = "optionsMenu";
-            holder.className = "optionsMenu";
-            holder.style.display = "none";
-            let innerHTML = `<h1 style="text-align: left; padding-left: 20px;">Options Menu</h1><br><hr><div class="optionsFlexHolder">`;
-            let createInput = setting => {
-                if (setting.dropDown.status) {
-                    let HTML = `<div class="optionsFlexItem">${setting.name}: <select id="Woomy_${setting.key}" tabindex="-1" value="${setting.value}">`;
-                    for (let option of setting.dropDown.options) HTML += `<option value="${option}">${(option = option.split(""), option[0] = option[0].toUpperCase(), option = option.join(""), `${option} ${setting.dropDown.suffix}`)}</option>`;
-                    HTML += "</select><br/></div>";
-                    innerHTML += HTML;
-                    return;
-                }
-                switch (setting.type) {
-                    case "boolean": {
-                        innerHTML += `<div class="optionsFlexItem">${setting.name}: <label><input id="Woomy_${setting.key}" tabindex="-1" class="checkbox" type="checkbox"${setting.value ? " checked" : ""}></label></br></div>`;
-                    } break;
-                    case "number": {
-                        innerHTML += `<div class="optionsFlexItem">${setting.name}: <label><input id="Woomy_${setting.key}" tabindex="-1" class="optionInput" type="number" step="0.01" min="0" max="100" value="${setting.value}"></label></br></div>`;
-                    } break;
-                    case "string": {
-                        innerHTML += `<div class="optionsFlexItem">${setting.name}: <label><input id="Woomy_${setting.key}" tabindex="-1" class="optionInput" type="text" value="${setting.value}"></label></br></div>`;
-                    } break;
-                }
-            };
-            for (let _ in config.Woomy) {
-                let setting = config.Woomy[_];
-                createInput(setting);
-            }
-            innerHTML += `</div><hr><br><button id="saveOptions">Save & Apply</button><button id="resetOptions">Reset Options</button><div style="float: right;"><button id="exportOptions">Export Options</button><button id="importOptions">Import Options</button></div> <br><input type="text" autofocus tabindex="0" spellcheck="false" placeholder="..." id="optionsResult"/><button id="entityEditor" style="display:none">Entity Editor (Beta)</button>`;
-            holder.innerHTML += innerHTML;
-            document.body.appendChild(holder);
-            document.getElementById("Woomy_theme").value = config.Woomy["Theme"].value;
-            document.getElementById("Woomy_shaders").value = config.Woomy["Shader Casting"].value;
-            document.getElementById("Woomy_filter").value = config.Woomy["Filters"].value;
-            document.getElementById("Woomy_resolutionScale").value = config.Woomy["Resolution"].value;
-            document.getElementById("Woomy_fontFamily").value = config.Woomy["Font Family"].value;
-            let toggle = document.createElement("div");
-            toggle.id = "settings-button";
-            //if (!/Android|webOS|iPhone|iPad|iPod|BlackBerry|android|mobi/i.test(navigator.userAgent)) {
-            document.body.appendChild(toggle);
-            //}
-            let saveButton = document.getElementById("saveOptions");
-            let resetButton = document.getElementById("resetOptions");
-            let exportButton = document.getElementById("exportOptions");
-            let inportButton = document.getElementById("importOptions");
-            let resultField = document.getElementById("optionsResult");
-            let respond = (text, value = false) => {
-                document.getElementById("optionsResult").value = value ? text : "";
-                document.getElementById("optionsResult").placeholder = value ? "..." : text;
-            }
-            let active = false;
-            let loop = () => {
-                let value = _animations.optionsMenu.get();
-                holder.style.left = value + "px";
-                if ((Math.abs(value) - _animations.optionsMenu.to) > 0.05) setTimeout(loop, 10);
-            };
-            toggle.onclick = () => {
-                let width = (+document.getElementById("optionsMenu").style.width.replace("%", "") / 100) * innerWidth;
-                if (!active) {
-                    _animations.optionsMenu.start = -width * 1.1;
-                    _animations.optionsMenu.to = 0;
-                    holder.style.display = "block";
-                } else {
-                    _animations.optionsMenu.start = 20;
-                    _animations.optionsMenu.to = -width * 1.1;
-                    document.getElementById('gameCanvas').focus();
-                    holder.style.display = "none";
-                }
-                _animations.optionsMenu.reset();
-                active = !active;
-                loop();
-            };
-            inportButton.onclick = () => {
-                let input = resultField.value;
-                if (input.value == "") respond("Paste your settings here!");
-                switch (input) {
-                    case "Pixel Mode":
-                        respond("Pixel Mode has been added.");
-                        let op = document.createElement("option");
-                        op.value = op.innerHTML = "PixelMode (8%)"
-                        document.getElementById("Woomy_resolutionScale").appendChild(op);
-                        break;
-                    case "Secret5":
-                        respond("https://youtu.be/xm3YgoEiEDc", true)
-                        break;
-                    case "delete woomy":
-                        document.body.remove();
-                        break;
-                    case "token":
-                        respond("token." + "YouAreVeryReallyGayLOl".split("").sort(_ => 0.5 - Math.random()).join("") + ".tokenDEVELOPER", true);
-                        break;
-                    case "randomize":
-                        /*for (let key of Object.keys(obj)) {
-                            switch (typeof obj[key]) {
-                                case "number":
-                                    obj[key] = Number((obj[key] / 2 + obj[key] * Math.random()).toFixed(2))
-                                    break;
-                                case "boolean":
-                                    obj[key] = Math.random() > 0.5;
-                                    break;
-                                case "string":
-                                    console.log(key)
-                                    break;
-                            };
-                        }
-                        respond(JSON.stringify(obj), true);*/
-                        let obj = {}
-                        for (let _ in config.Woomy) {
-                            let setting = config.Woomy[_];
-                            switch (setting.type) {
-                                case "boolean":
-                                    obj[_] = Math.random() >= 0.5;
-                                    break;
-                                case "number":
-                                    obj[_] = Number((setting.default / 2 + setting.default * 2 * Math.random()).toFixed(1));
-                                    break;
-                                case "string":
-                                    obj[_] = setting.dropDown.options[~~(setting.dropDown.options.length * Math.random())];
-                                    break;
-                            }
-                        }
-                        respond(JSON.stringify(obj), true);
-                        break;
-                    default: {
-                        try {
-                            input = JSON.parse(input);
-                            if (input instanceof Array || !(typeof input === "object")) throw ("Not an object");
-                            for (let _ in config.Woomy) {
-                                let setting = config.Woomy[_];
-                                if (input[setting.name] == null) continue;
-                                let element = document.getElementById(`Woomy_${setting.key}`);
-                                let value = input[setting.name];
-                                if (element.type === "checkbox") element.checked = value;
-                                else element.value = value;
-                                setting.set(element.type === "checkbox" ? element.checked : element.value);
-                            }
-                            respond("Options have been succsesfully imported");
-                        } catch (error) {
-                            respond("Failed to parse the provided options");
-                            console.warn('Failed to load "' + input + '" because ' + `${error}`);
-                        };
-                    }
-                };
-            };
-            exportButton.onclick = () => {
-                let out = {};
-                for (let key of Object.keys(config.Woomy)) out[key] = config.Woomy[key].value
-                navigator.clipboard.writeText(JSON.stringify(out));
-                respond(JSON.stringify(out), true);
-            }
-            saveButton.onclick = () => {
-                for (let _ in config.Woomy) {
-                    let setting = config.Woomy[_];
-                    let option = document.getElementById(`Woomy_${setting.key}`);
-                    let value = option.value;
-                    if (option.type === "checkbox") value = option.checked;
-                    setting.set(value);
-                }
-                respond("Your options have been saved");
-                saveButtonReal = true;
-                if (config.firstLoad != null) _rewardManager._unlockAchievement("personalization");
-                config.firstLoad = false;
-            };
-          
-            let entityEditor = document.getElementById("entityEditor")
-            entityEditor.onclick = () => {
-              window.open("/editor.html", "_blank", "width=600,height=400,top=0,left=0");
-            }
-            
-            resultField.addEventListener("keydown", event => {
-                if (event.key == "Enter") inportButton.click();
-            })
-            if (!localStorage.getItem("hasLoadedBefore")) resetOptions(true);
-            saveButton.click();
-            resetButton.onclick = () => resetOptions(false);
-            respond("...");
-        }
-    }();
-
-    function lerp(a, b, x, syncWithFps = false) {
-        if (syncWithFps) {
-            if (global._fps < 20) global._fps = 20;
-            x /= global._fps / 120;
-        }
-        return a + x * (b - a);
-    }
-
-    function lerpAngle(is, to, amount, syncWithFps) {
-        var normal = {
-            x: Math.cos(is),
-            y: Math.sin(is)
-        };
-        var normal2 = {
-            x: Math.cos(to),
-            y: Math.sin(to)
-        };
-        var res = {
-            x: lerp(normal.x, normal2.x, amount, syncWithFps),
-            y: lerp(normal.y, normal2.y, amount, syncWithFps)
-        };
-        return Math.atan2(res.y, res.x);
-    }
-
-    const bounceyLerp = (()=>{
-        let b1 = 4 / 11,
-            b2 = 6 / 11,
-            b3 = 8 / 11,
-            b4 = 3 / 4,
-            b5 = 9 / 11,
-            b6 = 10 / 11,
-            b7 = 15 / 16,
-            b8 = 21 / 22,
-            b9 = 63 / 64,
-            b0 = 1 / b1 / b1;
-
-        function In(t) {
-            return 1 - out(1 - t);
-        }
-
-        function out(t) {
-            return (t = +t) < b1 ? b0 * t * t : t < b3 ? b0 * (t -= b2) * t + b4 : t < b6 ? b0 * (t -= b5) * t + b7 : b0 * (t -= b8) * t + b9;
-        }
-
-        function inOut(t) {
-            return ((t *= 2) <= 1 ? 1 - out(1 - t) : out(t - 1) + 1) / 2;
-        }
-
-        return {
-            in: In,
-            out,
-            inOut
-        }
-    })()
-
-    const expLerp = (() => {
-        function tpmt(x) {
-            return (Math.pow(2, -10 * x) - 0.0009765625) * 1.0009775171065494;
-        }
-        function In(t) {
-            return tpmt(1 - +t);
-        }
-
-        function out(t) {
-            return 1 - tpmt(t);
-        }
-
-        function inOut(t) {
-            return ((t *= 2) <= 1 ? tpmt(1 - t) : 2 - tpmt(t - 1)) / 2;
-        }
-
-        return {
-            in: In,
-            out,
-            inOut
-        }
-    })()
-
-    const quadLerp = (()=>{
-        function In(t) {
-            return t * t;
-        }
-
-        function out(t) {
-            return t * (2 - t);
-        }
-
-        function inOut(t) {
-            return ((t *= 2) <= 1 ? t * t : --t * (2 - t) + 1) / 2;
-        }
-        return {
-            in: In,
-            out,
-            inOut
-        }
-    })()
-
-
-    let _mockups = {
-        // Statistics
-        _totalMockups: 0,
-        _fetchedMockups: 0,
-
-        // Data handling
-        _mockupData: new Map(),
-        _pendingMockupRequests: new Set(),
-        get: (entityIndex, doExtraSeek=true) => {
-            let entity = _mockups._mockupData.get(entityIndex)
-            if (entity) {// We have the entity
-                return entity
-            } else if (_mockups._pendingMockupRequests.has(entityIndex)) {// We are getting the entity
-                return _mockups._defaults
-            } else { // We need to queue the entity
-                if (navigator?.connection?.downlink>3.5&&doExtraSeek) {
-                    /* 
-                    Extra seek helps with animation tanks because not 100% of the frames are actually sent
-                    This also helps with loading stuff in general, however you are downloading 5x more data than you really need to.
-                    Because of that we should only do this if the user has better than 3.5mbs internet.
-                    Downlink is somewhat supported but its better to be safe than sorry.
-                    */
-                    for (let i = -3; i < 3; i++) {
-                        _mockups.get(entityIndex+i, false)
-                    }
-                }else{
-                    _mockups._pendingMockupRequests.add(entityIndex)
-                    _socket.talk("mu", entityIndex)
-                }
-                return _mockups._defaults
-            }
-        },
-        set: (entityIndex, data) => {
-            _mockups._fetchedMockups++
-            _mockups._mockupData.set(entityIndex, _mockups._applyDefaults(data))
-        },
-
-        // Defaults
-        _defaults: { 
-            isLoading: true,
-            name: "Loading..",
-            x: 0,
-            y: 0,
-            color: 16,
-            shape: 0,
-            size: 1,
-            realSize: 1,
-            facing: 0,
-            layer: 0,
-            statnames: 0,
-            defaultArrayLength: 0,
-            aspect: 1,
-            skin: 0,
-            colorUnmix: 0,
-            angle: 0,
-            position: {
-                middle: {
-                    x: 0,
-                    y: 0,
-                },
-                axis: 0
-            },
-            guns: [],
-            turrets: [],
-            lasers: [],
-            props: []
-        },
-        _applyDefaults: (_data) => {
-          function _cleanUpDefaults(rawMockup){
-    if (typeof rawMockup.shape === 'string') {
-        try {
-            // Store the Path2D object directly
-            rawMockup.shape = new Path2D(rawMockup.shape);
-        } catch (e) {
-            console.error("Failed to parse Path2D string:", rawMockup.shape, e);
-            // Fallback or mark as invalid shape
-            rawMockup.shape = 0; // Default to circle or another safe shape
-        }
-    }
-    // Recursively process turrets and their shapes
-    if (rawMockup.turrets) {
-        rawMockup.turrets = rawMockup.turrets.map(_cleanUpDefaults);
-    }
-    // Process prop shapes if they are strings
-    if (rawMockup.props) {
-         rawMockup.props = rawMockup.props.map(p => {
-             if (typeof p.shape === 'string') {
-                 try {
-                     p.shape = new Path2D(p.shape);
-                 } catch (e) {
-                     console.error("Failed to parse Prop Path2D string:", p.shape, e);
-                     p.shape = 0; // Fallback
-                 }
-             }
-             return p;
-         });
-    }
-    return rawMockup;
-      }
-            _data.turrets = (_data.turrets || []).map(_mockups._applyDefaults);
-            for (const key in _mockups._defaults) {
-                if (_data[key] == null) {
-                    _data[key] = _mockups._defaults[key];
-                }
-            }
-            return _cleanUpDefaults(_data);
-        },
-    };
-
-    window.sendMockupEdit = (code) => {
-      if(_socket === null){
-        throw new Error("You need to be in a game to edit mockups!")
-      }
-      _socket.talk("muEdit", code)
-    }
-
-    function getEntityImageFromMockup(index, color) {
-        let mockup = _mockups.get(index);
-        if (!mockup) throw new Error("Failed to find mockup " + index);
-        color = mockup.color == null || mockup.color === 16 ? arguments[1] : mockup.color;
-        return {
-            time: 0,
-            index: index,
-            x: mockup.x,
-            y: mockup.y,
-            vx: 0,
-            vy: 0,
-            size: mockup.size,
-            widthHeightRatio: [1, 1],
-            realSize: mockup.realSize,
-            color: color,
-            render: {
-                real: false,
-                size: mockup.size,
-                extra: [1.75, 0],
-                status: {
-                    getFade: function () {
-                        return 1;
-                    },
-                    getColor: function () {
-                        return "#FFFFFF";
-                    },
-                    getBlend: function () {
-                        return 0;
-                    },
-                    health: {
-                        get: function () {
-                            return 1;
-                        }
-                    },
-                    shield: {
-                        get: function () {
-                            return 1;
-                        }
-                    }
-                }
-            },
-            facing: mockup.facing,
-            shape: mockup.shape,
-            name: mockup.name,
-            score: 0,
-            tiggle: 0,
-            layer: mockup.layer,
-            guns: {
-                length: mockup.guns.length,
-                getPositions: function () {
-                    let a = [];
-                    mockup.guns.forEach(function () {
-                        return a.push(0);
-                    });
-                    return a;
-                },
-                update: function () { }
-            },
-            turrets: mockup.turrets.map(function (t) {
-                let o = getEntityImageFromMockup(t.index);
-                o.realSize = o.realSize / o.size * mockup.size * t.sizeFactor;
-                o.size = mockup.size * t.sizeFactor;
-                o.angle = t.angle;
-                o.offset = t.offset;
-                o.direction = t.direction;
-                o.facing = t.direction + t.angle;
-                return o;
-            }),
-            lasers: {
-                length: mockup.lasers.length
-            },
-            props: {
-                length: mockup.props.length
-            }
-        };
-    }
-    global.clickables = function () {
-        let Region = function () {
-            function Clickable() {
-                let region = {
-                    _x: 0,
-                    _y: 0,
-                    _w: 0,
-                    _h: 0
-                },
-                    active = 0;
-                return {
-                    set: function (x, y, w, h) {
-                        region._x = x * global._ratio;
-                        region._y = y * global._ratio;
-                        region._w = w * global._ratio;
-                        region._h = h * global._ratio;
-                        active = 1;
-                    },
-                    check: function (target) {
-                        let dx = Math.round(target.x - region._x),
-                            dy = Math.round(target.y - region._y);
-                        return active && dx >= 0 && dy >= 0 && dx <= region._w && dy <= region._h;
-                    },
-                    setActive: function (v) {
-                        active = v;
-                    }
-                };
-            }
-            return function (size) {
-                let data = [];
-                for (let i = 0; i < size; i++) data.push(Clickable());
-                return {
-                    place: function (index, ...a) {
-                        if (index >= data.length) {
-                            logger.norm(index);
-                            logger.norm(data);
-                            throw new Error("Trying to reference a clickable outside a region!");
-                        }
-                        data[index].set(...a);
-                    },
-                    hide: function () {
-                        for (let r of data) r.setActive(0);
-                    },
-                    get: function () {
-                        return data
-                    },
-                    check: function (x) {
-                        return data.findIndex(function (r) {
-                            return r.check(x);
-                        });
-                    }
-                };
-            };
-        }();
-        return {
-            stat: Region(10),
-            upgrade: Region(40),
-            hover: Region(1),
-            skipUpgrades: Region(1),
-            mobileClicks: Region(global.mobileClickables.length),
-            tree: Region(1)
-        };
-    }();
-    global.statHover = 0;
-    global.upgradeHover = 0;
     let entities = [],
         particles = [],
         upgradeSpin = 0,
-        _messages = [],
         metrics = {
             _latency: 0,
             _lag: 0,
@@ -1056,28 +165,6 @@ function RememberScriptingIsBannable() {
                 return {
                     setScores: function (s) {
                         if (s) {
-                            /*if (rewardManager.statistics[4] < s) rewardManager.increaseStatistic(4, s, true);
-                            switch (true) {
-                                case (rewardManager.statistics[4] > 10000000 - 1):
-                                    rewardManager.unlockAchievement("10_million_what");
-                                case (rewardManager.statistics[4] > 5000000 - 1):
-                                    rewardManager.unlockAchievement("now_that_is_really_something");
-                                case (rewardManager.statistics[4] > 2000000 - 1):
-                                    rewardManager.unlockAchievement("thats_something");
-                                case (rewardManager.statistics[4] > 1000000 - 1):
-                                    rewardManager.unlockAchievement("millionaire_lol");
-                                case (rewardManager.statistics[4] > 500000 - 1):
-                                    rewardManager.unlockAchievement("half_a_million");
-                                case (rewardManager.statistics[4] > 100000 - 1):
-                                    rewardManager.unlockAchievement("half_a_million");
-                                case (rewardManager.statistics[4] > 100000 - 1):
-                                    rewardManager.unlockAchievement("ok");
-                                case (rewardManager.statistics[4] > 10000 - 1):
-                                    rewardManager.unlockAchievement("thats_still_nothing")
-                                case (rewardManager.statistics[4] > 1000 - 1):
-                                    rewardManager.unlockAchievement("1k_lmao");
-                            }
-                            rewardManager.increaseStatistic(6, s);*/
                             score.set(s);
                             if (deduction > score.get()) {
                                 level = 0;
@@ -1115,7 +202,7 @@ function RememberScriptingIsBannable() {
                 _display: [],
                 _server: [],
                 _publish: (old, entry) => {
-                    let ref = _mockups.get(entry.index);
+                    let ref = mockups.get(entry.index);
                     let trueLabel = entry.labelOverride ? entry.labelOverride : entry.label
                     return {
                         id: entry.id,
@@ -1129,230 +216,17 @@ function RememberScriptingIsBannable() {
                 }
             }
         };
-    global._sendMessageToClient = (msg, c = "black") => _messages.push({
-        text: msg,
-        status: 2,
-        alpha: 0,
-        time: Date.now(),
-        color: color[c]
-    });
-    global.clearUpgrades = function () {
-        _gui._upgrades = [];
-    };
-    global.canUpgrade = 0;
-    global.canSkill = 0;
-    global.message = "";
-    global.time = 0;
+
     let getRatio = function () {
-        return Math.max(global._screenWidth / _player._renderv, global._screenHeight / _player._renderv / 9 * 16);
+        return Math.max(global._screenWidth / global.player._renderv, global._screenHeight / global.player._renderv / 9 * 16);
     };
 
-    function resizeEvent(e) {
-        let scale = window.devicePixelRatio;
-        scale *= [0.2, 0.5, 0.75, 1, 0.08][["Very Low (35%)", "Low (50%)", "Medium (75%)", "High (100%)", "PixelMode (8%)"].indexOf(config.resolutionScale)];
-        c.width = global._screenWidth = window.innerWidth * scale;
-        c.height = global._screenHeight = window.innerHeight * scale;
-        global._ratio = scale;
-        if(!global.mobile)document.getElementById('gameCanvas').focus();
-        global._screenSize = Math.min(1920, Math.max(window.innerWidth, 1280));
-    }
-    let _animations = ((module) => {
-        class Animation {
-            constructor(start, to, smoothness = 0.05) {
-                this.start = start;
-                this.to = to;
-                this.value = start;
-                this.smoothness = smoothness;
-            }
-            reset() {
-                this.value = this.start;
-                return this.value;
-            }
-            getLerp() {
-                this.value = lerp(this.value, this.to, this.smoothness, true);
-                return this.value;
-            }
-            getNoLerp() {
-                this.value = this.to;
-                return this.value;
-            }
-            get() {
-                return config.smoothAnimations ? this.getLerp() : this.getNoLerp();
-            }
-            flip() {
-                const start = this.to;
-                const to = this.start;
-                this.start = start;
-                this.to = to;
-            }
-            goodEnough(val = .5) {
-                return Math.abs(this.to - this.value) < val;
-            }
-        }
-        let library = {};
-        library.connecting = new Animation(1, 0);
-        library.disconnected = new Animation(1, 0);
-        library.deathScreen = new Animation(1, 0);
-        library.upgradeMenu = new Animation(0, 1, 0.01);
-        library.skillMenu = new Animation(0, 1, 0.01);
-        library.optionsMenu = new Animation(1, 0);
-        library.minimap = new Animation(-1, 1, 0.025);
-        library.leaderboard = new Animation(-1, 1, 0.025);
-        library.curtains = new Animation(1.2, 0, .05);
-        module.animations = library;
-        return library;
-    })(window);
+
     window.onload = function () {
         if (window.didWindowLoad) return
         window.didWindowLoad = true
-        config.Woomy = (() => {
-            let library = {};
-            class Setting {
-                constructor(key, name, type, normal, setFunction = () => { }, dropDown = {
-                    keys: [],
-                    suffix: ""
-                }) {
-                    this.key = key;
-                    this.name = name;
-                    this.type = type;
-                    this.default = normal;
-                    this.setFunction = setFunction;
-                    this.dropDown = {
-                        status: !!dropDown.keys.length,
-                        options: dropDown.keys,
-                        suffix: dropDown.suffix
-                    };
-                    this.retrieveFromLocalStorage();
-                    library[name] = this;
-                }
-                getStorageName() {
-                    return "Woomy_" + this.type + "_" + this.key;
-                }
-                retrieveFromLocalStorage() {
-                    let key = this.getStorageName();
-                    let value = localStorage.getItem(key);
-                    if (this.type === "number" && !isNaN(+value)) value = +value;
-                    let valid = (value !== "undefined" && value);
-                    this.set(valid ? JSON.parse(value) : this.default);
-                }
-                update() {
-                    config[this.key] = this.value;
-                    localStorage.setItem(this.getStorageName(), JSON.stringify(this.value));
-                }
-                set(value) {
-                    if (this.type === "number" && !isNaN(+value)) value = +value;
-                    if (this.type === "boolean" && ["on", "off"].includes(value)) value = value === "on";
-                    if (typeof value === this.type) {
-                        this.value = value;
-                        this.update();
-                        this.setFunction(value);
-                    }
-                }
-                reset() {
-                    this.value = this.default;
-                    this.update();
-                }
-            }
-            new Setting("neon", "Neon", "boolean", false);
-            new Setting("darkBorders", "Dark Borders", "boolean", false);
-            new Setting("rgbBorders", "Rainbow Borders", "boolean", false);
-            new Setting("glassMode", "Glass Mode", "boolean", false);
-            new Setting("pointy", "Sharp Borders", "boolean", false);
-            new Setting("inverseBorderColor", "Inverse Border Color", "boolean", false);
-            new Setting("noBorders", "No Borders", "boolean", false);
-            new Setting("tintedDamage", "Red Damage", "boolean", true);
-            new Setting("miterText", "Sharp Text", "boolean", false);
-            new Setting("tintedHealth", "Tinted Health Bars", "boolean", true);
-            new Setting("coloredHealthBars", "Colored Health Bars", "boolean", false);
-            new Setting("shieldbars", "Split Health Bars", "boolean", true);
-            new Setting("fancyAnimations", "Fancy Animations", "boolean", true, () => global._gameStart && resizeEvent());
-            new Setting("useFourRows", "Four Upgrade Rows", "boolean", true);
-            new Setting("roundUpgrades", "Round Upgrades", "boolean", false);
-            new Setting("disableMessages", "Disable Messages", "boolean", false);
-            new Setting("autoUpgrade", "Auto Level Up", "boolean", global.mobile);
-            new Setting("drawOwnName", "Render Own Name", "boolean", false);
-            new Setting("screenshotMode", "Screenshot Mode", "boolean", false);
-            new Setting("lerpSize", "Lerp Entity Sizes", "boolean", false);
-            new Setting("localmotion", "Local Motion", "boolean", false);
-            new Setting("gameAnimations", "Game Menu Animations", "boolean", true);
-            new Setting("mainMenuStyle", "Menu Dark Mode", "boolean", false, enabled => {
-                const setProperties = vars => {
-                    if (enabled) {
-                        vars.setProperty('--backgroundColor', '#202225');
-                        vars.setProperty('--backgroundBorderColor', '#f2e558');
-                        vars.setProperty('--menuTextColor', '#e1e1e7');
-                        vars.setProperty('--backgroundBrightness', '0.85');
-                        vars.setProperty('--backgroundLink', "url(/resources/background_dark.svg)");
-                        _rewardManager._unlockAchievement("its_better_for_my_eyes");
-                    } else {
-                        vars.setProperty('--backgroundColor', '#dde6eb');
-                        vars.setProperty('--backgroundBorderColor', '#c1cfd8');
-                        vars.setProperty('--menuTextColor', '#000000');
-                        vars.setProperty('--backgroundBrightness', '0.9');
-                        vars.setProperty('--backgroundLink', "url(/resources/background_light.svg)");
-                    }
-                }
-                setProperties(document.querySelector(":root").style);
-            });
-            new Setting("fontStrokeRatio", "Font Stroke Ratio", "number", 6);
-            new Setting("borderChunk", "Border Width", "number", 6);
-            new Setting("mininumBorderChunk", "Min Border Thickness", "number", 3);
-            new Setting("barChunk", "Bar Stroke Thickness", "number", 4.5);
-            new Setting("deathExpandRatio", "Death Expand Ratio", "number", 1.35);
-            new Setting("fontSizeBoost", "Font Size", "number", 10);
-            new Setting("fpsCap", "FPS Cap", "number", 45, value => {
-                global._fpscap = 1000 / Math.max(value, 1);
-                if (global._fpscap !== global._oldFpsCap) global._sendMessageToClient("Max FPS changed, it may take a few seconds to show any difference.");
-                if (value === 1) _rewardManager._unlockAchievement("artificial_lag");
-                global._oldFpsCap = global._fpscap;
-            });
-            new Setting("resolutionScale", "Resolution", "string", "High (100%)", resizeEvent, {
-                keys: ["Very Low (35%)", "Low (50%)", "Medium (75%)", "High (100%)"],
-                suffix: ""
-            });
-            new Setting("fontFamily", "Font Family", "string", "Ubuntu", value => {
-                if (value !== "Ubuntu") global._sendMessageToClient("If a font is too big or too small, try changing the Font Size option!");
-            }, {
-                keys: ["Ubuntu", "Alfa Slab One", "Bebas Neue", "Bungee", "Cutive Mono", "Dancing Script", "Fredoka One", "Indie Flower", "Nanum Brush Script", "Pacifico", "Passion One", "Permanent Marker", "Zen Dots", "Rampart One", "Roboto Mono", "Share Tech Mono", "Syne Mono", "wingdings", "serif", "sans-serif", "cursive", "system-ui"],
-                suffix: ""
-            });
-            new Setting("theme", "Theme", "string", "normal", value => {if(themes[value]){setColor(themes[value])}else{setColor(themes.normal)}}, {
-                keys: Object.keys(themes),
-                suffix: "Colors"
-            });
-            codeblock_shadowsSetting: {
-                let shadowTypes = ["Disabled", "Light Blur", "Dark Blur", "Colorful Blur", "Light", "Dark",/* "Light Stroke", "Dark Stroke",*/ "Colorful Dense", "Fake 3D", "Dynamic Fake 3D"];
-                new Setting("shaders", "Shader Casting", "string", "Disabled", value => {
-                    if (value !== "Disabled") _rewardManager._unlockAchievement("like_minecraft_shaders_no");
-                }, {
-                    keys: shadowTypes,
-                    suffix: ""
-                });
-            }
-            new Setting("filter", "Filters", "string", "Disabled", () => { }, {
-                keys: ["Disabled", "Saturated", "Grayscale", "Dramatic", "Inverted", "Sepia"],
-                suffix: ""
-            });
-            /*new Setting("testSetting", "Slider Test", "slider", "25", value => {
-                console.log(parseInt(value));
-            }, {
-                keys: [0, 10],
-                suffix: ""
-            });*/
-            /*new Setting("prediction", "Prediction", "string", "Smooth (Reccomended)", val => {
-                config.prediction = {
-                    "Original (Old)": 0,
-                    "Woomy (New)": 1,
-                    "Smooth (Reccomended)": 2
-                }[val];
-                if (config.prediction == null) config.prediction = 2;
-            }, {
-                keys: ["Original (Old)", "Woomy (New)", "Smooth (Reccomended)"],
-                suffix: ""
-            })*/
-            return library;
-        })();
-        window._initOptions();
+
+        initSettingsMenu();
 
         let selectServer = (function () {
             // server filtering
@@ -1428,7 +302,7 @@ function RememberScriptingIsBannable() {
                             if (!playerCounts[serverData.game_mode_id]) {
                                 playerCounts[serverData.game_mode_id] = 0
                             }
-                            playerCounts[serverData.game_mode_id] += serverData.total_player_count
+                            playerCounts[serverData.game_mode_id] += serverData.totalglobal.player_count
                         }
                         Array.from(document.getElementsByClassName("woomyServerOption")).forEach(ele => {
                             let id = ele.id.split("_")[1]
@@ -1598,7 +472,7 @@ function RememberScriptingIsBannable() {
             }
             return select;
         })();
-        _util._retrieveFromLocalStorage("playerNameInput");
+        util._retrieveFromLocalStorage("playerNameInput");
         document.onkeydown = function (e) {
             if (global._disconnected && global._gameStart) return;
             let key = e.which || e.keyCode;
@@ -1610,1014 +484,20 @@ function RememberScriptingIsBannable() {
         };
         window.addEventListener("resize", resizeEvent);
         resizeEvent();
-        console.log("%c◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥\n%c   WARNING: Do not paste code or scripts here!\n%c◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥\n\n%c   Scripts that give you an unfair advantage can\n   result in a ban. Also, some scripts may\n   contain malicious code to steal your token!\n\n%c◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥◣◥", "color: crimson;", "color: crimson; font-weight: 900;", "color: crimson;", "color: DarkOrange;", "color: crimson;");
     };
-    let LZString = (function () {
 
-        // private property
-        var f = String.fromCharCode;
-        var keyStrBase64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-        var keyStrUriSafe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$";
-        var baseReverseDic = {};
-
-        function getBaseValue(alphabet, character) {
-            if (!baseReverseDic[alphabet]) {
-                baseReverseDic[alphabet] = {};
-                for (var i = 0; i < alphabet.length; i++) {
-                    baseReverseDic[alphabet][alphabet.charAt(i)] = i;
-                }
-            }
-            return baseReverseDic[alphabet][character];
-        }
-
-        var LZString = {
-            compressToBase64: function (input) {
-                if (input == null) return "";
-                var res = LZString._compress(input, 6, function (a) { return keyStrBase64.charAt(a); });
-                switch (res.length % 4) { // To produce valid Base64
-                    default: // When could this happen ?
-                    case 0: return res;
-                    case 1: return res + "===";
-                    case 2: return res + "==";
-                    case 3: return res + "=";
-                }
-            },
-
-            decompressFromBase64: function (input) {
-                if (input == null) return "";
-                if (input == "") return null;
-                return LZString._decompress(input.length, 32, function (index) { return getBaseValue(keyStrBase64, input.charAt(index)); });
-            },
-
-            compressToUTF16: function (input) {
-                if (input == null) return "";
-                return LZString._compress(input, 15, function (a) { return f(a + 32); }) + " ";
-            },
-
-            decompressFromUTF16: function (compressed) {
-                if (compressed == null) return "";
-                if (compressed == "") return null;
-                return LZString._decompress(compressed.length, 16384, function (index) { return compressed.charCodeAt(index) - 32; });
-            },
-
-            //compress into uint8array (UCS-2 big endian format)
-            compressToUint8Array: function (uncompressed) {
-                var compressed = LZString.compress(uncompressed);
-                var buf = new Uint8Array(compressed.length * 2); // 2 bytes per character
-
-                for (var i = 0, TotalLen = compressed.length; i < TotalLen; i++) {
-                    var current_value = compressed.charCodeAt(i);
-                    buf[i * 2] = current_value >>> 8;
-                    buf[i * 2 + 1] = current_value % 256;
-                }
-                return buf;
-            },
-
-            //decompress from uint8array (UCS-2 big endian format)
-            decompressFromUint8Array: function (compressed) {
-                if (compressed === null || compressed === undefined) {
-                    return LZString.decompress(compressed);
-                } else {
-                    var buf = new Array(compressed.length / 2); // 2 bytes per character
-                    for (var i = 0, TotalLen = buf.length; i < TotalLen; i++) {
-                        buf[i] = compressed[i * 2] * 256 + compressed[i * 2 + 1];
-                    }
-
-                    var result = [];
-                    buf.forEach(function (c) {
-                        result.push(f(c));
-                    });
-                    return LZString.decompress(result.join(''));
-
-                }
-
-            },
-
-
-            //compress into a string that is already URI encoded
-            compressToEncodedURIComponent: function (input) {
-                if (input == null) return "";
-                return LZString._compress(input, 6, function (a) { return keyStrUriSafe.charAt(a); });
-            },
-
-            //decompress from an output of compressToEncodedURIComponent
-            decompressFromEncodedURIComponent: function (input) {
-                if (input == null) return "";
-                if (input == "") return null;
-                input = input.replace(/ /g, "+");
-                return LZString._decompress(input.length, 32, function (index) { return getBaseValue(keyStrUriSafe, input.charAt(index)); });
-            },
-
-            compress: function (uncompressed) {
-                return LZString._compress(uncompressed, 16, function (a) { return f(a); });
-            },
-            _compress: function (uncompressed, bitsPerChar, getCharFromInt) {
-                if (uncompressed == null) return "";
-                var i, value,
-                    context_dictionary = {},
-                    context_dictionaryToCreate = {},
-                    context_c = "",
-                    context_wc = "",
-                    context_w = "",
-                    context_enlargeIn = 2, // Compensate for the first entry which should not count
-                    context_dictSize = 3,
-                    context_numBits = 2,
-                    context_data = [],
-                    context_data_val = 0,
-                    context_data_position = 0,
-                    ii;
-
-                for (ii = 0; ii < uncompressed.length; ii += 1) {
-                    context_c = uncompressed.charAt(ii);
-                    if (!Object.prototype.hasOwnProperty.call(context_dictionary, context_c)) {
-                        context_dictionary[context_c] = context_dictSize++;
-                        context_dictionaryToCreate[context_c] = true;
-                    }
-
-                    context_wc = context_w + context_c;
-                    if (Object.prototype.hasOwnProperty.call(context_dictionary, context_wc)) {
-                        context_w = context_wc;
-                    } else {
-                        if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
-                            if (context_w.charCodeAt(0) < 256) {
-                                for (i = 0; i < context_numBits; i++) {
-                                    context_data_val = (context_data_val << 1);
-                                    if (context_data_position == bitsPerChar - 1) {
-                                        context_data_position = 0;
-                                        context_data.push(getCharFromInt(context_data_val));
-                                        context_data_val = 0;
-                                    } else {
-                                        context_data_position++;
-                                    }
-                                }
-                                value = context_w.charCodeAt(0);
-                                for (i = 0; i < 8; i++) {
-                                    context_data_val = (context_data_val << 1) | (value & 1);
-                                    if (context_data_position == bitsPerChar - 1) {
-                                        context_data_position = 0;
-                                        context_data.push(getCharFromInt(context_data_val));
-                                        context_data_val = 0;
-                                    } else {
-                                        context_data_position++;
-                                    }
-                                    value = value >> 1;
-                                }
-                            } else {
-                                value = 1;
-                                for (i = 0; i < context_numBits; i++) {
-                                    context_data_val = (context_data_val << 1) | value;
-                                    if (context_data_position == bitsPerChar - 1) {
-                                        context_data_position = 0;
-                                        context_data.push(getCharFromInt(context_data_val));
-                                        context_data_val = 0;
-                                    } else {
-                                        context_data_position++;
-                                    }
-                                    value = 0;
-                                }
-                                value = context_w.charCodeAt(0);
-                                for (i = 0; i < 16; i++) {
-                                    context_data_val = (context_data_val << 1) | (value & 1);
-                                    if (context_data_position == bitsPerChar - 1) {
-                                        context_data_position = 0;
-                                        context_data.push(getCharFromInt(context_data_val));
-                                        context_data_val = 0;
-                                    } else {
-                                        context_data_position++;
-                                    }
-                                    value = value >> 1;
-                                }
-                            }
-                            context_enlargeIn--;
-                            if (context_enlargeIn == 0) {
-                                context_enlargeIn = Math.pow(2, context_numBits);
-                                context_numBits++;
-                            }
-                            delete context_dictionaryToCreate[context_w];
-                        } else {
-                            value = context_dictionary[context_w];
-                            for (i = 0; i < context_numBits; i++) {
-                                context_data_val = (context_data_val << 1) | (value & 1);
-                                if (context_data_position == bitsPerChar - 1) {
-                                    context_data_position = 0;
-                                    context_data.push(getCharFromInt(context_data_val));
-                                    context_data_val = 0;
-                                } else {
-                                    context_data_position++;
-                                }
-                                value = value >> 1;
-                            }
-
-
-                        }
-                        context_enlargeIn--;
-                        if (context_enlargeIn == 0) {
-                            context_enlargeIn = Math.pow(2, context_numBits);
-                            context_numBits++;
-                        }
-                        // Add wc to the dictionary.
-                        context_dictionary[context_wc] = context_dictSize++;
-                        context_w = String(context_c);
-                    }
-                }
-
-                // Output the code for w.
-                if (context_w !== "") {
-                    if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
-                        if (context_w.charCodeAt(0) < 256) {
-                            for (i = 0; i < context_numBits; i++) {
-                                context_data_val = (context_data_val << 1);
-                                if (context_data_position == bitsPerChar - 1) {
-                                    context_data_position = 0;
-                                    context_data.push(getCharFromInt(context_data_val));
-                                    context_data_val = 0;
-                                } else {
-                                    context_data_position++;
-                                }
-                            }
-                            value = context_w.charCodeAt(0);
-                            for (i = 0; i < 8; i++) {
-                                context_data_val = (context_data_val << 1) | (value & 1);
-                                if (context_data_position == bitsPerChar - 1) {
-                                    context_data_position = 0;
-                                    context_data.push(getCharFromInt(context_data_val));
-                                    context_data_val = 0;
-                                } else {
-                                    context_data_position++;
-                                }
-                                value = value >> 1;
-                            }
-                        } else {
-                            value = 1;
-                            for (i = 0; i < context_numBits; i++) {
-                                context_data_val = (context_data_val << 1) | value;
-                                if (context_data_position == bitsPerChar - 1) {
-                                    context_data_position = 0;
-                                    context_data.push(getCharFromInt(context_data_val));
-                                    context_data_val = 0;
-                                } else {
-                                    context_data_position++;
-                                }
-                                value = 0;
-                            }
-                            value = context_w.charCodeAt(0);
-                            for (i = 0; i < 16; i++) {
-                                context_data_val = (context_data_val << 1) | (value & 1);
-                                if (context_data_position == bitsPerChar - 1) {
-                                    context_data_position = 0;
-                                    context_data.push(getCharFromInt(context_data_val));
-                                    context_data_val = 0;
-                                } else {
-                                    context_data_position++;
-                                }
-                                value = value >> 1;
-                            }
-                        }
-                        context_enlargeIn--;
-                        if (context_enlargeIn == 0) {
-                            context_enlargeIn = Math.pow(2, context_numBits);
-                            context_numBits++;
-                        }
-                        delete context_dictionaryToCreate[context_w];
-                    } else {
-                        value = context_dictionary[context_w];
-                        for (i = 0; i < context_numBits; i++) {
-                            context_data_val = (context_data_val << 1) | (value & 1);
-                            if (context_data_position == bitsPerChar - 1) {
-                                context_data_position = 0;
-                                context_data.push(getCharFromInt(context_data_val));
-                                context_data_val = 0;
-                            } else {
-                                context_data_position++;
-                            }
-                            value = value >> 1;
-                        }
-
-
-                    }
-                    context_enlargeIn--;
-                    if (context_enlargeIn == 0) {
-                        context_enlargeIn = Math.pow(2, context_numBits);
-                        context_numBits++;
-                    }
-                }
-
-                // Mark the end of the stream
-                value = 2;
-                for (i = 0; i < context_numBits; i++) {
-                    context_data_val = (context_data_val << 1) | (value & 1);
-                    if (context_data_position == bitsPerChar - 1) {
-                        context_data_position = 0;
-                        context_data.push(getCharFromInt(context_data_val));
-                        context_data_val = 0;
-                    } else {
-                        context_data_position++;
-                    }
-                    value = value >> 1;
-                }
-
-                // Flush the last char
-                while (true) {
-                    context_data_val = (context_data_val << 1);
-                    if (context_data_position == bitsPerChar - 1) {
-                        context_data.push(getCharFromInt(context_data_val));
-                        break;
-                    }
-                    else context_data_position++;
-                }
-                return context_data.join('');
-            },
-
-            decompress: function (compressed) {
-                if (compressed == null) return "";
-                if (compressed == "") return null;
-                return LZString._decompress(compressed.length, 32768, function (index) { return compressed.charCodeAt(index); });
-            },
-
-            _decompress: function (length, resetValue, getNextValue) {
-                var dictionary = [],
-                    next,
-                    enlargeIn = 4,
-                    dictSize = 4,
-                    numBits = 3,
-                    entry = "",
-                    result = [],
-                    i,
-                    w,
-                    bits, resb, maxpower, power,
-                    c,
-                    data = { val: getNextValue(0), position: resetValue, index: 1 };
-
-                for (i = 0; i < 3; i += 1) {
-                    dictionary[i] = i;
-                }
-
-                bits = 0;
-                maxpower = Math.pow(2, 2);
-                power = 1;
-                while (power != maxpower) {
-                    resb = data.val & data.position;
-                    data.position >>= 1;
-                    if (data.position == 0) {
-                        data.position = resetValue;
-                        data.val = getNextValue(data.index++);
-                    }
-                    bits |= (resb > 0 ? 1 : 0) * power;
-                    power <<= 1;
-                }
-
-                switch (next = bits) {
-                    case 0:
-                        bits = 0;
-                        maxpower = Math.pow(2, 8);
-                        power = 1;
-                        while (power != maxpower) {
-                            resb = data.val & data.position;
-                            data.position >>= 1;
-                            if (data.position == 0) {
-                                data.position = resetValue;
-                                data.val = getNextValue(data.index++);
-                            }
-                            bits |= (resb > 0 ? 1 : 0) * power;
-                            power <<= 1;
-                        }
-                        c = f(bits);
-                        break;
-                    case 1:
-                        bits = 0;
-                        maxpower = Math.pow(2, 16);
-                        power = 1;
-                        while (power != maxpower) {
-                            resb = data.val & data.position;
-                            data.position >>= 1;
-                            if (data.position == 0) {
-                                data.position = resetValue;
-                                data.val = getNextValue(data.index++);
-                            }
-                            bits |= (resb > 0 ? 1 : 0) * power;
-                            power <<= 1;
-                        }
-                        c = f(bits);
-                        break;
-                    case 2:
-                        return "";
-                }
-                dictionary[3] = c;
-                w = c;
-                result.push(c);
-                while (true) {
-                    if (data.index > length) {
-                        return "";
-                    }
-
-                    bits = 0;
-                    maxpower = Math.pow(2, numBits);
-                    power = 1;
-                    while (power != maxpower) {
-                        resb = data.val & data.position;
-                        data.position >>= 1;
-                        if (data.position == 0) {
-                            data.position = resetValue;
-                            data.val = getNextValue(data.index++);
-                        }
-                        bits |= (resb > 0 ? 1 : 0) * power;
-                        power <<= 1;
-                    }
-
-                    switch (c = bits) {
-                        case 0:
-                            bits = 0;
-                            maxpower = Math.pow(2, 8);
-                            power = 1;
-                            while (power != maxpower) {
-                                resb = data.val & data.position;
-                                data.position >>= 1;
-                                if (data.position == 0) {
-                                    data.position = resetValue;
-                                    data.val = getNextValue(data.index++);
-                                }
-                                bits |= (resb > 0 ? 1 : 0) * power;
-                                power <<= 1;
-                            }
-
-                            dictionary[dictSize++] = f(bits);
-                            c = dictSize - 1;
-                            enlargeIn--;
-                            break;
-                        case 1:
-                            bits = 0;
-                            maxpower = Math.pow(2, 16);
-                            power = 1;
-                            while (power != maxpower) {
-                                resb = data.val & data.position;
-                                data.position >>= 1;
-                                if (data.position == 0) {
-                                    data.position = resetValue;
-                                    data.val = getNextValue(data.index++);
-                                }
-                                bits |= (resb > 0 ? 1 : 0) * power;
-                                power <<= 1;
-                            }
-                            dictionary[dictSize++] = f(bits);
-                            c = dictSize - 1;
-                            enlargeIn--;
-                            break;
-                        case 2:
-                            return result.join('');
-                    }
-
-                    if (enlargeIn == 0) {
-                        enlargeIn = Math.pow(2, numBits);
-                        numBits++;
-                    }
-
-                    if (dictionary[c]) {
-                        entry = dictionary[c];
-                    } else {
-                        if (c === dictSize) {
-                            entry = w + w.charAt(0);
-                        } else {
-                            return null;
-                        }
-                    }
-                    result.push(entry);
-
-                    // Add w+entry[0] to the dictionary.
-                    dictionary[dictSize++] = w + entry.charAt(0);
-                    enlargeIn--;
-
-                    w = entry;
-
-                    if (enlargeIn == 0) {
-                        enlargeIn = Math.pow(2, numBits);
-                        numBits++;
-                    }
-
-                }
-            }
-        };
-        return LZString;
-    })();
     function getWOSocketId(){
       if(!localStorage.getItem("socketId")){
         localStorage.setItem("socketId", Date.now().toString(16))
       }
       return localStorage.getItem("socketId");
     }
-    global._canvas = new (class Canvas {
-        constructor() {
-            let mobile = global.mobile;
-            this.mobile = mobile;
-            this._directionLock = 0;
-            this._reenviar = 1;
-            this._directions = [];
-            this._maxStats = false;
-            let self = this;
-            this._cv = document.getElementById("gameCanvas");
-            this._cv.width = global._screenWidth;
-            this._cv.height = global._screenHeight;
-            if (mobile) {
-                this.controlTouch = null;
-                this.movementTouch = null;
-                this.movementTop = false;
-                this.movementBottom = false;
-                this.movementLeft = false;
-                this.movementRight = false;
-                this.lastTap = 0;
-                this._cv.addEventListener('touchstart', this._touchStart, false);
-                this._cv.addEventListener('touchmove', this._touchMove, false);
-                this._cv.addEventListener('touchend', this._touchEnd, false);
-                this._cv.addEventListener('touchcancel', this._touchEnd, false);
-            } else {
-                this._cv.addEventListener('mousedown', this._mouseDown, false);
-                this._cv.addEventListener('mousemove', this._gameInput, false);
-                this._cv.addEventListener('mouseup', this._mouseUp, false);
-            }
-            this._cv.addEventListener('keydown', this._keyboardDown, false);
-            this._cv.addEventListener('keyup', this._keyboardUp, false);
-            this._cv.parent = self;
-            this._cv.mouse = {
-                x: 0,
-                y: 0,
-                down: false
-            };
-        }
-        _keyboardDown(event) {
-            if (!global._gameStart) return;
-            if (event.location === 3) {
-                let number = event.code.substring(6)
-                if (global["DEV_KEY_" + number]) {
-                    let value = JSON.parse(localStorage.getItem("DEV_KEY_" + number))
-                    if (!value[0]) {
-                        global._sendMessageToClient(`To use DEV_KEY_${number} you must do setDevKey in the console`)
-                        return
-                    } else if (value[1]) {
-                        eval(value[0])(global, _socket)
-                    } else {
-                        _socket.talk("D", 5, value[0]);
-                    }
-                }
-                return
-            }
-            if (event.keyCode == global.KEY_UPGRADE_STR) {
-              event.preventDefault()
-            }
-            switch (event.keyCode) {
-                case global.KEY_UP_ARROW:
-                    if (!global._died && global._showTree) return global._scrollX = 0;
-                    _socket.cmd.set(0, 1);
-                    break;
-                case global.KEY_DOWN_ARROW:
-                    if (!global._died && global._showTree) return global._scrollX = 1;
-                    _socket.cmd.set(1, 1);
-                    break;
-                case global.KEY_LEFT_ARROW:
-                    if (!global._died && global._showTree) {
-                        global._scrollX -= global.searchName === "Basic" ? 0.001 : 0.02;
-                        return;
-                    }
-                    _socket.cmd.set(2, 1);
-                    break;
-                case global.KEY_RIGHT_ARROW:
-                    if (!global._died && global._showTree) {
-                        global._scrollX += global.searchName === "Basic" ? 0.001 : 0.02;
-                        return;
-                    }
-                    _socket.cmd.set(3, 1);
-                    break;
-                case global.KEY_LEVEL_UP:
-                    _socket.talk("L");
-                    break;
-                // Beta-tester keys
-                case global.KEY_COLOR_CHANGE:
-                    _socket.talk("B", 0);
-                    break;
-                case global.KEY_SPAWN_SHAPES:
-                    _socket.talk("B", 2);
-                    break;
-                case global.KEY_TELEPORT:
-                    _socket.talk("B", 3);
-                    break;
-                case global.KEY_POWER_CYCLE_FIREFOX:
-                case global.KEY_POWER_CYCLE:
-                    _socket.talk("B", 4);
-                    break;
-                case global.KEY_BAN_PLAYER:
-                    _socket.talk("banSocket")
-                break;
-                case global.KEY_KILL_WITH_MOUSE:
-                    _socket.talk("B", 9);
-                    break;
-                case global.KEY_STEALTH:
-                    _socket.talk("B", 10);
-                    break;
-                case global.KEY_CHAT:
-                    let chatBox = document.getElementById("chatBox");
-                    if (!chatBox & !global._died) {
-                        _socket.cmd.reset()
-                        chatBox = document.createElement("input");
-                        chatBox.type = "text";
-                        chatBox.id = "chatBox";
-                        chatBox.classList.add("chatBox");
-                        chatBox.placeholder = global.mobile?"Press send to send":"Press enter to send";
-                        chatBox.maxLength = 50;
-                        document.body.appendChild(chatBox);
-                        chatBox.focus();
-                        setTimeout(() => {
-                            chatBox.style.opacity = 1;
-                        }, 10);
-                        chatBox.addEventListener("keydown", (e) => {
-                            if (e.keyCode === global.KEY_CHAT) {
-                                let input = chatBox.value;
-                                removeChatBox();
-                                _socket.talk("cs", input.substring(0, 50));
-                            }
-                        })
-                        // detect lost focus
-                        chatBox.addEventListener("blur", () => {
-                            removeChatBox();
-                        })
-                    }
-                    function removeChatBox() {
-                        let chatBox = document.getElementById("chatBox");
-                        let game = document.getElementById("gameCanvas");
-                        if (chatBox) {
-                            chatBox.style.opacity = 0;
-                            setTimeout(() => {
-                                chatBox.remove();
-                            }, 200);
-                        }
-                        game.focus();
-                    }
-                    break;
-            }
-            if (global.canSkill) {
-                let amount = this._maxStats ? 16 : 1;
-                do {
-                    switch (event.keyCode) {
-                        case global.KEY_UPGRADE_ATK:
-                            _socket.talk("x", 0);
-                            break;
-                        case global.KEY_UPGRADE_HTL:
-                            _socket.talk("x", 1);
-                            break;
-                        case global.KEY_UPGRADE_SPD:
-                            _socket.talk("x", 2);
-                            break;
-                        case global.KEY_UPGRADE_STR:
-                            _socket.talk("x", 3);
-                            break;
-                        case global.KEY_UPGRADE_PEN:
-                            _socket.talk("x", 4);
-                            break;
-                        case global.KEY_UPGRADE_DAM:
-                            _socket.talk("x", 5);
-                            break;
-                        case global.KEY_UPGRADE_RLD:
-                            _socket.talk("x", 6);
-                            break;
-                        case global.KEY_UPGRADE_MOB:
-                            _socket.talk("x", 7);
-                            break;
-                        case global.KEY_UPGRADE_RGN:
-                            _socket.talk("x", 8);
-                            break;
-                        case global.KEY_UPGRADE_SHI:
-                            _socket.talk("x", 9);
-                            break;
-                    }
-                } while (--amount);
-            }
-            if (!event.repeat) {
-                switch (event.keyCode) {
-                    case global.KEY_ENTER:
-                        if (global._diedAt - Date.now() > 0 || (global._disconnected && global._gameStart)) return;
-                        if (global._died) {
-                            _displayDeathHTML(false)
-                            let socketOut = _util._cleanString(global.playerName, 25).split('');
-                            for (let i = 0; i < socketOut.length; i++) socketOut[i] = socketOut[i].charCodeAt();
-                            _socket.talk("s", global.party || 0, socketOut.toString(), 0, getWOSocketId());
-                            if (config.autoUpgrade) for (let i = 0; i < 75; i++) setTimeout(() => _socket.talk('L'), i * 25);
-                            global._diedAt = Date.now()
-                            global._deathScreenState = 1
-                            global._died = false;
-                        }
-                        break;
-                    case 221:
-                        global.playerKey.includes("DEV") && eval(window.prompt("Local eval: "));
-                        break;
-                    case global.KEY_UP:
-                        _socket.cmd.set(0, 1);
-                        break;
-                    case global.KEY_DOWN:
-                        _socket.cmd.set(1, 1);
-                        break;
-                    case global.KEY_LEFT:
-                        _socket.cmd.set(2, 1);
-                        break;
-                    case global.KEY_RIGHT:
-                        _socket.cmd.set(3, 1);
-                        break;
-                    case global.KEY_MOUSE_0:
-                        _socket.cmd.set(4, 1);
-                        break;
-                    //case global.KEY_MOUSE_1:
-                    //  _socket.cmd.set(5, 1);
-                    //break;
-                    case global.KEY_MOUSE_2:
-                        _socket.cmd.set(6, 1);
-                        break;
-                    case global.KEY_AUTO_SPIN:
-                        _socket.talk("t", 0);
-                        break;
-                    case global.KEY_AUTO_FIRE:
-                        _socket.talk("t", 1);
-                        break;
-                    case global.KEY_OVER_RIDE:
-                        _socket.talk("t", 2);
-                        break;
-                    case global.KEY_MAX_STATS:
-                        this._maxStats = true;
-                        break;
-                    case global.KEY_DEBUG:
-                        global._debug = global._debug % 4 + 1;
-                        break;
-                    case global.KEY_DRAG:
-                        _socket.talk("B", 11);
-                        break;
-                    case global.KEY_CLASS_TREE:
-                        if (global._died) break;
-                        global._showTree = !global._showTree;
-                        _socket.talk("P", global._showTree);
-                        break;
-                    // Beta-tester keys
-                    case global.KEY_TESTBED:
-                    case global.KEY_TESTBED_FIREFOX:
-                    case global.KEY_TESTBED_ALT:
-                        _socket.talk("T", 0);
-                        break;
-                    case global.KEY_SUICIDE:
-                        _socket.talk("T", 1);
-                        break;
-                    case global.KEY_RESET_BASIC_TANK:
-                        _socket.talk("T", 2);
-                        break;
-                    case global.KEY_CHANGE_TO_BASIC:
-                        _socket.talk("CTB");
-                    break;
-                    case global.KEY_GODMODE:
-                    case global.KEY_GODMODE_2:
-                        _socket.talk("B", 1);
-                        break;
-                    case global.KEY_PASSIVE_MODE:
-                        _socket.talk("T", 4);
-                        break;
-                    case global.KEY_RAINBOW:
-                    case global.KEY_RAINBOW_2:
-                        _socket.talk("T", 5);
-                        break;
-                    case global.KEY_TIER_SWITCH:
-                    case global.KEY_TIER_SWITCH_2:
-                        _socket.talk("X");
-                        break;
-                    case global.KEY_OVERRIDE_ENTITY:
-                        //_socket.talk("B", 6);
-                        _socket.talk("B", 13);
-                        break;
-                    case global.KEY_INFECT_MINION:
-                        //_socket.talk("B", 6);
-                        _socket.talk("B", 14);
-                        break;
-                    case global.KEY_RESET_COLOR:
-                        _socket.talk("T", 7);
-                        break;
-                    case global.KEY_CONTROL_DOM:
-                        _socket.talk("l");
-                        break;
-                    case global.KEY_TANK_JOURNEY:
-                        _socket.talk("B", 8);
-                        break;
-                    case 17:
-                        _socket.talk("B", 12);
-                        break;
-                }
-            }
-        }
-        _keyboardUp(event) {
-            if (!global._gameStart) return;
-            switch (event.keyCode) {
-                case global.KEY_UP_ARROW:
-                case global.KEY_UP:
-                    _socket.cmd.set(0, 0);
-                    break;
-                case global.KEY_DOWN_ARROW:
-                case global.KEY_DOWN:
-                    _socket.cmd.set(1, 0);
-                    break;
-                case global.KEY_LEFT_ARROW:
-                case global.KEY_LEFT:
-                    _socket.cmd.set(2, 0);
-                    break;
-                case global.KEY_RIGHT_ARROW:
-                case global.KEY_RIGHT:
-                    _socket.cmd.set(3, 0);
-                    break;
-                case global.KEY_MOUSE_0:
-                    _socket.cmd.set(4, 0);
-                    break;
-                //case global.KEY_MOUSE_1:
-                //  _socket.cmd.set(5, 0);
-                //break;
-                case global.KEY_MOUSE_2:
-                    _socket.cmd.set(6, 0);
-                    break;
-                case global.KEY_MAX_STATS:
-                    this._maxStats = false;
-                    break;
-            }
-        }
-        _mouseDown(mouse) {
-            global.mousedown = true
-            if (!global._gameStart) return;
-            switch (mouse.button) {
-                case 0:
-                    const ratio = _util._getScreenRatio();
-                    let width = global._screenWidth / innerWidth;
-                    let height = global._screenHeight / innerHeight;
-                    this.mouse.x = mouse.clientX * global._ratio * width; //global.ratio / ratio;// / ratio;//(global.ratio * ratio);// / ratio;
-                    this.mouse.y = mouse.clientY * global._ratio * height; //global.ratio / ratio;// / ratio;//(global.ratio * ratio);// / ratio;
-                    this.mouse.down = true;
-                    if (global._showTree) {
-                        if (global.clickables.tree.check(this.mouse) !== -1) {
-                            for (let i = 0; i < 5 * Math.random(); i++) _socket.talk("U", "random");
-                        }
-                    } else {
-                        let statIndex = global.clickables.stat.check(this.mouse);
-                        if (statIndex !== -1) _socket.talk("x", statIndex);
-                        else if (global.clickables.skipUpgrades.check(this.mouse) !== -1) global.clearUpgrades();
-                        else {
-                            let uIndex = global.clickables.upgrade.check(this.mouse);
-                            if (uIndex !== -1) {
-                                _socket.talk("U", uIndex);
-                            } else {
-                                _socket.cmd.set(4, 1);
-                            }
-                        }
-                    }
-                    break;
-                case 1:
-                    _socket.cmd.set(5, 1);
-                    break;
-                case 2:
-                    _socket.cmd.set(6, 1);
-                    break;
-            }
-        }
-        _mouseUp(mouse) {
-            if (!global._gameStart) return;
-            switch (mouse.button) {
-                case 0:
-                    this.mouse.down = true;
-                    _socket.cmd.set(4, 0);
-                    break;
-                case 1:
-                    _socket.cmd.set(5, 0);
-                    break;
-                case 2:
-                    _socket.cmd.set(6, 0);
-                    break;
-            }
-        }
-        _gameInput(mouse) {
-            let width = global._screenWidth / innerWidth;
-            let height = global._screenHeight / innerHeight;
-            this.mouse.x = mouse.clientX; // / rs;
-            this.mouse.y = mouse.clientY; // / rs;// / ratio;
-            if (_player._cx != null && _player._cy != null) {
-                if(global._target === undefined){
-                  console.log("GLOBAL", Object.entries(global).toString())
-                  return;
-                }
-                global._target._x = (this.mouse.x - innerWidth / 2) * width; //this.parent.cv.width / 2;
-                global._target._y = (this.mouse.y - innerHeight / 2) * height; //this.parent.cv.height / 2;
-            }
-            global.statHover = global.clickables.hover.check({
-                x: mouse.clientX * global._ratio,
-                y: mouse.clientY * global._ratio
-            }) === 0;
-            global.guiMouse = {
-                x: mouse.clientX * height, // * global.ratio / ratio,//(global.ratio * ratio),
-                y: mouse.clientY * width // * global.ratio / ratio//(global.ratio * ratio)
-            };
-        }
-        _touchStart(e) {
-            e.preventDefault();
-            if (global._diedAt - Date.now() > 0 || (global._disconnected && global._gameStart)) return;
-            if (global._died) {
-                _displayDeathHTML(false)
-                let socketOut = _util._cleanString(global.playerName, 25).split('');
-                for (let i = 0; i < socketOut.length; i++) socketOut[i] = socketOut[i].charCodeAt();
-                _socket.talk("s", global.party || 0, socketOut.toString(), 0, getWOSocketId());
-                if (config.autoUpgrade){
-                    for (let i = 0; i < 75; i++){
-                        setTimeout(() => _socket.talk('L'), i * 25);
-                    }
-                }
-                global._diedAt = Date.now()
-                global._deathScreenState = 1
-                global._died = false;
-            }
-            let width = global._screenWidth / innerWidth;
-            let height = global._screenHeight / innerHeight;
-            for (let touch of e.changedTouches) {
-                let mpos = {
-                    x: touch.clientX * global._ratio * width,
-                    y: touch.clientY * global._ratio * height
-                };
-                let guiMpos = { // exactally where the mouse is, dk how the other ones manage to work but
-                    x: touch.clientX * width,
-                    y: touch.clientY * height
-                }
-                let id = touch.identifier;
-                let statIndex = global.clickables.stat.check(mpos);
-                let mobileClickIndex = global.clickables.mobileClicks.check(mpos);
-                if (mobileClickIndex !== -1)global.mobileClickables[mobileClickIndex]();
-                else if (statIndex !== -1) _socket.talk('x', statIndex);
-                else if (global.clickables.skipUpgrades.check(mpos) !== -1) global.clearUpgrades();
-                else {
-                    let index =  global.clickables.upgrade.check(mpos)
-                    if (index !== -1) {
-                        _socket.talk("U", index);
-                    } else {
-                        mpos.x /= width;
-                        mpos.y /= height;
-                        let onLeft = mpos.x < this.parent._cv.width / 2;
-                        if (this.parent.movementTouch === null && onLeft) {
-                            this.parent.movementTouch = id;
-                        } else if (this.parent.controlTouch === null && !onLeft) {
-                            this.parent.controlTouch = id;
-                            global._mobileFiring[1] = true
-                            _socket.cmd.set(global._mobileFiring[0], true);
-                        }
-                    }
-                }
-            }
-            this.parent._touchMove(e, false);
-        }
-        _touchMove(e, useParent = true) {
-            const _this = useParent ? this.parent : this;
-            e.preventDefault();
-            for (let touch of e.changedTouches) {
-                let mpos = {
-                    x: touch.clientX * global._ratio,
-                    y: touch.clientY * global._ratio
-                };
-                let id = touch.identifier;
-                if (_this.movementTouch === id) {
-                    let x = mpos.x - _this._cv.width * 1 / 6;
-                    let y = mpos.y - _this._cv.height * 2 / 3;
-                    let norm = Math.sqrt(x * x + y * y);
-                    x /= norm;
-                    y /= norm;
-                    let amount = 0.3826834323650898; // Math.sin(Math.PI / 8)
-                    if ((y < -amount) !== _this.movementTop) _socket.cmd.set(0, _this.movementTop = y < -amount);
-                    if ((y > amount) !== _this.movementBottom) _socket.cmd.set(1, _this.movementBottom = y > amount);
-                    if ((x < -amount) !== _this.movementLeft) _socket.cmd.set(2, _this.movementLeft = x < -amount);
-                    if ((x > amount) !== _this.movementRight) _socket.cmd.set(3, _this.movementRight = x > amount);
-                } else if (_this.controlTouch === id) {
-                    global._target._x = (mpos.x - _this._cv.width * 5 / 6) * 4;
-                    global._target._y = (mpos.y - _this._cv.height * 2 / 3) * 4;
-                }
-            }
-        }
-        _touchEnd(e) {
-            e.preventDefault();
-            for (let touch of e.changedTouches) {
-                let mpos = {
-                    x: touch.clientX * window.devicePixelRatio,
-                    y: touch.clientY * window.devicePixelRatio
-                };
-                let id = touch.identifier;
-                if (this.parent.movementTouch === id) {
-                    this.parent.movementTouch = null;
-                    if (this.parent.movementTop) _socket.cmd.set(0, this.parent.movementTop = false);
-                    if (this.parent.movementBottom) _socket.cmd.set(1, this.parent.movementBottom = false);
-                    if (this.parent.movementLeft) _socket.cmd.set(2, this.parent.movementLeft = false);
-                    if (this.parent.movementRight) _socket.cmd.set(3, this.parent.movementRight = false);
-                } else if (this.parent.controlTouch === id) {
-                    this.parent.controlTouch = null;
-                    global._mobileFiring[1] = false
-                    _socket.cmd.set(4, false);
-                    _socket.cmd.set(6, false);
-                }
-            }
-        }
-    });
     let c = global._canvas._cv,
         ctx = c.getContext("2d"),
         c2 = document.createElement("canvas"),
         ctx2 = c2.getContext("2d");
-    ctx2.imageSmoothingEnabled = 0;
+    ctx.imageSmoothingEnabled = false;
+    ctx2.imageSmoothingEnabled = false;
 
     function isInView(x, y, r) {
         let mid = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0,
@@ -2680,99 +560,7 @@ function RememberScriptingIsBannable() {
         getRelative = function () {
             return Date.now();
         };
-    var _player = { // Why var?
-        _x: 0,
-        y: 0,
-        _cx: 0,
-        _cy: 0,
-        _vx: 0,
-        _vy: 0,
-        _rendershiftx: 0,
-        _rendershifty: 0,
-        _lastvx: 0,
-        _lastvy: 0,
-        _renderx: 0,
-        _rendery: 0,
-        _renderv: 1,
-        _lastx: 0,
-        _lasty: 0,
-        _name: "",
-        _view: 1,
-        _lastUpdate: 0,
-        _time: 0,
-        _nameColor: 0 /*"#FFFFFF"*/,
-        _color: 0,
-        _canSeeInvisible: 0,
-        _isOutsideRoom: 0,
-        // PLACEHOLDER
-        _instance: {
-            "interval": 0,
-            "id": 0,
-            "index": 0,
-            "x": 0,
-            "y": 0,
-            "vx": 0,
-            "vy": 0,
-            "size": 1,
-            "facing": 0,
-            "twiggle": 0,
-            "layer": 0,
-            "color": 16,
-            "health": 1,
-            "shield": 1,
-            "alpha": 1,
-            "seeInvisible": 0,
-            "nameColor": "#FFFFFF",
-            "widthHeightRatio": [
-                1,
-                1
-            ],
-            "drawsHealth": 2,
-            "nameplate": 4,
-            "invuln": 1,
-            "name": "Whygena",
-            "score": 0,
-            "render": {
-                "draws": true,
-                "expandsWithDeath": 2,
-                "lastRender": 0,
-                "x": 0,
-                "y": 0,
-                "lastx": 0,
-                "lasty": 0,
-                "lastvx": 0,
-                "lastvy": 0,
-                "lastf": 0,
-                "f": 0,
-                "h": 1,
-                "s": 1,
-                "interval": 0,
-                "slip": 0,
-                "status": {},
-                "health": {},
-                "shield": {},
-                "size": 1,
-            },
-            "oldIndex": 0,
-            "guns": {
-                "length": 0
-            },
-            "turrets": [],
-            "lasers": {
-                "length": 0
-            },
-            "props": {
-                "length": 0
-            }
-        },
-        pepperspray: {
-            apply: false,
-            blurAmount: 0,
-            blurMax: 0
-        },
-        lsd: false
-    },
-        _anims = {};
+        let _anims = {};
     let socketInit = async function () {
         resizeEvent();
         let protocol = fasttalk,
@@ -2890,7 +678,7 @@ function RememberScriptingIsBannable() {
                                             entity.render.lastvx = entity.vx;
                                             entity.render.lastvy = entity.vy;
                                             entity.render.lastf = entity.facing;
-                                            entity.render.lastRender = _player._time;
+                                            entity.render.lastRender = global.player._time;
                                         }
                                         const flags = get.next();
                                         entity.index = get.next();
@@ -2921,7 +709,7 @@ function RememberScriptingIsBannable() {
                                         entity.alpha = (flags & 16) ? (get.next() / 255) : 1;
                                         entity.seeInvisible = flags & 32;
                                         entity.nameColor = flags & 64 ? get.next() : "#FFFFFF";
-                                        entity.label = flags & 128 ? get.next() : _mockups.get(entity.index).name
+                                        entity.label = flags & 128 ? get.next() : mockups.get(entity.index).name
                                         entity.widthHeightRatio = [(flags & 256) ? get.next() : 1, (flags & 512) ? get.next() : 1];
                                         entity.drawsHealth = type & 0x02;
                                         entity.nameplate = type & 0x04;
@@ -2936,7 +724,7 @@ function RememberScriptingIsBannable() {
                                                 real: true,
                                                 draws: false,
                                                 expandsWithDeath: entity.drawsHealth,
-                                                lastRender: _player._time,
+                                                lastRender: global.player._time,
                                                 x: entity.x,
                                                 y: entity.y,
                                                 lastx: entity.x - metrics._rendergap * config.roomSpeed * (1000 / 30) * entity.vx,
@@ -2956,22 +744,22 @@ function RememberScriptingIsBannable() {
                                                 extra: [1, 0], // for props
                                             };
 
-                                            let mockup = _mockups.get(entity.index);
+                                            let mockup = mockups.get(entity.index);
                                             if (mockup != null && mockup.shape > 2 && mockup.shape < 6) {
                                                 switch (mockup.color) {
                                                     case 207:
-                                                        _rewardManager._unlockAchievement("hot");
+                                                        rewardManager.unlockAchievement("hot");
                                                         break;
                                                     case 31:
-                                                        _rewardManager._unlockAchievement("toxic");
+                                                        rewardManager.unlockAchievement("toxic");
                                                         break;
                                                     case 261:
-                                                        _rewardManager._unlockAchievement("mystic");
+                                                        rewardManager.unlockAchievement("mystic");
                                                         break;
                                                 }
                                             }
                                             if(entity.color === -1){
-                                                _rewardManager._unlockAchievement("realShiny")
+                                                rewardManager.unlockAchievement("realShiny")
                                             }
                                         }
                                         entity.render.health.set(entity.health);
@@ -2988,7 +776,7 @@ function RememberScriptingIsBannable() {
                                     for (let i = 0; i < gunnumb; i++) {
                                         let time = get.next(),
                                             power = get.next();
-                                        if (time > _player._lastUpdate - metrics._rendergap) {
+                                        if (time > global.player._lastUpdate - metrics._rendergap) {
                                             entity.guns.fire(i, power);
                                         }
                                     }
@@ -3033,7 +821,7 @@ function RememberScriptingIsBannable() {
                             for (let i = 0; i < entities.length; i++) {
                                 let e = entities[i];
                                 e.render.status.set(e.health === 1 ? "dying" : "killed");
-                                if (e.render.status.getFade() !== 0 && isInView(e.render.x - _player._renderx, e.render.y - _player._rendery, e.size, 1)) {
+                                if (e.render.status.getFade() !== 0 && isInView(e.render.x - global.player._renderx, e.render.y - global.player._rendery, e.size, 1)) {
                                     output.push(e);
                                 } else {
 
@@ -3141,7 +929,7 @@ function RememberScriptingIsBannable() {
                                 barColor: data.shift(),
                                 nameColor: data.shift(),
                             };
-                            instance.label = data.shift() || _mockups.get(instance.index).label
+                            instance.label = data.shift() || mockups.get(instance.index).label
                             if (global.gamemodeAlteration !== "sbx" || data.shift() === global.party) {
                                 _gui._leaderboard._server.push(instance);
                             }
@@ -3165,7 +953,7 @@ function RememberScriptingIsBannable() {
             }
             let url = await getFullURL([global._windowSearch.lobby, servers[global._selectedServer] || servers[0]], true) + `a=${_$a}&b=${_$b}&c=${_$c}&d=${_$d}&e=${_$e}`
             let connectionAttempts = 1
-            let socket = WebSocket(url, roomHost);
+            window.socket = WebSocket(url, roomHost);
             global._windowSearch.lobby = window.rivetLobby
             window["help"] = function () {
                 logger.info("Here is a list of commands and their usages:");
@@ -3361,9 +1149,9 @@ function RememberScriptingIsBannable() {
                         let o = 0;
                         for (let i = 0; i < 8; i++) if (commands[i]) o += Math.pow(2, i);
                         let ratio = getRatio();
-                        let x = _util._fixNumber(Math.round((global._target._x - _player._rendershiftx) / ratio));
-                        let y = _util._fixNumber(Math.round((global._target._y - _player._rendershifty) / ratio));
-                        let c = _util._fixNumber(o);
+                        let x = util._fixNumber(Math.round((global._target._x - global.player._rendershiftx) / ratio));
+                        let y = util._fixNumber(Math.round((global._target._y - global.player._rendershifty) / ratio));
+                        let c = util._fixNumber(o);
                         if (cache._x !== x || cache._y !== y || cache._c !== c) {
                             cache._x = x;
                             cache._y = y;
@@ -3401,9 +1189,9 @@ function RememberScriptingIsBannable() {
                 let packet = m.splice(0, 1)[0];
                 switch (packet) {
                     case "mu": {
-                        _mockups._pendingMockupRequests.delete(m[0])
+                        mockups.pendingMockupRequests.delete(m[0])
                         if (m[1].length !== 2) {
-                            _mockups.set(m[0], JSON.parse(m[1]))
+                            mockups.set(m[0], JSON.parse(m[1]))
                         }
                     }
                         break;
@@ -3413,42 +1201,42 @@ function RememberScriptingIsBannable() {
                         break;
                     case "AA": { // Achievements and statistics
                         if (m[0] === -1) {
-                            _rewardManager._unlockAchievement(m[1]);
+                            rewardManager.unlockAchievement(m[1]);
                         } else {
-                            _rewardManager._increaseStatistic(m[0], m[1]);
+                            rewardManager.increaseStatistic(m[0], m[1]);
                             switch (m[0]) {
                                 case 0:
                                     global._killTracker++;
-                                    if (global._killTracker === 2) _rewardManager._unlockAchievement("double_kill");
-                                    if (global._killTracker === 3) _rewardManager._unlockAchievement("triple_kill");
-                                    if (global._killTracker === 5) _rewardManager._unlockAchievement("mean_lean_killing_machine");
+                                    if (global._killTracker === 2) rewardManager.unlockAchievement("double_kill");
+                                    if (global._killTracker === 3) rewardManager.unlockAchievement("triple_kill");
+                                    if (global._killTracker === 5) rewardManager.unlockAchievement("mean_lean_killing_machine");
                                     setTimeout(() => global._killTracker--, 3000);
-                                    switch (_rewardManager._statistics[0]) {
-                                        case 1: return void _rewardManager._unlockAchievement("woo_you_killed_someone");
-                                        case 5: return void _rewardManager._unlockAchievement("still_single_digits");
-                                        case 10: return void _rewardManager._unlockAchievement("only_ten");
-                                        case 50: return void _rewardManager._unlockAchievement("okay_that_is_something");
-                                        case 100: return void _rewardManager._unlockAchievement("got_good");
-                                        case 250: return void _rewardManager._unlockAchievement("okay_you_are_scaring_me");
-                                        case 500: return void _rewardManager._unlockAchievement("genocide");
-                                        case 1000: return void _rewardManager._unlockAchievement("genocide_ii");
+                                    switch (rewardManager._statistics[0]) {
+                                        case 1: return void rewardManager.unlockAchievement("woo_you_killed_someone");
+                                        case 5: return void rewardManager.unlockAchievement("still_single_digits");
+                                        case 10: return void rewardManager.unlockAchievement("only_ten");
+                                        case 50: return void rewardManager.unlockAchievement("okay_that_is_something");
+                                        case 100: return void rewardManager.unlockAchievement("got_good");
+                                        case 250: return void rewardManager.unlockAchievement("okay_you_are_scaring_me");
+                                        case 500: return void rewardManager.unlockAchievement("genocide");
+                                        case 1000: return void rewardManager.unlockAchievement("genocide_ii");
                                     };
                                     break;
                                 case 2:
-                                    switch (_rewardManager._statistics[2]) {
-                                        case 1: return void _rewardManager._unlockAchievement("that_was_tough");
-                                        case 4: return void _rewardManager._unlockAchievement("those_things_are_insane");
-                                        case 15: return void _rewardManager._unlockAchievement("what_in_the_world_is_a_celestial");
-                                        case 50: return void _rewardManager._unlockAchievement("boss_hunter");
-                                        case 100: return void _rewardManager._unlockAchievement("bosses_fear_me");
+                                    switch (rewardManager._statistics[2]) {
+                                        case 1: return void rewardManager.unlockAchievement("that_was_tough");
+                                        case 4: return void rewardManager.unlockAchievement("those_things_are_insane");
+                                        case 15: return void rewardManager.unlockAchievement("what_in_the_world_is_a_celestial");
+                                        case 50: return void rewardManager.unlockAchievement("boss_hunter");
+                                        case 100: return void rewardManager.unlockAchievement("bosses_fear_me");
                                     };
                                     break;
                                 case 3:
-                                    switch (_rewardManager._statistics[3]) {
-                                        case 1: return void _rewardManager._unlockAchievement("polynotagon");
-                                        case 250: return void _rewardManager._unlockAchievement("polygon_hater");
-                                        case 1000: return void _rewardManager._unlockAchievement("these_polygons_gotta_go");
-                                        case 1000000: return void _rewardManager._unlockAchievement("polygont");
+                                    switch (rewardManager._statistics[3]) {
+                                        case 1: return void rewardManager.unlockAchievement("polynotagon");
+                                        case 250: return void rewardManager.unlockAchievement("polygon_hater");
+                                        case 1000: return void rewardManager.unlockAchievement("these_polygons_gotta_go");
+                                        case 1000000: return void rewardManager.unlockAchievement("polygont");
                                     };
                                     break;
                             }
@@ -3473,7 +1261,7 @@ function RememberScriptingIsBannable() {
                             global.firstSpawn = true;
                             global.inQueue = false;
                             logger.info("The server has welcomed us to the game room! Sending spawn request.");
-                            let socketOut = _util._cleanString(global.playerName, 25).split('');
+                            let socketOut = util._cleanString(global.playerName, 25).split('');
                             for (let i = 0; i < socketOut.length; i++) socketOut[i] = socketOut[i].charCodeAt();
                             socket.talk("s", global.party || 0, socketOut.toString(), 1, getWOSocketId());
                             if (config.autoUpgrade) for (let i = 0; i < 75; i++) setTimeout(() => _socket.talk('L'), i * 25);
@@ -3512,15 +1300,15 @@ function RememberScriptingIsBannable() {
                     }
                         break;
                     case "c": {
-                        _player._x = _player._renderx = m[0];
-                        _player.y = _player._rendery = m[1];
-                        _player._view = _player._renderv = m[2];
+                        global.player._x = global.player._renderx = m[0];
+                        global.player.y = global.player._rendery = m[1];
+                        global.player._view = global.player._renderv = m[2];
                         // ok and shut the fuck up L loser + ratio i dont give a damn if the camera was forced move. I should force this
                         //logger.info /*warn*/("Camera force moved!");
                     }
                         break;
                     case "m": {
-                        _messages.push({
+                        global.messages.push({
                             text: m[0],
                             status: 2,
                             alpha: 0,
@@ -3543,7 +1331,7 @@ function RememberScriptingIsBannable() {
                     case "u": {
                         //global.controllingSquadron = !!m.shift();
                         global.isScoping = !!m.shift();
-                        if (global.isScoping) _rewardManager._unlockAchievement("im_still_single");
+                        if (global.isScoping) rewardManager.unlockAchievement("im_still_single");
                         let cam = {
                             time: m[0],
                             x: m[1],
@@ -3551,30 +1339,30 @@ function RememberScriptingIsBannable() {
                             FoV: m[3]
                         },
                             playerData = m.slice(4);
-                        if (cam.time > _player._lastUpdate) {
+                        if (cam.time > global.player._lastUpdate) {
                             lag.add(getNow() - cam.time);
-                            _player._time = cam.time + lag.get();
-                            metrics._rendergap = cam.time - _player._lastUpdate;
+                            global.player._time = cam.time + lag.get();
+                            metrics._rendergap = cam.time - global.player._lastUpdate;
                             if (metrics._rendergap <= 0) logger.warn("Yo some bullshit is up...");
-                            _player._lastUpdate = cam.time;
+                            global.player._lastUpdate = cam.time;
                             convert.begin(playerData);
                             convert.gui();
                             convert.data();
-                            _player._lastx = _player._cx;
-                            _player._lasty = _player.yc;
-                            _player._cx = cam.x;
-                            _player._cy = cam.y;
-                            _player._lastvx = _player._vx;
-                            _player._lastvy = _player._vy;
-                            _player._vx = global._died ? 0 : cam.vx;
-                            _player._vy = global._died ? 0 : cam.vy;
-                            if (isNaN(_player._renderx)) _player._renderx = _player._cx;
-                            if (isNaN(_player._rendery)) _player._rendery = _player._cy;
-                            _player._view = cam.FoV;
-                            if (isNaN(_player._renderv) || _player._renderv === 0) _player._renderv = 2000;
+                            global.player._lastx = global.player._cx;
+                            global.player._lasty = global.player.yc;
+                            global.player._cx = cam.x;
+                            global.player._cy = cam.y;
+                            global.player._lastvx = global.player._vx;
+                            global.player._lastvy = global.player._vy;
+                            global.player._vx = global._died ? 0 : cam.vx;
+                            global.player._vy = global._died ? 0 : cam.vy;
+                            if (isNaN(global.player._renderx)) global.player._renderx = global.player._cx;
+                            if (isNaN(global.player._rendery)) global.player._rendery = global.player._cy;
+                            global.player._view = cam.FoV;
+                            if (isNaN(global.player._renderv) || global.player._renderv === 0) global.player._renderv = 2000;
                             metrics._lastlag = metrics._lag;
                             metrics._lastuplink = getRelative();
-                        } //else logger.info("This is old data! Last given time: " + _player._time + "; offered packet timestamp: " + cam.time + ".");
+                        } //else logger.info("This is old data! Last given time: " + global.player._time + "; offered packet timestamp: " + cam.time + ".");
                         socket.cmd.talk();
                         updateTimes++;
                     }
@@ -3604,7 +1392,7 @@ function RememberScriptingIsBannable() {
                     case "p": {
                         window.Date
                         metrics._latency = global.time - lastPing;
-                        if (metrics._latency > 999) _rewardManager._unlockAchievement("laaaaaag");
+                        if (metrics._latency > 999) rewardManager.unlockAchievement("laaaaaag");
                     }
                         break;
                     case "F": {                      
@@ -3614,35 +1402,35 @@ function RememberScriptingIsBannable() {
                         global.deathDate = new Date().toLocaleString();
 
                         global._deathSplashChoice = Math.floor(Math.random() * global._deathSplash.length);
-                        let mockupname = (_mockups.get(_gui._type).name || "").toLowerCase();
+                        let mockupname = (mockups.get(_gui._type).name || "").toLowerCase();
                         if (!mockupname.includes("mothership") && !mockupname.includes("dominator")) {
-                            _rewardManager._increaseStatistic(6, m[0]);
-                            if (_rewardManager._statistics[6] >= 1_000_000) _rewardManager._unlockAchievement("millionaire");
-                            if (_rewardManager._statistics[6] >= 10_000_000) _rewardManager._unlockAchievement("you_can_now_afford_a_lamborghini_veneno");
-                            if (_rewardManager._statistics[6] >= 100_000_000) _rewardManager._unlockAchievement("tax_collector");
-                            if (_rewardManager._statistics[6] >= 1_000_000_000) _rewardManager._unlockAchievement("billionaire");
+                            rewardManager.increaseStatistic(6, m[0]);
+                            if (rewardManager._statistics[6] >= 1_000_000) rewardManager.unlockAchievement("millionaire");
+                            if (rewardManager._statistics[6] >= 10_000_000) rewardManager.unlockAchievement("you_can_now_afford_a_lamborghini_veneno");
+                            if (rewardManager._statistics[6] >= 100_000_000) rewardManager.unlockAchievement("tax_collector");
+                            if (rewardManager._statistics[6] >= 1_000_000_000) rewardManager.unlockAchievement("billionaire");
 
-                            if (_rewardManager._statistics[4] < m[0]) {
-                                if (m[0] >= 100_000) _rewardManager._unlockAchievement("everybody_stars_somewhere");
-                                if (m[0] >= 750_000) _rewardManager._unlockAchievement("250k_away");
-                                if (m[0] >= 1_000_000) _rewardManager._unlockAchievement("one_million");
-                                if (m[0] >= 5_000_000) _rewardManager._unlockAchievement("have_a_high_five");
-                                if (m[0] >= 10_000_000) _rewardManager._unlockAchievement("10__9");
-                                _rewardManager._increaseStatistic(4, m[0], true);
+                            if (rewardManager._statistics[4] < m[0]) {
+                                if (m[0] >= 100_000) rewardManager.unlockAchievement("everybody_stars_somewhere");
+                                if (m[0] >= 750_000) rewardManager.unlockAchievement("250k_away");
+                                if (m[0] >= 1_000_000) rewardManager.unlockAchievement("one_million");
+                                if (m[0] >= 5_000_000) rewardManager.unlockAchievement("have_a_high_five");
+                                if (m[0] >= 10_000_000) rewardManager.unlockAchievement("10__9");
+                                rewardManager.increaseStatistic(4, m[0], true);
                             }
-                            _rewardManager._increaseStatistic(1, 1);
-                            switch (_rewardManager._statistics[1]) {
+                            rewardManager.increaseStatistic(1, 1);
+                            switch (rewardManager._statistics[1]) {
                                 case 1:
-                                    _rewardManager._unlockAchievement("l_bozo");
+                                    rewardManager.unlockAchievement("l_bozo");
                                     break;
                                 case 10:
-                                    _rewardManager._unlockAchievement("large_bozo_energy");
+                                    rewardManager.unlockAchievement("large_bozo_energy");
                                     break;
                                 case 50:
-                                    _rewardManager._unlockAchievement("okay_its_becoming_sad");
+                                    rewardManager.unlockAchievement("okay_its_becoming_sad");
                                     break;
                                 case 100:
-                                    _rewardManager._unlockAchievement("it_became_sad");
+                                    rewardManager.unlockAchievement("it_became_sad");
                                     break;
                             };
                         }
@@ -3662,8 +1450,8 @@ function RememberScriptingIsBannable() {
                             return 0;
                         };
                         global._diedAt = Date.now() + 3e3;
-                        if (_mockups.get(_gui._type).name === "Basic") _rewardManager._increaseStatistic(9, 1);
-                        if (_rewardManager._statistics[9] > 49) _rewardManager._unlockAchievement("there_are_other_classes_too");
+                        if (mockups.get(_gui._type).name === "Basic") rewardManager.increaseStatistic(9, 1);
+                        if (rewardManager._statistics[9] > 49) rewardManager.unlockAchievement("there_are_other_classes_too");
                     }
                         break;
                     case "K": {
@@ -3676,7 +1464,7 @@ function RememberScriptingIsBannable() {
                         global._disconnectReason = m[0];
                         if (m[0] === "The arena has closed. Please try again later once the server restarts.") {
                             global._arenaClosed = true;
-                            _rewardManager._unlockAchievement("the_end_of_time")
+                            rewardManager.unlockAchievement("the_end_of_time")
                             global.closingSplash = m[1] || "";
                         }
                         socket.onclose({});
@@ -3694,11 +1482,11 @@ function RememberScriptingIsBannable() {
                         }
                     } break;
                     case "pepperspray":
-                        _player.pepperspray.apply = m[0];
-                        _player.pepperspray.blurMax = m[1];
+                        global.player.pepperspray.apply = m[0];
+                        global.player.pepperspray.blurMax = m[1];
                         break;
                     case "lsd":
-                        _player.lsd = m[0];
+                        global.player.lsd = m[0];
                         break;
                     case "displayText": {
                         global.displayTextUI.enabled = m[0];
@@ -3723,7 +1511,7 @@ function RememberScriptingIsBannable() {
                     case "da":
                         metrics._serverCpuUsage = m[0]
                         metrics._serverMemUsage = m[1]
-                        _mockups._totalMockups = m[2]
+                        mockups.totalMockups = m[2]
                         break;
                     default:
                         throw new Error("Unknown message index!" + packet);
@@ -3831,11 +1619,11 @@ function RememberScriptingIsBannable() {
         }
         document.getElementsByClassName("background")[0].remove();
         let playerNameInput = document.getElementById("playerNameInput");
-        _util._submitToLocalStorage("playerNameInput");
-        global.playerName = _player._name = playerNameInput.value.trim();
-        global.cleanPlayerName = _util._cleanString(global.playerName, 25)
+        util._submitToLocalStorage("playerNameInput");
+        global.playerName = global.player._name = playerNameInput.value.trim();
+        global.cleanPlayerName = util._cleanString(global.playerName, 25)
         setTimeout(() => {
-            if (global.playerName === "") _rewardManager._unlockAchievement("anonymous");
+            if (global.playerName === "") rewardManager.unlockAchievement("anonymous");
         }, 5000);
         if (document.getElementById("mainMenu")) {
             document.getElementById("mainMenu").remove();
@@ -3851,14 +1639,14 @@ function RememberScriptingIsBannable() {
         if (global.mobile) {
             _tryFullScreen()
             if (navigator.b || window.matchMedia && window.matchMedia("(display-mode: fullscreen), (display-mode: standalone), (display-mode: minimal-ui)").matches) {
-                _messages.push({
+                global.messages.push({
                     text: "Thank you for adding the Woomy-Arras.io app!",
                     status: 2,
                     alpha: 0,
                     time: Date.now() + 3000
                 });
             } else {
-                _messages.push({
+                global.messages.push({
                     text: "Add the Woomy-Arras.io app by bookmarking the site to the homescreen!",
                     status: 2,
                     alpha: 0,
@@ -5343,10 +3131,10 @@ function RememberScriptingIsBannable() {
             }
             switch (skin) {
                 case 0: // Normal Barrel
-                    context.lineTo(x + l[0] * Math.cos(angle + r[0]), y + l[0] * Math.sin(angle + r[0]));
-                    context.lineTo(x + l[1] * Math.cos(angle + Math.PI - r[1]), y + l[1] * Math.sin(angle + Math.PI - r[1]));
-                    context.lineTo(x + l[1] * Math.cos(angle + Math.PI + r[1]), y + l[1] * Math.sin(angle + Math.PI + r[1]));
-                    context.lineTo(x + l[0] * Math.cos(angle - r[0]), y + l[0] * Math.sin(angle - r[0]));
+                    context.lineTo(x + l[0] * Math.cos(angle + r[0]), y + l[0] * Math.sin(angle + r[0])); // tr
+                    context.lineTo(x + l[1] * Math.cos(angle + Math.PI - r[1]), y + l[1] * Math.sin(angle + Math.PI - r[1])); //br
+                    context.lineTo(x + l[1] * Math.cos(angle + Math.PI + r[1]), y + l[1] * Math.sin(angle + Math.PI + r[1])); //bl
+                    context.lineTo(x + l[0] * Math.cos(angle - r[0]), y + l[0] * Math.sin(angle - r[0])); // tl
                     break;
                 case 1: // Flamethrower Barrel
                     context.lineTo(x + l[1] * Math.cos(angle - (r[0] / 3)), y + l[1] * Math.sin(angle - (r[0] / 3)));
@@ -5459,21 +3247,6 @@ function RememberScriptingIsBannable() {
                     context.lineTo(x + l[0] * Math.cos(angle - r[0]), y + l[0] * Math.sin(angle - r[0]));
                     break;
                 case 100: // Tachyon
-                    rotatePoint(-0.2 - movement, 0, angle - Math.PI / 2, drawSize);
-                    rotatePoint(-0.2 - movement, 2.5, angle - Math.PI / 2, drawSize);
-                    rotatePoint(-0.65 - movement, 2, angle - Math.PI / 2, drawSize);
-                    rotatePoint(-0.65 - movement, 0, angle - Math.PI / 2, drawSize);
-                    context.lineJoin = config.pointy ? "miter" : "round";
-                    context.closePath();
-                    context.stroke();
-                    if (config.glassMode) context.globalAlpha = 0.6;
-                    context.fill();
-                    context.globalalpha = 1;
-                    context.beginPath();
-                    rotatePoint(0.2 + movement, 0, angle - Math.PI / 2, drawSize);
-                    rotatePoint(0.2 + movement, 2.5, angle - Math.PI / 2, drawSize);
-                    rotatePoint(0.65 + movement, 2, angle - Math.PI / 2, drawSize);
-                    rotatePoint(0.65 + movement, 0, angle - Math.PI / 2, drawSize);
                     break;
             }
             context.lineJoin = config.pointy ? "miter" : "round";
@@ -5716,7 +3489,7 @@ function RememberScriptingIsBannable() {
                 context = assignedContext || ctx,
                 fade = turretInfo ? 1 : render.status.getFade(),
                 drawSize = scale * ratio * (turretInfo ? instance.size : render.size),
-                m = _mockups.get(instance.index),
+                m = mockups.get(instance.index),
                 xx = x,
                 yy = y,
                 source = turretInfo === 0 ? instance : turretInfo,
@@ -6010,7 +3783,7 @@ function RememberScriptingIsBannable() {
         let fade = instance.render.status.getFade();
         ctx.globalAlpha = fade * fade;
         let size = instance.render.size * ratio,
-            m = _mockups.get(instance.index),
+            m = mockups.get(instance.index),
             realSize = size / m.size * m.realSize;
         if (instance.drawsHealth) {
             let health = instance.render.health.get(),
@@ -6059,10 +3832,10 @@ function RememberScriptingIsBannable() {
                 let stroke = undefined;
                 let font = undefined;
                 ctx.globalAlpha = alpha;
-                drawText(instance.score > 0 ? _util._handleLargeNumber(instance.score) : "", x, y - realSize - 16 * nameRatio, 8 * nameRatio, "#E4EBE7", "center", false, 1, stroke, ctx, font);
+                drawText(instance.score > 0 ? util._handleLargeNumber(instance.score) : "", x, y - realSize - 16 * nameRatio, 8 * nameRatio, "#E4EBE7", "center", false, 1, stroke, ctx, font);
                 switch (fill.charAt(0)) {
                     case "!":
-                        let data = _util._getSpecialNameInfoById(Number(instance.nameColor.substring(1)));
+                        let data = util._getSpecialNameInfoById(Number(instance.nameColor.substring(1)));
                         fill = data[0];
                         stroke = data[1];
                         font = data[2];
@@ -6202,14 +3975,14 @@ function RememberScriptingIsBannable() {
                 py; {
                 let motion = compensation();
                 //if (config.prediction === 2) {
-                _player._renderx = motion.predict(_player._renderx, _player._cx, 0, 0);
-                _player._rendery = motion.predict(_player._rendery, _player._cy, 0, 0);
+                global.player._renderx = motion.predict(global.player._renderx, global.player._cx, 0, 0);
+                global.player._rendery = motion.predict(global.player._rendery, global.player._cy, 0, 0);
                 /*} else {
                     player.renderx = motion.predict(player.lastx, player.x, player.lastvx, player.vx);
                     player.rendery = motion.predict(player.lasty, player.y, player.lastvy, player.vy);
                 }*/
-                px = ratio * _player._renderx;
-                py = ratio * _player._rendery;
+                px = ratio * global.player._renderx;
+                py = ratio * global.player._rendery;
             } {
                 ctx.clearRect(0, 0, global._screenWidth, global._screenHeight);
                 _clearScreen(mixColors(color.white, color.guiblack, 0.15), 1);
@@ -6318,20 +4091,20 @@ function RememberScriptingIsBannable() {
                     let x = ratio * instance.render.x - px,
                         y = ratio * instance.render.y - py;
                     if (isMe) {
-                        _player._x = x;
-                        _player.y = y;
-                        _player._rendershiftx = global.controllingSquadron ? 0 : x;
-                        _player._rendershifty = global.controllingSquadron ? 0 : y;
-                        _player.team = instance.team;
+                        global.player._x = x;
+                        global.player.y = y;
+                        global.player._rendershiftx = global.controllingSquadron ? 0 : x;
+                        global.player._rendershifty = global.controllingSquadron ? 0 : y;
+                        global.player.team = instance.team;
                         // Ok                        // Set facing
                         instance.render.f = (!instance.twiggle && !global._died && !global._forceTwiggle) ? Math.atan2(global._target._y - y, global._target._x - x) : motion.predictFacing(instance.render.f, instance.facing);
                         // Save information about the player
-                        _player._nameColor = instance.nameColor
+                        global.player._nameColor = instance.nameColor
                         //console.log(mockups[instance.index])
-                        _player._name = instance.name == null ? _mockups.get(instance.index).name : instance.name;
-                        _player._label = instance.label
-                        _player._canSeeInvisible = instance.seeInvisible;
-                        if (instance.alpha < 0.1) _rewardManager._unlockAchievement("sneak_100");
+                        global.player._name = instance.name == null ? mockups.get(instance.index).name : instance.name;
+                        global.player._label = instance.label
+                        global.player._canSeeInvisible = instance.seeInvisible;
+                        if (instance.alpha < 0.1) rewardManager.unlockAchievement("sneak_100");
                     } else {
                         instance.render.f = motion.predictFacing(instance.render.f, instance.facing);
                     };
@@ -6343,8 +4116,8 @@ function RememberScriptingIsBannable() {
                         instance.render.health.set(0);
                         instance.render.shield.set(0);
                     }
-                    drawEntity(x, y, instance, ratio, _player._canSeeInvisible ? instance.alpha + .5 : instance.alpha, 1.1, instance.render.f);
-                    if ((instance.nameplate || instance.drawsHealth) && !config.screenshotMode) frameplate.push([x, y, instance, ratio, _player._canSeeInvisible ? instance.alpha + .5 : instance.alpha]);
+                    drawEntity(x, y, instance, ratio, global.player._canSeeInvisible ? instance.alpha + .5 : instance.alpha, 1.1, instance.render.f);
+                    if ((instance.nameplate || instance.drawsHealth) && !config.screenshotMode) frameplate.push([x, y, instance, ratio, global.player._canSeeInvisible ? instance.alpha + .5 : instance.alpha]);
                     ctx.globalAlpha = 1;
                 };
                 ctx.shadowBlur = 0;
@@ -6360,7 +4133,7 @@ function RememberScriptingIsBannable() {
                   darknessCanvas.width = global._screenWidth;
                   darknessCanvas.height = global._screenWidth;
                   const darknessCtx = darknessCanvas.getContext('2d');
-                  if(_player._canSeeInvisible){
+                  if(global.player._canSeeInvisible){
                     darknessCtx.globalAlpha = .9
                   }
                   darknessCtx.fillStyle = "black";
@@ -6375,7 +4148,7 @@ function RememberScriptingIsBannable() {
                     size = ((Math.min(15+instance.size*12, instance.size+200))*instance.render.status.getFade())*ratio
                     
                     // auras
-                    let mockup = _mockups.get(instance.index)
+                    let mockup = mockups.get(instance.index)
                     for (let prop of mockup.props){
                       if(prop.isAura){
                         let size = Math.round(instance.size / mockup.size * mockup.realSize * prop.size)
@@ -6393,7 +4166,7 @@ function RememberScriptingIsBannable() {
                     }
                     
                     // entities
-                    if(instance.team !== _player.team) continue;
+                    if(instance.team !== global.player.team) continue;
                     let gradient = darknessCtx.createRadialGradient(
                       x, y, 0, 
                       x, y, size
@@ -6429,7 +4202,7 @@ function RememberScriptingIsBannable() {
                 }
             }
             ctx.translate(global._screenWidth / -2, global._screenHeight / -2);
-            ratio = _util._getScreenRatio();
+            ratio = util._getScreenRatio();
             let scaleScreenRatio = (by, unset) => {
                 global._screenWidth /= by;
                 global._screenHeight /= by;
@@ -6438,210 +4211,16 @@ function RememberScriptingIsBannable() {
             };
             scaleScreenRatio(ratio, true);
             // Draw GUI
-            let t = {
-                x: global._target._x + global._screenWidth / 2,
-                y: global._target._y + global._screenHeight / 2
-            };
             let alcoveSize = 200 / ratio; // / drawRatio * global.screenWidth;
             let spacing = 20;
 
             if (!config.screenshotMode) {
-                {
-                    do {
-                        global.clickables.tree.hide();
-                        if (!global._showTree) break;
-                        let doAfter = () => {
-                            let spacing = 10;
-                            let x = 20;
-                            let y = 60;
-                            let length = 180;
-                            let height = 50;
-                            let colorIndex = global._tankMenuColor;
-
-                            global.clickables.tree.place(0, x, y, length, height);
-                            ctx.globalAlpha = .5;
-                            ctx.fillStyle = getColor(colorIndex > 185 ? colorIndex - 85 : colorIndex);
-                            config.roundUpgrades ? drawGuiRoundRect(x, y, length, height, 10) : drawGuiRect(x, y, length, height);
-                            ctx.globalAlpha = .175;
-                            ctx.fillStyle = getColor(-10 + (colorIndex++ - (colorIndex > 185 ? 85 : 0)));
-                            config.roundUpgrades ? drawGuiRoundRect(x, y, length, .6 * height, 4) : drawGuiRect(x, y, length, .6 * height);
-                            ctx.fillStyle = color.black;
-                            config.roundUpgrades ? drawGuiRoundRect(x, y + .6 * height, length, .4 * height, 4) : drawGuiRect(x, y + .6 * height, length, .4 * height);
-                            ctx.strokeStyle = color.black;
-                            ctx.globalAlpha = 1;
-                            ctx.lineWidth = 3;
-                            drawGuiRect(x, y, length, height, true);
-                            if (!global._died && !global._disconnected) {
-                                if (global.guiMouse.x > x && global.guiMouse.x < x + length && global.guiMouse.y > y && global.guiMouse.y < y + height) {
-                                    ctx.globalAlpha = .2;
-                                    config.roundUpgrades ? drawGuiRoundRect(x, y, length, height, 10) : drawGuiRect(x, y, length, height);
-                                }
-                            };
-                            ctx.globalAlpha = 1;
-                            drawText("Random Tank", x + length * 0.5, y + height * 0.5, height * 0.45, color.guiwhite, 'center', true);
-                        };
-                        if (global._died) {
-                            global._showTree = false;
-                            global._scrollX = 0;
-                        };
-                        let validint = v => Math.max(0, Math.min(global._screenWidth, v));
-                        // This is a seperate bar because bounds and movement need to be the same
-                        let lerpspeed = 0.15;
-                        global._realScrollX = lerp(global._realScrollX, Math.max(0, Math.min(1, global._scrollX)), lerpspeed);
-                        // Bounds
-                        if (global._scrollX < 0) global._scrollX = 0;
-                        if (global._scrollX > 1) global._scrollX = 1;
-                        global.doParseTree(_mockups, global);
-                        /*ctx.strokeStyle = color.black;
-                        ctx.globalAlpha = 1;
-                        ctx.lineWidth = 4;
-                        drawGuiRect(global.screenWidth / 2 - 275, 5, 550, 550, true);
-                        ctx.globalAlpha = .5;
-                        ctx.fillStyle = color.lgrey;
-                        drawGuiRect(global.screenWidth / 2 - 275, 5, 550, 550);*/
-                        ctx.globalAlpha = 1;
-                        let [tiles, branches, full] = global.parsedTreeData;
-                        let tileDiv = 0.8, //global.searchName === "Basic" ? 1.25 : 1.25,
-                            tileSize = alcoveSize / 5 / tileDiv,
-                            size = tileSize - 4;
-                        ctx.globalAlpha = 1;
-                        for (let [start, end] of branches) {
-                            let sx = global._screenWidth / 2 + (start.x - full.width * global._realScrollX) * tileSize + 1 + .5 * size,
-                                ex = global._screenWidth / 2 + (end.x - full.width * global._realScrollX) * tileSize + 1 + .5 * size;
-                            if ((sx > 0 && ex < global._screenWidth) || (sx < global._screenWidth && ex > global._screenWidth) || (sx < 0 && ex < global._screenWidth && ex > 0)) {
-                                let sy = global._screenHeight / 2 + (start.y - full.height / 2) * tileSize + 1 + .5 * size,
-                                    ey = global._screenHeight / 2 + (end.y - full.height / 2) * tileSize + 1 + .5 * size;
-                                ctx.strokeStyle = color.black;
-                                ctx.lineWidth = 2;
-                                ctx.beginPath();
-                                ctx.lineTo(validint(sx), sy + 60);
-                                ctx.lineTo(validint(ex), ey + 60);
-                                ctx.closePath();
-                                ctx.stroke();
-                            };
-                        }
-                        for (let {
-                            x,
-                            y,
-                            colorIndex,
-                            index
-                        }
-                            of tiles) {
-                            let ax = global._screenWidth / 2 + (x - full.width * global._realScrollX) * tileSize,
-                                ay = global._screenHeight / 2 + (y - full.height / 2) * tileSize + 60,
-                                realSize = tileSize;
-                            //colorIndex = global.tankMenuColor;
-                            //if (ax + realSize < 0 || ax - realSize > global.screenWidth) continue;
-                            if (ax + realSize > 0 && ax - realSize < global._screenWidth) {
-                                ctx.globalAlpha = .75;
-                                ctx.fillStyle = getColor(colorIndex > 185 ? colorIndex - 85 : colorIndex);
-                                drawGuiRect(ax, ay, realSize, realSize);
-                                ctx.globalAlpha = .15;
-                                ctx.fillStyle = getColor(-10 + (colorIndex++ - (colorIndex > 185 ? 85 : 0)));
-                                drawGuiRect(ax, ay, realSize, realSize * .6);
-                                ctx.fillStyle = color.black;
-                                drawGuiRect(ax, ay + realSize * .6, realSize, realSize * .4);
-                                ctx.globalAlpha = 1;
-                                let angle = -Math.PI / 4,
-                                    picture = getEntityImageFromMockup(index, _gui._color),
-                                    position = _mockups.get(index).position,
-                                    scale = .8 * realSize / position.axis,
-                                    xx = ax + .5 * realSize - scale * position.middle.x * Math.cos(angle),
-                                    yy = ay + .5 * realSize - scale * position.middle.x * Math.sin(angle);
-                                /**
-                                 *                     let scale = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 1,
-                rot = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 0,
-                turretsObeyRot = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : 0,
-                assignedContext = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : 0,
-                turretInfo = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : 0,
-                render = arguments.length > 10 && arguments[10] !== undefined ? arguments[10] : instance.render,
-                                 */
-                                drawEntity(xx, yy, picture, .5, 1, scale / picture.size * 2, angle, true);
-                                ctx.strokeStyle = color.black;
-                                ctx.globalAlpha = 1;
-                                ctx.lineWidth = 2;
-                                drawGuiRect(ax, ay, realSize, realSize, true);
-                                if (t.x > ax && t.y > ay && t.x < ax + realSize && t.y < ay + realSize) doAfter = (function () {
-                                    ctx.globalAlpha = 0.2;
-                                    ctx.fillStyle = color.black;
-                                    ctx.strokStyle = color.black;
-                                    ctx.globaAlpha = 0.75
-                                    ctx.lineWidth = 5;
-                                    drawGuiRect(ax, ay, realSize, realSize);
-                                    ctx.fillRect(t.x - 100, t.y - 20, 200, -180);
-                                    drawGuiRect(t.x - 100, t.y - 20, 200, -180, true);
-                                    ctx.globalAlpha = 1;
-                                    let angle = -Math.PI / 4,
-                                        picture = getEntityImageFromMockup(index, _gui._color),
-                                        position = _mockups.get(index).position,
-                                        scale = .9 * realSize / position.axis,
-                                        xx = t.x - scale * position.middle.x * Math.cos(angle),
-                                        yy = t.y - 110 - scale * position.middle.x * Math.sin(angle);
-                                    drawEntity(xx, yy, picture, 1.2, 1, scale / picture.size * 2, angle, true);
-                                    if (global.lastPictureName !== picture.name && global.mousedown) {
-                                        global.mousedown = false;
-                                        global.lastPictureName = picture.name;
-                                        let size = 250;
-                                        ctx2.save();
-                                        let og = {
-                                            w: c2.width,
-                                            h: c2.height
-                                        };
-                                        c2.width = size;
-                                        c2.height = size;
-                                        scale = .225 * size / position.axis,
-                                            xx = size / 2 - scale * position.middle.x * Math.cos(angle),
-                                            yy = size / 2 - scale * position.middle.x * Math.sin(angle);
-                                        drawEntity(xx, yy, picture, 1.5, 1, scale / picture.size * 2, angle, true, ctx2);
-                                        try {
-                                            c2.toBlob(function (blob) {
-                                                const item = new ClipboardItem({ "image/png": blob });
-                                                _messages.push({
-                                                    text: "Image saved to your clipboard",
-                                                    status: 2,
-                                                    alpha: 0,
-                                                    time: Date.now(),
-                                                    color: color.black
-                                                });
-                                                navigator.clipboard.write([item]);
-                                            })
-                                        } catch (error) {
-                                            if (`${error}`.includes("Document is not focused")) {
-                                                _messages.push({
-                                                    text: "Error saving image, please stay focused on the tab and keep the GUI open!",
-                                                    status: 2,
-                                                    alpha: 0,
-                                                    time: Date.now(),
-                                                    color: color.black
-                                                });
-                                            } else {
-                                                console.error(error);
-                                                _messages.push({
-                                                    text: "Failed to save image for an unkown reason.",
-                                                    status: 2,
-                                                    alpha: 0,
-                                                    time: Date.now(),
-                                                    color: color.black
-                                                });
-                                            }
-                                        };
-                                        c2.width = og.w;
-                                        c2.height = og.h;
-                                        ctx2.restore();
-                                    };
-                                    drawText(picture.name, t.x, t.y - 35, 23, color.guiwhite, 'center', true);
-                                });
-                            };
-                        }
-                        doAfter()
-                    } while (false);
-                }
                 if (global.mobile) scaleScreenRatio(ratio, true);
                 _gui._skill.update();
                 if (global.mobile) scaleScreenRatio(1.4);
 
-                if (!global._showTree) {
-                    if (global.mobile) scaleScreenRatio(1 / 1.4); {
+                if (global.mobile) scaleScreenRatio(1 / 1.4);
+                {
                         if (!global.mobile) {
                             global.canSkill = !!_gui._points && _gui._skills.some(skill => skill.amount < skill.cap);
                             let active = (global.canSkill || global._died || global.statHover)
@@ -6654,7 +4233,7 @@ function RememberScriptingIsBannable() {
                                 savedLen = len,
                                 save = config.fancyAnimations ? len * statMenu.get() : len,
                                 ticker = 11,
-                                namedata = _gui._getStatNames(_mockups.get(_gui._type).statnames || -1);
+                                namedata = _gui._getStatNames(mockups.get(_gui._type).statnames || -1);
                                 let y = global._screenHeight - 20 - height
                                 let x = -20 - 2 * len + (config.fancyAnimations ? statMenu.get() : active) * (2 * 20 + 2 * len)
                             _gui._skills.forEach(function drawSkillBar(skill) {
@@ -6694,7 +4273,7 @@ function RememberScriptingIsBannable() {
                             global.clickables.hover.place(0, 0, y, .8 * savedLen, .8 * (global._screenHeight - y));
                             if (_gui._points !== 0) drawText("x" + _gui._points, Math.round(x + len - 2) + .5, Math.round(y + height - 4) + .5, 20, color.guiwhite, "right");
                         }
-                    } {
+                    {
                         let spacing = 4,
                             len = 1.65 * alcoveSize,
                             height = 25,
@@ -6706,21 +4285,21 @@ function RememberScriptingIsBannable() {
                         drawBar(x, x + len, y + height / 2, height - 3 + config.barChunk, color.black);
                         drawBar(x, x + len, y + height / 2, height - 3, color.grey);
                         drawBar(x, x + len * (level > 59 ? 1 : _gui._skill.getProgress()), y + height / 2, height - 3.5, color.gold);
-                        drawText("Level " + level + " " + _player._label, x + len / 2, y + height / 2, height - 4, color.guiwhite, "center", 1);
+                        drawText("Level " + level + " " + global.player._label, x + len / 2, y + height / 2, height - 4, color.guiwhite, "center", 1);
                         height = 14;
                         y -= height + spacing;
                         drawBar(x + len * .1, x + len * .9, y + height / 2, height - 3 + config.barChunk, color.black);
                         drawBar(x + len * .1, x + len * .9, y + height / 2, height - 3, color.grey);
                         drawBar(x + len * .1, x + len * (0.1 + .8 * (max ? Math.min(1, _gui._skill.getScore() / max) : 1)), y + height / 2, height - 3.5, color.green);
-                        drawText("Score: " + _util._formatLargeNumber(Math.round(_gui._skill.getScore())), x + len / 2, y + height / 2, height - 2, color.guiwhite, "center", 1);
+                        drawText("Score: " + util._formatLargeNumber(Math.round(_gui._skill.getScore())), x + len / 2, y + height / 2, height - 2, color.guiwhite, "center", 1);
                         ctx.lineWidth = 4;
-                        if (_player._nameColor) {
-                            if (_player._nameColor.charAt("0") !== "!") {
-                                let nameColor = _player._nameColor || "#FFFFFF";
-                                drawText(_player._name, Math.round(x + len / 2) + .5, Math.round(y - 10 - spacing) + .5, 32, nameColor, "center");
+                        if (global.player._nameColor) {
+                            if (global.player._nameColor.charAt("0") !== "!") {
+                                let nameColor = global.player._nameColor || "#FFFFFF";
+                                drawText(global.player._name, Math.round(x + len / 2) + .5, Math.round(y - 10 - spacing) + .5, 32, nameColor, "center");
                             } else {
-                                let [fill, stroke, font, size] = _util._getSpecialNameInfoById(Number(_player._nameColor.substring(1)));
-                                drawText(_player._name, Math.round(x + len / 2) + .5, Math.round(y - 10 - spacing) + .5, 32, fill, "center", false, 1, stroke, ctx, font);
+                                let [fill, stroke, font, size] = util._getSpecialNameInfoById(Number(global.player._nameColor.substring(1)));
+                                drawText(global.player._name, Math.round(x + len / 2) + .5, Math.round(y - 10 - spacing) + .5, 32, fill, "center", false, 1, stroke, ctx, font);
                             }
                         }
                         if (global.displayTextUI.enabled) {
@@ -6818,13 +4397,13 @@ function RememberScriptingIsBannable() {
                         ctx.fillStyle = color.guiblack;
                         if (!global._died) {
                             if (config.prediction === 2 || true) {
-                                let xAdder = (_player._cx * (rawRatio[0] ? 1 : rawRatio[2])) / global._gameWidth * len - 1
-                                let yAdder = (_player._cy * (rawRatio[0] ? rawRatio[1] : 1)) / global._gameWidth * height - 1
+                                let xAdder = (global.player._cx * (rawRatio[0] ? 1 : rawRatio[2])) / global._gameWidth * len - 1
+                                let yAdder = (global.player._cy * (rawRatio[0] ? rawRatio[1] : 1)) / global._gameWidth * height - 1
                                 if (xAdder > 0 && yAdder > 0 && xAdder < 200 && yAdder < 200) {
                                     drawGuiCircle(x + xAdder, y + yAdder, 2);
                                 }
                             } else {
-                                drawGuiCircle(x + _player._x / global._gameWidth * len - 1, y + _player.y / global._gameWidth * height - 1, 2);
+                                drawGuiCircle(x + global.player._x / global._gameWidth * len - 1, y + global.player.y / global._gameWidth * height - 1, 2);
                             }
                         }
                         if (global.mobile) {
@@ -6851,7 +4430,7 @@ function RememberScriptingIsBannable() {
                                     y -= 16
                                     drawText(`Server CPU usage: ${metrics._serverCpuUsage.toFixed(2)}%`, x + len, y, 14, metrics._serverCpuUsage > 80 ? color.red : metrics._serverCpuUsage > 65 ? color.orange : color.guiwhite, "right")
                                     y -= 16
-                                    drawText(`${_mockups._fetchedMockups}/${_mockups._totalMockups} (${((_mockups._fetchedMockups/_mockups._totalMockups)*100).toFixed(2)}%) Mockups`, x + len, y, 14, color.guiwhite, "right")
+                                    drawText(`${mockups.fetchedMockups}/${mockups.totalMockups} (${((mockups.fetchedMockups/mockups.totalMockups)*100).toFixed(2)}%) Mockups`, x + len, y, 14, color.guiwhite, "right")
                                 }
                             }
                         }
@@ -6873,7 +4452,6 @@ function RememberScriptingIsBannable() {
                         scaleScreenRatio(1 / 0.8);
                         scaleScreenRatio(1.4);
                     } { // Draw leaderboard
-                        if (!global._showTree) {
                             let vspacing = 4;
                             let len = 200;
                             let height = 14;
@@ -6902,12 +4480,12 @@ function RememberScriptingIsBannable() {
                                 // Leadboard name + score
                                 let nameColor = entry.nameColor;
                                 if (nameColor.charAt(0) !== "!") {
-                                    drawText(entry.label + (': ' + _util._handleLargeNumber(Math.round(entry.score))), x + len / 2, y + height / 2, height - 5, nameColor, 'center', true);
+                                    drawText(entry.label + (': ' + util._handleLargeNumber(Math.round(entry.score))), x + len / 2, y + height / 2, height - 5, nameColor, 'center', true);
                                 } else {
-                                    let [fill, stroke, font, size] = _util._getSpecialNameInfoById(Number(nameColor.substring(1)));
+                                    let [fill, stroke, font, size] = util._getSpecialNameInfoById(Number(nameColor.substring(1)));
                                     // With stroke its too hard to read xd
                                     stroke = 0;
-                                    drawText(entry.label + (': ' + _util._handleLargeNumber(Math.round(entry.score))), x + len / 2, y + height / 2, height - 5, fill, 'center', true, 1, stroke, ctx, font);
+                                    drawText(entry.label + (': ' + util._handleLargeNumber(Math.round(entry.score))), x + len / 2, y + height / 2, height - 5, fill, 'center', true, 1, stroke, ctx, font);
                                 }
                                 // Mini-image
                                 let scale = height / entry.position.axis,
@@ -6917,7 +4495,6 @@ function RememberScriptingIsBannable() {
                                 // Move down
                                 y += vspacing + height;
                             }
-                        }
                     }
                     {
                         if (!config.disableMessages) {
@@ -6927,8 +4504,8 @@ function RememberScriptingIsBannable() {
                                 y = 20,
                                 fill;
                             if (global.mobile) y += (global.canSkill ? ((alcoveSize / 3 + spacing) / 1.4) * statMenu.get() : 0) + (global.canUpgrade ? ((alcoveSize / 2 + spacing) / 1.4) * upgradeMenu.get() : 0);
-                            for (let i = _messages.length - 1; i >= 0; i--) {
-                                let msg = _messages[i],
+                            for (let i = global.messages.length - 1; i >= 0; i--) {
+                                let msg = global.messages[i],
                                     txt = msg.text,
                                     text = txt;
                                 //if (msg.len == null || msg.font !== config.fontFamily) {
@@ -6945,12 +4522,12 @@ function RememberScriptingIsBannable() {
                                 if (msg.status > 1) {
                                     msg.status -= .05;
                                     msg.alpha += .05;
-                                } else if (i === 0 && (_messages.length > 6 || Date.now() - msg.time > 1e4)) {
-                                    let mult = _messages.length > 15 ? 5 : 1;
+                                } else if (i === 0 && (global.messages.length > 6 || Date.now() - msg.time > 1e4)) {
+                                    let mult = global.messages.length > 15 ? 5 : 1;
                                     msg.status -= .05 * mult;
                                     msg.alpha -= .05 * mult;
-                                    if (msg.alpha <= 0 || _messages.length > 40) {
-                                        _messages.splice(0, 1);
+                                    if (msg.alpha <= 0 || global.messages.length > 40) {
+                                        global.messages.splice(0, 1);
                                     }
                                 }
                             }
@@ -7000,7 +4577,7 @@ function RememberScriptingIsBannable() {
                                 }
                                 ctx.globalAlpha = 1;
                                 let picture = getEntityImageFromMockup(model, _gui._color),
-                                    position = _mockups.get(model).position,
+                                    position = mockups.get(model).position,
                                     scale = .6 * len / position.axis,
                                     xx = y + .5 * height - scale * position.middle.x * Math.cos(upgradeSpin),
                                     yy = x + .5 * len - scale * position.middle.x * Math.sin(upgradeSpin);
@@ -7044,7 +4621,7 @@ function RememberScriptingIsBannable() {
                             let x = 2 * spacing - spacing;
                             let y = spacing;
                             let index = 0;
-                            let namedata = _gui._getStatNames(_mockups.get(_gui._type).statnames || -1);
+                            let namedata = _gui._getStatNames(mockups.get(_gui._type).statnames || -1);
                             if (global.canSkill) {
                                 _gui._skills.forEach((skill, ticker) => {
                                     let skillCap = skill.softcap;
@@ -7162,17 +4739,17 @@ function RememberScriptingIsBannable() {
                 if (global.mobile) scaleScreenRatio(1 / ratio, true);
             }
 
-            if (_player.pepperspray.apply || _player.pepperspray.blurMax > 0) {
-                ctx.filter = `blur(${_player.pepperspray.blurAmount}px)`;
+            if (global.player.pepperspray.apply || global.player.pepperspray.blurMax > 0) {
+                ctx.filter = `blur(${global.player.pepperspray.blurAmount}px)`;
                 ctx.drawImage(c, 0, 0, global._screenWidth, global._screenHeight);
                 ctx.filter = "none";
-                if (!_player.pepperspray.apply && _player.pepperspray.blurAmount != 0) {
-                    _player.pepperspray.blurAmount--
-                    if (_player.pepperspray.blurAmount == 0) _player.pepperspray.blurMax = 0;
-                } else if (_player.pepperspray.blurAmount < _player.pepperspray.blurMax) _player.pepperspray.blurAmount++;
+                if (!global.player.pepperspray.apply && global.player.pepperspray.blurAmount != 0) {
+                    global.player.pepperspray.blurAmount--
+                    if (global.player.pepperspray.blurAmount == 0) global.player.pepperspray.blurMax = 0;
+                } else if (global.player.pepperspray.blurAmount < global.player.pepperspray.blurMax) global.player.pepperspray.blurAmount++;
             }
 
-            if (_player.lsd) {
+            if (global.player.lsd) {
                 ctx.filter = `hue-rotate(${Math.sin(Date.now() / 600) * 360}deg)`;
                 ctx.drawImage(c, 0, 0, global._screenWidth, global._screenHeight);
                 ctx.filter = "none";
@@ -7200,7 +4777,7 @@ function RememberScriptingIsBannable() {
                 let txt = "";
                 if (global.finalKillers.length) {
                     txt = "🔪 Succumbed to";
-                    for (let i = 0; i < global.finalKillers.length; i++) txt += " " + _util._addArticle(_mockups.get(global.finalKillers[i]).name) + " and";
+                    for (let i = 0; i < global.finalKillers.length; i++) txt += " " + util._addArticle(mockups.get(global.finalKillers[i]).name) + " and";
                     txt = txt.slice(0, -4) + ".";
                 } else txt += "🔪 Well that was kinda dumb, huh?";
                 return txt;
@@ -7267,19 +4844,19 @@ function RememberScriptingIsBannable() {
                 y = global._screenHeight / 2 - 50,
                 picture = getEntityImageFromMockup(_gui._type, _gui._color),
                 len = 140,
-                position = _mockups.get(_gui._type).position,
+                position = mockups.get(_gui._type).position,
                 scale = len / position.axis,
                 xx = global._screenWidth / 2 - scale * position.middle.x * .707,
                 yy = global._screenHeight / 2 - 35 + scale * position.middle.x * .707,
                 delay = Math.ceil((global._diedAt - Date.now()) / 1000);
-            _player.pepperspray.apply = false;
-            _player.lsd = false;
+            global.player.pepperspray.apply = false;
+            global.player.lsd = false;
             drawEntity(xx - 190 - len / 2, (yy - 10) * getGlide(), picture, 1.5, getAlpha(), .5 * scale / picture.realSize, -Math.PI / 4);
             ctx.globalAlpha = getAlpha()
             drawText(global._deathSplashOverride || global._deathSplash[global._deathSplashChoice], x, (y - 80) * getGlide(), 10, color.guiwhite, "center");
-            drawText("Level " + _gui._skill.getLevel() + " " + _player._label, x - 170, (y - 30) * getGlide(), 24, color.guiwhite);
-            drawText("Final Score: " + _util._formatLargeNumber(Math.round(global.finalScore.get())), (x - 170), (y + 25) * getGlide(), 50, color.guiwhite);
-            drawText("⌛ Survived for " + _util._formatTime(Math.round(global.finalLifetime.get())) + ".", (x - 170), (y + 55) * getGlide(), 16, color.guiwhite);
+            drawText("Level " + _gui._skill.getLevel() + " " + global.player._label, x - 170, (y - 30) * getGlide(), 24, color.guiwhite);
+            drawText("Final Score: " + util._formatLargeNumber(Math.round(global.finalScore.get())), (x - 170), (y + 25) * getGlide(), 50, color.guiwhite);
+            drawText("⌛ Survived for " + util._formatTime(Math.round(global.finalLifetime.get())) + ".", (x - 170), (y + 55) * getGlide(), 16, color.guiwhite);
             drawText(getKills(), (x - 170), (y + 77) * getGlide(), 16, color.guiwhite);
             drawText(getDeath(), (x - 170), (y + 99) * getGlide(), 16, color.guiwhite);
             drawText("⌚ Died on " + global.deathDate, (x - 170), (y + 121) * getGlide(), 16, color.guiwhite);
@@ -7339,7 +4916,7 @@ function RememberScriptingIsBannable() {
             _clearScreen(color.white, .5);
             drawText("You are in queue for a 1v1 battle!", global._screenWidth / 2, global._screenHeight / 2, 30, color.guiwhite, "center");
             drawText(splash, global._screenWidth / 2, global._screenHeight / 2 + 30, 15, color.lgreen, "center");
-            drawText("You've been in the queue for " + _util._formatTime(Math.round((Date.now() - global.queueStart) / 1000)), global._screenWidth / 2, global._screenHeight / 2 + 75, 15, color.guiwhite, "center");
+            drawText("You've been in the queue for " + util._formatTime(Math.round((Date.now() - global.queueStart) / 1000)), global._screenWidth / 2, global._screenHeight / 2 + 75, 15, color.guiwhite, "center");
         }
     }();
     let _gameDrawRankedResults = function () {
@@ -7367,41 +4944,41 @@ function RememberScriptingIsBannable() {
             } else {
 
             };
-            if (_rewardManager._statistics[5] < ++time) _rewardManager._increaseStatistic(5, time, true);
+            if (rewardManager._statistics[5] < ++time) rewardManager.increaseStatistic(5, time, true);
             switch (time) {
                 case 1800:
-                    _rewardManager._unlockAchievement("hope_you_are_having_fun");
+                    rewardManager.unlockAchievement("hope_you_are_having_fun");
                     break;
                 case 3600:
-                    _rewardManager._unlockAchievement("i_mean_you_must_be_right");
+                    rewardManager.unlockAchievement("i_mean_you_must_be_right");
                     break;
                 case 7200:
-                    _rewardManager._unlockAchievement("hopefully_you_have_the_score_to_back_this_up");
+                    rewardManager.unlockAchievement("hopefully_you_have_the_score_to_back_this_up");
                     break;
                 case 14400:
-                    _rewardManager._unlockAchievement("no_way_you_didnt_go_afk");
+                    rewardManager.unlockAchievement("no_way_you_didnt_go_afk");
                     break;
             }
 
-            _rewardManager._increaseStatistic(7, 1);
-            switch (_rewardManager._statistics[7]) {
+            rewardManager.increaseStatistic(7, 1);
+            switch (rewardManager._statistics[7]) {
                 case 1800:
-                    _rewardManager._unlockAchievement("hourly_enjoyer");
+                    rewardManager.unlockAchievement("hourly_enjoyer");
                     break;
                 case 14400:
-                    _rewardManager._unlockAchievement("fhourly_enjoyer");
+                    rewardManager.unlockAchievement("fhourly_enjoyer");
                     break;
                 case 36000:
-                    _rewardManager._unlockAchievement("okay_that_was_fun");
+                    rewardManager.unlockAchievement("okay_that_was_fun");
                     break;
                 case 86400:
-                    _rewardManager._unlockAchievement("uh_are_you_okay");
+                    rewardManager.unlockAchievement("uh_are_you_okay");
                     break;
                 case 259200:
-                    _rewardManager._unlockAchievement("you_need_something_else_to_do");
+                    rewardManager.unlockAchievement("you_need_something_else_to_do");
                     break;
                 case 604800:
-                    _rewardManager._unlockAchievement("wake_up_wake_up_wake_up");
+                    rewardManager.unlockAchievement("wake_up_wake_up_wake_up");
                     break;
             }
 
@@ -7409,24 +4986,24 @@ function RememberScriptingIsBannable() {
             global._fpsc = 0;
 
             if (time % 3 === 0) {
-                if (_gui._skills[0].cap !== 0 && _gui._skills[0].amount === _gui._skills[0].cap) _rewardManager._unlockAchievement("shielded_from_your_bs");
-                if (_gui._skills[1].cap !== 0 && _gui._skills[1].amount === _gui._skills[1].cap) _rewardManager._unlockAchievement("selfrepairing");
-                if (_gui._skills[2].cap !== 0 && _gui._skills[2].amount === _gui._skills[2].cap) _rewardManager._unlockAchievement("2fast4u");
-                if (_gui._skills[3].cap !== 0 && _gui._skills[3].amount === _gui._skills[3].cap) _rewardManager._unlockAchievement("ratatatatatatatata");
-                if (_gui._skills[4].cap !== 0 && _gui._skills[4].amount === _gui._skills[4].cap) _rewardManager._unlockAchievement("more_dangerous_than_it_looks");
-                if (_gui._skills[5].cap !== 0 && _gui._skills[5].amount === _gui._skills[5].cap) _rewardManager._unlockAchievement("theres_no_stopping_it");
-                if (_gui._skills[6].cap !== 0 && _gui._skills[6].amount === _gui._skills[6].cap) _rewardManager._unlockAchievement("indestructible_ii");
-                if (_gui._skills[7].cap !== 0 && _gui._skills[7].amount === _gui._skills[7].cap) _rewardManager._unlockAchievement("mach_4");
-                if (_gui._skills[8].cap !== 0 && _gui._skills[8].amount === _gui._skills[8].cap) _rewardManager._unlockAchievement("dont_touch_me");
-                if (_gui._skills[9].cap !== 0 && _gui._skills[9].amount === _gui._skills[9].cap) _rewardManager._unlockAchievement("indestructible");
+                if (_gui._skills[0].cap !== 0 && _gui._skills[0].amount === _gui._skills[0].cap) rewardManager.unlockAchievement("shielded_from_your_bs");
+                if (_gui._skills[1].cap !== 0 && _gui._skills[1].amount === _gui._skills[1].cap) rewardManager.unlockAchievement("selfrepairing");
+                if (_gui._skills[2].cap !== 0 && _gui._skills[2].amount === _gui._skills[2].cap) rewardManager.unlockAchievement("2fast4u");
+                if (_gui._skills[3].cap !== 0 && _gui._skills[3].amount === _gui._skills[3].cap) rewardManager.unlockAchievement("ratatatatatatatata");
+                if (_gui._skills[4].cap !== 0 && _gui._skills[4].amount === _gui._skills[4].cap) rewardManager.unlockAchievement("more_dangerous_than_it_looks");
+                if (_gui._skills[5].cap !== 0 && _gui._skills[5].amount === _gui._skills[5].cap) rewardManager.unlockAchievement("theres_no_stopping_it");
+                if (_gui._skills[6].cap !== 0 && _gui._skills[6].amount === _gui._skills[6].cap) rewardManager.unlockAchievement("indestructible_ii");
+                if (_gui._skills[7].cap !== 0 && _gui._skills[7].amount === _gui._skills[7].cap) rewardManager.unlockAchievement("mach_4");
+                if (_gui._skills[8].cap !== 0 && _gui._skills[8].amount === _gui._skills[8].cap) rewardManager.unlockAchievement("dont_touch_me");
+                if (_gui._skills[9].cap !== 0 && _gui._skills[9].amount === _gui._skills[9].cap) rewardManager.unlockAchievement("indestructible");
 
-                if (_rewardManager._statistics[8] < 225 && _rewardManager._statistics[8] > 199) _rewardManager._unlockAchievement("nuisance_exterminator");
-                if (_rewardManager._statistics[8] < 15 && _rewardManager._statistics[8] > 0) _rewardManager._unlockAchievement("they_seek");
+                if (rewardManager._statistics[8] < 225 && rewardManager._statistics[8] > 199) rewardManager.unlockAchievement("nuisance_exterminator");
+                if (rewardManager._statistics[8] < 15 && rewardManager._statistics[8] > 0) rewardManager.unlockAchievement("they_seek");
 
-                if (_rewardManager._statistics[10] < 110 && _rewardManager._statistics[10] > 99) _rewardManager._unlockAchievement("drones_are_life");
+                if (rewardManager._statistics[10] < 110 && rewardManager._statistics[10] > 99) rewardManager.unlockAchievement("drones_are_life");
 
                 let max = _gui._leaderboard._display.length ? _gui._leaderboard._display[0].score : false;
-                if (!global._died && time > 30 && Math.min(1, _gui._skill.getScore() / max) === 1) _rewardManager._unlockAchievement("the_leader");
+                if (!global._died && time > 30 && Math.min(1, _gui._skill.getScore() / max) === 1) rewardManager.unlockAchievement("the_leader");
             }
         }
         setInterval(func, 1000);
@@ -7441,7 +5018,7 @@ function RememberScriptingIsBannable() {
                 if (global._tankMenuColorReal >= 185) global._tankMenuColorReal = 100;
                 global._tankMenuColorReal += 0.16;
                 global._tankMenuColor = global._tankMenuColorReal | 0;
-                _player._renderv += (_player._view - _player._renderv) / 30;
+                global.player._renderv += (global.player._view - global.player._renderv) / 30;
                 let ratio = getRatio();
                 ctx.lineCap = "round";
                 ctx.lineJoin = "round";
@@ -7459,13 +5036,13 @@ function RememberScriptingIsBannable() {
                         _socket.talk("da")
                         lastServerStat = global.time
                     }
-                    metrics._lag = global.time - _player._time;
+                    metrics._lag = global.time - global.player._time;
                 }
                 if (global.inQueue === 2) _gameDrawRankedResults();
                 else if (global.inQueue) _gameDrawQueue();
                 else if (!window.rivetServerFound) _gameDrawServerStatusText();
                 else if (global._gameStart) {
-                    if (_mockups.length === 0) _gameDrawLoadingMockups();
+                    if (mockups.length === 0) _gameDrawLoadingMockups();
                     else {
                         gameDraw(ratio);
                     };

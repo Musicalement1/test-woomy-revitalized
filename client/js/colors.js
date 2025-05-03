@@ -1,4 +1,7 @@
+import { global } from "./global.js"
 import { config } from "/js/config.js"
+import { lerp } from "/js/lerp.js"
+import { imageCache } from "./assets.js";
 
 let color = {
 	"teal": "#7ADBBC",
@@ -588,50 +591,21 @@ let themes = {
 	}
 };
 
-const mixColors = (() => {
-	// Cache with a small size limit
-	const memory = new Map();
-	const MAX_CACHE_SIZE = 1000;
-
-	return function (color1, color2, percentage) {
-		// Clamp the percentage between 0 and 1
-		percentage = Math.min(Math.max(percentage, 0), 1);
-
-		// Use a simpler, direct key generation method (without toFixed)
-		const key = `${color1}${color2}${percentage * 100}`;
-
-		// Check if the result is already cached
-		let mem = memory.get(key)
-		if (mem !== undefined) return mem
-
-		// Extract RGB values from hex without using regex
-		const r1 = parseInt(color1.slice(1, 3), 16);
-		const g1 = parseInt(color1.slice(3, 5), 16);
-		const b1 = parseInt(color1.slice(5, 7), 16);
-
-		const r2 = parseInt(color2.slice(1, 3), 16);
-		const g2 = parseInt(color2.slice(3, 5), 16);
-		const b2 = parseInt(color2.slice(5, 7), 16);
-
-		// Calculate the mixed RGB values with integer math
-		const mixedR = Math.round(r1 + (r2 - r1) * percentage);
-		const mixedG = Math.round(g1 + (g2 - g1) * percentage);
-		const mixedB = Math.round(b1 + (b2 - b1) * percentage);
-
-		// Combine RGB into hex and ensure 2 digit padding (hex format is #RRGGBB)
-		const mixedColor = `#${(mixedR < 16 ? '0' : '') + mixedR.toString(16)}${(mixedG < 16 ? '0' : '') + mixedG.toString(16)}${(mixedB < 16 ? '0' : '') + mixedB.toString(16)}`;
-
-		// Cache the result
-		memory.set(key, mixedColor);
-
-		// Evict oldest entry from memory if cache size exceeds the limit
-		if (memory.size > MAX_CACHE_SIZE) {
-			memory.delete(memory.keys().next().value);
-		}
-
-		return mixedColor;
-	};
-})();
+const mixColorsCache = new Map()
+function mixColors(primary, secondary, amount) {
+	const key = `${primary}${secondary}${amount}`;
+	if (mixColorsCache.has(key)) return mixColorsCache.get(key);
+	const pr = parseInt(primary.slice(1), 16);
+	const sr = parseInt(secondary.slice(1), 16);
+	const hex = `#${(
+		1 << 24
+		| Math.floor(lerp((pr >> 16) & 255, (sr >> 16) & 255, amount)) << 16
+		| Math.floor(lerp((pr >> 8) & 255, (sr >> 8) & 255, amount)) << 8
+		| Math.floor(lerp(pr & 255, sr & 255, amount))
+	).toString(16).slice(1)}`;
+	mixColorsCache.set(key, hex);
+	return hex;
+}
 
 const specialColors = {}
 function getColor(colorID) {
@@ -1253,8 +1227,8 @@ function getColor(colorID) {
 				specialColors[1000] = function (ctx, instance) {
 					if (!imageCache.starbackground || !imageCache.starbackground.ready) return;
 					const pattern = ctx.createPattern(imageCache.starbackground, "repeat");
-					const screenWorldOriginX = -_player._renderx * _global._ratio + _global._screenWidth / 2;
-					const screenWorldOriginY = -_player._rendery * _global._ratio + _global._screenHeight / 2;
+					const screenWorldOriginX = -global.player._renderx * global._ratio + global._screenWidth / 2;
+					const screenWorldOriginY = -global.player._rendery * global._ratio + global._screenHeight / 2;
 					pattern.setTransform(new DOMMatrix().translate(screenWorldOriginX, screenWorldOriginY));
 					ctx.fillStyle = pattern;
 					ctx.fill()
@@ -1267,8 +1241,8 @@ function getColor(colorID) {
 				specialColors[1001] = function (ctx, instance) {
 					if (!imageCache.starbackgroundInverted || !imageCache.starbackgroundInverted.ready) return;
 					const pattern = ctx.createPattern(imageCache.starbackgroundInverted, "repeat");
-					const screenWorldOriginX = -_player._renderx * _global._ratio + _global._screenWidth / 2;
-					const screenWorldOriginY = -_player._rendery * _global._ratio + _global._screenHeight / 2;
+					const screenWorldOriginX = -global.player._renderx * global._ratio + global._screenWidth / 2;
+					const screenWorldOriginY = -global.player._rendery * global._ratio + global._screenHeight / 2;
 					pattern.setTransform(new DOMMatrix().translate(screenWorldOriginX, screenWorldOriginY));
 					ctx.fillStyle = pattern;
 					ctx.fill()
@@ -1291,7 +1265,7 @@ function getColor(colorID) {
 
 function getColorDark(givenColor) {
 	if (config.noBorders) return givenColor;
-	if (config.rgbBorders) return getColor(_global._tankMenuColor);
+	if (config.rgbBorders) return getColor(global._tankMenuColor);
 	let dark = (config.neon | config.inverseBorderColor) ? color.white : color.black;
 	return config.darkBorders ? dark : mixColors(givenColor, dark, color.border);
 }
@@ -1406,6 +1380,7 @@ export {
 	color,
 	setColor,
 	themes,
+	specialColors,
 	mixColors,
 	getColor,
 	getColorDark,
