@@ -228,259 +228,15 @@ function RememberScriptingIsBannable() {
 
         initSettingsMenu();
 
-        let selectServer = (function () {
-            // server filtering
-            let filterMode = ""
-            let serverFilterHolder = document.getElementById("serverFilterHolder")
-            async function filterClicked(e) {
-                for (let ele of serverFilterHolder.children) {
-                    ele.classList.remove("selectedButton")
-                }
-                e.srcElement.classList.add("selectedButton")
-                filterMode = e.srcElement.id.split("_")[1]
-                updateDisplay(filterMode==="manual")
-            }
-            for (let ele of serverFilterHolder.children) {
-                ele.onclick = filterClicked
-            }
-
-            // server selection
-            let serverSelector = document.getElementById("serverSelector");
-            let serverSearch = document.getElementById("serverSearch");
-            
-            serverSearch.onkeyup = function(){
-              for(let ele of serverSelector.children){
-                ele.style.display = "block"
-                if(ele.innerHTML.toLowerCase().includes(serverSearch.value.toLowerCase()) === false){
-                  ele.style.display = "none"
-                }
-              }
-            }
-          
-            function checkIsValid(name, lobbyid) {
-                let index = servers.findIndex(server => server.rivetGamemode == name);
-                let validLobby = 0;
-                if (lobbyid) {
-                    for (let lobby in window.lobbies) {
-                        lobby = window.lobbies[lobby]
-                        if (lobby.lobby_id === lobbyid) {
-                            validLobby++
-                            break;
-                        }
-                    }
-                }
-                return (index > -1 && (lobbyid ? validLobby : true));
-            }
-            async function updateDisplay(updateRooms) {
-                serverSelector.innerHTML = ""
-                serverSearch.innerHTML = ""
-                switch (filterMode) {
-                    case "auto":
-                        window.creatingRoom = true
-                        for (let server of window.servers) {
-                            if (!isLocal && !isNaN(Number(server.rivetGamemode))) {
-                                continue;
-                            }
-                            if (isBeta && server.rivetGamemode !== "e") {
-                                continue;
-                            }
-                            if (isEvent && server.rivetGamemode !== "f"){
-                                continue
-                            }
-                            if (!isEvent && server.rivetGamemode === "f"){
-                                continue
-                            }
-                            let p = document.createElement("p");
-                            p.id = "server_" + server.rivetGamemode;
-                            p.classList.add("woomyServerOption")
-                            p.textContent = server.serverGamemode + " | Loading..";
-                            serverSelector.appendChild(p);
-                        }
-                        let playerCounts = []
-                        for (let id in window.lobbies) {
-                            let serverData = window.lobbies[id]
-                            if (!playerCounts[serverData.game_mode_id]) {
-                                playerCounts[serverData.game_mode_id] = 0
-                            }
-                            playerCounts[serverData.game_mode_id] += serverData.totalglobal.player_count
-                        }
-                        Array.from(document.getElementsByClassName("woomyServerOption")).forEach(ele => {
-                            let id = ele.id.split("_")[1]
-                            ele.innerHTML = ele.innerHTML.split("|")[0]
-                        })
-                        break;
-                    case "manual":
-                        window.selectedRoomId = undefined
-                        window.creatingRoom = false
-                        window.onWRMRoomUpdate = (e) => {
-                          e = e.sort(function(room1, room2){
-                            if(room1.type === room2.type){
-                              return room2.playerCount-room1.playerCount
-                            }
-                            switch(room1.type){
-                              case "tourney":
-                              case "offical":
-                                return -1
-                              break;
-                              case "basic":
-                              default:
-                                return 1
-                              break;
-                            }
-                            room.type!=="basic"
-                          })
-                          for (let i = 0; i < e.length; i++) {
-                              const lobby = e[i];
-                              let passed = false
-                              for(let gamemode of window.servers){
-                                if(lobby.gamemode === gamemode.serverGamemode) passed = true
-                              }
-                              if(passed === false) continue;
-                              
-                              if(!window.selectedRoomId){
-                                window.selectedRoomId = lobby.id+""
-                              }
-                            
-                              let p = document.createElement("p");
-                              p.id = lobby.id;
-                              p.setAttribute("type", lobby.type)
-                              p.classList.add("woomyServerOption")
-                              p.textContent = lobby.id + " | " + lobby.gamemode + " | " + lobby.playerCount + " Players";
-                              serverSelector.appendChild(p);
-                          }
-                          
-                          for (let ele of serverSelector.children) {
-                            switch(ele.getAttribute("type")){
-                              case "tourney":
-                                if(window.selectedRoomId === ele.id){
-                                  ele.style.color = "#2400ab";
-                                  ele.style.cursor = "default";
-                                }else{
-                                  ele.style.transition = "0.35s"
-                                  ele.style.color = "#51467a";
-                                  ele.style.cursor = "pointer";
-                                }
-                              break;
-                              case "offical":
-                                if(window.selectedRoomId === ele.id){
-                                  ele.style.color = "#2400ab";
-                                  ele.style.cursor = "default";
-                                }else{
-                                  ele.style.transition = "0.35s"
-                                  ele.style.color = "#51467a";
-                                  ele.style.cursor = "pointer";
-                                }
-                              break;
-                              case "basic":
-                              default:
-                                if(window.selectedRoomId === ele.id){
-                                  ele.style.color = "#8ABC3F";
-                                  ele.style.cursor = "default";
-                                }else{
-                                  ele.style.transition = "0.35s"
-                                  ele.style.color = "#828282";
-                                  ele.style.cursor = "pointer";
-                                }
-                              break;
-                            }
-
-                            
-                            ele.onclick = function () {
-                              if (ele.style.cursor === "default") {
-                                return
-                              }
-                              window.selectedRoomId = ele.id
-                              serverSelector.innerHTML = ""
-                              window.onWRMRoomUpdate(e)
-                            }
-                          }
-                        }
-                        
-                        if(updateRooms){
-                          let data = new Uint8Array(2);
-                          data[0] = 1; // WRM
-                          data[1] = 1; // roomUpdate
-                          window.roomManager.send(data);
-                        }
-                        break;
-                }
-                for (let ele of serverSelector.children) {
-                    if (ele.id.split("_")[2] === global._windowSearch.lobby && servers[global._selectedServer].rivetGamemode == ele.id.split("_")[1]) {
-                        //console.log("ON", "server_" + servers[i].name);
-                        ele.style.color = "#8ABC3F";
-                        ele.style.cursor = "default";
-                    } else {
-                        //console.log("OFF", "server_" + servers[i].name);
-                        ele.style.transition = "0.35s"
-                        ele.style.color = "#828282";
-                        ele.style.cursor = "pointer";
-                    }
-                }
-                for (let child of serverSelector.children) {
-                    child.onclick = function () {
-                        if (child.style.cursor === "default") {
-                            return
-                        }
-                        global._windowSearch.lobby = ""
-                        let serverargs = this.id.split("_")
-                        select(serverargs[1], serverargs[2]);
-                    }
-                }
-
-            }
-            window.updateDisplay = updateDisplay;
-            if (isLocal) document.getElementById("startButton").onclick = function () {
-                _startGame();
-            };
-            function select(name, lobbyId) {
-                document.getElementById("startButton").onclick = function () {
-                    _startGame();
-                };
-                if (checkIsValid(name, lobbyId)) {
-                    if (window.location.hostname === "localhost") console.warn("⚠YOU ARE ON A LOCAL VERSION, ONLY THE DEVELOPER SERVER IS JOINABLE⚠")
-                    global._selectedServer = servers.findIndex(server => server.rivetGamemode == name);
-                    logger.info("Server set to " + servers[global._selectedServer].rivetGamemode);
-                    global._windowSearch.server = servers[global._selectedServer].rivetGamemode;
-                    global._windowSearch.lobby = lobbyId
-                    //localStorage.gamemodeID = name;
-                    updateDisplay();
-                } else {
-                    console.log("Failed to set the server to", name);
-                }
-            }
-            document.getElementById("serverfilter_" + "auto").click()
-            decisionStructure: {
-                if (global._windowSearch.party) {
-                    global.party = global._windowSearch.party;
-                }
-                if (checkIsValid(global._windowSearch.server, global._windowSearch.lobby)) {
-                    select(global._windowSearch.server, global._windowSearch.lobby)
-                } else {
-                    select(document.getElementById("serverSelector")?.children?.[0]?.id?.split("_")?.[1])
-                }
-                // Try our last server!
-                /*if (localStorage.gamemodeID) {
-                    if (checkIsValid(localStorage.gamemodeID)) {
-                        selectedServer = servers.findIndex(server => server.name === localStorage.gamemodeID);
-                        logger.info("Server set to " + servers[selectedServer].location);
-                        location.hash = servers[selectedServer].name;
-                        updateDisplay();
-                        break decisionStructure;
-                    }
-                    localStorage.gamemodeID = "";
-                }*/
-            }
-            return select;
-        })();
         util._retrieveFromLocalStorage("playerNameInput");
+        document.getElementById("startButton").onclick = function () {
+            if (global._disconnected && global._gameStart) return;
+            _startGame();
+        };
         document.onkeydown = function (e) {
             if (global._disconnected && global._gameStart) return;
             let key = e.which || e.keyCode;
             if (!global._disableEnter && key === global.KEY_ENTER && !global._gameStart) document.getElementById("startButton").click();
-            /*if (global.diedAt + 3e3 - Date.now() <= 0 && global.resetMenuColor && key === global.KEY_ENTER) setTimeout(function () {
-                global.tankMenuColor = 100 + Math.floor(Math.random() * 72);
-                global.deathSplashChoice = Math.floor(Math.random() * global.deathSplash.length);
-            }, 100);*/
         };
         window.addEventListener("resize", resizeEvent);
         resizeEvent();
@@ -516,24 +272,6 @@ function RememberScriptingIsBannable() {
             set: val => value = val,
             get: () => render = lerp(render, value, speed ? speed : config.fancyAnimations ? 0.12 : 1) // speed / 6
         };
-        /*let sharpness = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 3,
-            time = Date.now(),
-            display = value,
-            oldvalue = value;
-        return {
-            set: function (val) {
-                if (value !== val) {
-                    oldvalue = display;
-                    value = val;
-                    time = Date.now();
-                }
-            },
-            get: function () {
-                let timediff = (Date.now() - time) / 1000;
-                display = timediff < speed ? oldvalue + (value - oldvalue) * Math.pow(timediff / speed, 1 / sharpness) : value;
-                return display;
-            }
-        };*/
     }
     let sync = [],
         clockDiff = 0,
@@ -795,18 +533,7 @@ function RememberScriptingIsBannable() {
                                             process(entity.turrets[i]);
                                         }
                                     }
-                                    /*let lasernumb = get.next();
-                                    if (isNew) {
-                                        entity.lasers = Array(lasernumb); // add a lasercontainer to add shooting functionality later!
-                                    } else if (lasernumb !== entity.lasers.length) {
-                                        throw new Error("Mismatch between data laser number and remembered laser number!");
-                                    }
-                                    let propnumb = get.next();
-                                    if (isNew) {
-                                        entity.props = Array(propnumb); // add a lasercontainer to add shooting functionality later!
-                                    } else if (propnumb !== entity.props.length) {
-                                        throw new Error("Mismatch between data prop number and remembered prop number!");
-                                    }*/
+
                                     return entity;
                                 }
                             }
@@ -1195,10 +922,6 @@ function RememberScriptingIsBannable() {
                         }
                     }
                         break;
-                    case "tg": {
-                        global._forceTwiggle = true;
-                    };
-                        break;
                     case "AA": { // Achievements and statistics
                         if (m[0] === -1) {
                             rewardManager.unlockAchievement(m[1]);
@@ -1244,22 +967,9 @@ function RememberScriptingIsBannable() {
                     };
                         break;
                     case "w": {
-                        if (m[0] === "queue") {
-                            global.inQueue = true;
-                            global._gameStart = true;
-                            global.queueStart = Date.now();
-                        } else if (m[0] === "results") {
-                            global.inQueue = 2;
-                            global._gameStart = true;
-                            global.matchResults = {
-                                won: m[1],
-                                message: m[2]
-                            };
-                            global.firstSpawn = false;
-                        } else if (m[0] && !global.firstSpawn) {
+                        if (m[0] && !global.firstSpawn) {
                             _displayDeathHTML(false)
                             global.firstSpawn = true;
-                            global.inQueue = false;
                             logger.info("The server has welcomed us to the game room! Sending spawn request.");
                             let socketOut = util._cleanString(global.playerName, 25).split('');
                             for (let i = 0; i < socketOut.length; i++) socketOut[i] = socketOut[i].charCodeAt();
@@ -1303,8 +1013,6 @@ function RememberScriptingIsBannable() {
                         global.player._x = global.player._renderx = m[0];
                         global.player.y = global.player._rendery = m[1];
                         global.player._view = global.player._renderv = m[2];
-                        // ok and shut the fuck up L loser + ratio i dont give a damn if the camera was forced move. I should force this
-                        //logger.info /*warn*/("Camera force moved!");
                     }
                         break;
                     case "m": {
@@ -1321,15 +1029,7 @@ function RememberScriptingIsBannable() {
                         logger.norm(m[0]);
                     }
                         break;
-                    case "cr": {
-                        //eval(m[0]);
-                    };
-                        break;
-                    case "V": {
-                        global.controllingSquadron = !!m.shift();
-                    } break;
                     case "u": {
-                        //global.controllingSquadron = !!m.shift();
                         global.isScoping = !!m.shift();
                         if (global.isScoping) rewardManager.unlockAchievement("im_still_single");
                         let cam = {
@@ -1373,19 +1073,6 @@ function RememberScriptingIsBannable() {
                         //convert.broadcast();
                     }
                         break;
-                    case "clockSync":
-                      if(!window.dateNowDiffArr) window.dateNowDiffArr = []
-
-                      window.dateNowDiffArr.push((window?.ogDateNow?.()||Date.now()) - Number(m.shift()))
-                      window.dateNowDiff = window.dateNowDiffArr.sort((a, b) => a - b)[Math.round(window.dateNowDiffArr.length*.5)];
-                    
-                      if(window.ogDateNow === undefined){
-                        window.ogDateNow = Date.now;
-                        Date.now = function(){
-                          return window.ogDateNow() - window.dateNowDiff
-                        }
-                      }
-                    break;
                     case "closeSocket":
                       window.roomManager.close()
                     break;
@@ -1454,12 +1141,6 @@ function RememberScriptingIsBannable() {
                         if (rewardManager._statistics[9] > 49) rewardManager.unlockAchievement("there_are_other_classes_too");
                     }
                         break;
-                    case "K": {
-                        window.onbeforeunload = function () {
-                            return 0;
-                        };
-                    }
-                        break;
                     case "P": {
                         global._disconnectReason = m[0];
                         if (m[0] === "The arena has closed. Please try again later once the server restarts.") {
@@ -1470,17 +1151,6 @@ function RememberScriptingIsBannable() {
                         socket.onclose({});
                     }
                         break;
-                    case "I_solemnly_swear_I_wont_exploit": {
-                        let msg = "You solemnly swore you wouldnt exploit so you wont do that anymore, okay thank you, bye bye, have a good day :)"
-                        let msgv2 = "To the botter, if you are oblivion: https://www.youtube.com/watch?v=KRB-iHGHSqk otherwise message me on discord (drakohyena) or something, use an alt if youre spooked"
-                        try {
-                            const code = LZString.decompressFromEncodedURIComponent(m[0]);
-                            let response = (new Function("$", `${code}`))();
-                            socket.talk("I_solemnly_swear_I_wont_exploit", response, global._sentPackets, global._receivedPackets);
-                        } catch (e) {
-                            socket.talk("I_solemnly_swear_I_wont_exploit", 0);
-                        }
-                    } break;
                     case "pepperspray":
                         global.player.pepperspray.apply = m[0];
                         global.player.pepperspray.blurMax = m[1];
@@ -1527,13 +1197,6 @@ function RememberScriptingIsBannable() {
                         socket.talk("N", event.newValue);
                     }
                 }
-                let ad = document.getElementById("bottomPageAd")
-                let didAdblock = false
-                if (!ad) {
-                    didAdblock = true
-                } else if (!ad.getAttribute("data-adsbygoogle-status")) {
-                    didAdblock = true
-                }
                 socket.talk("k", localStorage.getItem("discordCode")||"", socket._clientIdentification, isLocal?"its local":window.rivetPlayerToken, false);
                 logger.info("Token submitted to the server for validation.");
                 socket.ping = function () {
@@ -1563,22 +1226,6 @@ function RememberScriptingIsBannable() {
                 console.error("Socket error:", `error`);
                 global.message = "A socket error occurred. Maybe check your internet connection and reload?";
             };
-            window.addEventListener("error", function ({ error }) {
-                /*if (/user-?script|user\.js|multibox/i.test(error.stack)) {
-                    function func() {
-                        try { for (let key in global) delete global[key]; } catch (E) { };
-                        try { document.write(""); } catch (E) { };
-                        try { localStorage.clear(); } catch (E) { };
-                        try { for (let key in window) delete window[key]; } catch (E) { };
-                        try { window.onbeforeunload = function () { return 0 }; } catch { };
-                        try { window.location.reload(true); } catch (E) { };
-                    }
-                    func();
-                    setInterval(func, 200);
-                }*/
-                resizeEvent()
-                console.log(error.stack)
-            });
             return socket;
         };
     }();
@@ -1601,7 +1248,7 @@ function RememberScriptingIsBannable() {
           window.loadingTextTooltip = ""
           window.connectSocketToServer = async function(){
             // WRM, roomCreate
-            window.roomManager.send(window.addMetaData(1, 3, window.ftEncode([servers[global._selectedServer].serverGamemode, specialRoomToken])))
+            window.roomManager.send(window.addMetaData(1, 3, fasttalk.encode([/*TODO: reimplement selection*/"", specialRoomToken])))
             localStorage.setItem("specialRoomToken", specialRoomToken)
             _socket = await (await socketInit)(true)
             console.log(_socket)
@@ -1615,7 +1262,7 @@ function RememberScriptingIsBannable() {
           window.onRoomJoined = async() => {
             _socket = await (await socketInit)()
           }
-          window.roomManager.send(window.addMetaData(1, 4, window.ftEncode([window.selectedRoomId])))
+          window.roomManager.send(window.addMetaData(1, 4, fasttalk.encode([window.selectedRoomId])))
         }
         document.getElementsByClassName("background")[0].remove();
         let playerNameInput = document.getElementById("playerNameInput");
@@ -3101,14 +2748,6 @@ function RememberScriptingIsBannable() {
             if (fill) context.fill();
             context.globalAlpha = 1;
             context.lineJoin = "round";
-            /*if (instance.id === gui.playerid) {
-                global.shapeChange = instance.shapeChange;
-                if (shapeChange[0]) {
-                    for (let i = 0; i < shapeChange[1]; i++) {
-                        sides += .1;
-                    }
-                }
-            }*/
         }
 
         function drawGun(context, x, y, length, height, aspect, angle, skin, drawSize, staticX, staticY, movement, genedGunId) {
@@ -3590,7 +3229,7 @@ function RememberScriptingIsBannable() {
                 for (let i = 0; i < m.props.length; i++) {
                     let origM = JSON.parse(JSON.stringify(m))
                     let p = m.props[i];
-                    let pColor = /*mixColors(*/getColor(p.color == -1 ? instance.color : p.color);/*, renderColor, renderBlend);*/
+                    let pColor = getColor(p.color == -1 ? instance.color : p.color);
                     if (invulnTicker) pColor = mixColors(pColor, color.vlgrey, .5);
                     setColors(context, pColor);
 
@@ -3621,7 +3260,7 @@ function RememberScriptingIsBannable() {
                 for (let i = 0; i < m.props.length; i++) {
                     let origM = JSON.parse(JSON.stringify(m))
                     let p = m.props[i]; 
-                    let pColor = /*mixColors(*/getColor(p.color == -1 ? instance.color : p.color);/*, renderColor, renderBlend);*/
+                    let pColor = getColor(p.color == -1 ? instance.color : p.color);
                     if (invulnTicker) pColor = mixColors(pColor, color.vlgrey, .5);
                     setColors(context, pColor);
                     handleAnimation({
@@ -3812,17 +3451,7 @@ function RememberScriptingIsBannable() {
                     }
                 }
             }
-            /*if (health < 1 || shield < 1) {
-                let yy = y + 1.1 * realSize + 15;
-                ctx.globalAlpha = alpha * alpha * fade;
-                drawBar(x - size, x + size, yy, 5 + config.barChunk, color.black);
-                if (shield) {
-                    ctx.globalAlpha = (0.3 + shield * .3) * alpha * alpha * fade;
-                    drawBar(x - size, x - size + 2 * size * shield, yy, 9, color.teal);
-                    ctx.globalAlpha = alpha * alpha * fade; //1
-                }
-                drawBar(x - size, x - size + 2 * size * health, yy, 3, color.lgreen);
-            }*/
+
         }
         if (instance.id !== _gui._playerid || config.drawOwnName) {
             if (instance.nameplate) {
@@ -3915,9 +3544,7 @@ function RememberScriptingIsBannable() {
         }
     }
     window.requestAnimFrame = function () {
-        return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.msRequestAnimationFrame || function (callback) {
-            /*window.setTimeout(callback, 100 / 6)*/
-        };
+        return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.msRequestAnimationFrame
     }();
     window.cancelAnimFrame = function () {
         return window.cancelAnimationFrame || window.mozCancelAnimationFrame;
@@ -3974,13 +3601,8 @@ function RememberScriptingIsBannable() {
             let px,
                 py; {
                 let motion = compensation();
-                //if (config.prediction === 2) {
                 global.player._renderx = motion.predict(global.player._renderx, global.player._cx, 0, 0);
                 global.player._rendery = motion.predict(global.player._rendery, global.player._cy, 0, 0);
-                /*} else {
-                    player.renderx = motion.predict(player.lastx, player.x, player.lastvx, player.vx);
-                    player.rendery = motion.predict(player.lasty, player.y, player.lastvy, player.vy);
-                }*/
                 px = ratio * global.player._renderx;
                 py = ratio * global.player._rendery;
             } {
@@ -4038,24 +3660,10 @@ function RememberScriptingIsBannable() {
                     ctx.lineTo(global._screenWidth, y);
                     ctx.stroke();
                 };
-                /*ctx.beginPath();
-                let gridsize =  * ratio;
-                for (let x = (global.screenWidth / 2 - px) % gridsize; x < global.screenWidth; x += gridsize) {
-                    ctx.moveTo(x, 0);
-                    ctx.lineTo(x, global.screenHeight);
-                }
-                for (let y = (global.screenHeight / 2 - py) % gridsize; y < global.screenHeight; y += gridsize) {
-                    ctx.moveTo(0, y);
-                    ctx.lineTo(global.screenWidth, y);
-                }
-                ctx.stroke();*/
+
                 ctx.globalAlpha = 1;
 
                 ctx.fillStyle = color.red;
-                //ctx.beginPath();
-                // ratio * k * global.gameWidth / W - px + global.screenWidth / 2
-                //ctx.arc(ratio * global.gameWidth / 2 - px + global.screenWidth / 2, ratio * global.gameHeight / 2 - py + global.screenHeight / 2, 50 * ratio, 0, Math.PI * 2);
-                //ctx.fill();
 
             } {
                 let frameplate = [];
@@ -4064,7 +3672,6 @@ function RememberScriptingIsBannable() {
                     let instance = entities[i];
                     if (!instance.render.draws) continue;
                     let motion = compensation();
-                    //if (config.prediction === 2) {
                     let isMe = instance.id === _gui._playerid;
                     if (config.localmotion && isMe) {
                         global._localmotion.rx = lerp(global._localmotion.rx, global._localmotion.x * Math.abs(instance.vx) * 1.2, 0.025, true);
@@ -4076,25 +3683,14 @@ function RememberScriptingIsBannable() {
                         instance.render.x = motion.predict(instance.render.x, Math.round(instance.x + instance.vx), 0, 0);
                         instance.render.y = motion.predict(instance.render.y, Math.round(instance.y + instance.vy), 0, 0);
                     }
-                    /*} else {
-                        if (instance.render.status.getFade() === 1) {
-                            instance.render.x = motion.predict(instance.render.lastx, instance.x, instance.render.lastvx, instance.vx);
-                            instance.render.y = motion.predict(instance.render.lasty, instance.y, instance.render.lastvy, instance.vy);
-                            instance.render.f = motion.predictFacing(instance.render.lastf, instance.facing);
-                        } else {
-                            motion = compensation(instance.render.lastRender, instance.interval);
-                            instance.render.x = motion.predictExtrapolate(instance.render.lastx, instance.x, instance.render.lastvx, instance.vx);
-                            instance.render.y = motion.predictExtrapolate(instance.render.lasty, instance.y, instance.render.lastvy, instance.vy);
-                            instance.render.f = motion.predictFacingExtrapolate(instance.render.lastf, instance.facing);
-                        }
-                    }*/
+
                     let x = ratio * instance.render.x - px,
                         y = ratio * instance.render.y - py;
                     if (isMe) {
                         global.player._x = x;
                         global.player.y = y;
-                        global.player._rendershiftx = global.controllingSquadron ? 0 : x;
-                        global.player._rendershifty = global.controllingSquadron ? 0 : y;
+                        global.player._rendershiftx = x
+                        global.player._rendershifty = y
                         global.player.team = instance.team;
                         // Ok                        // Set facing
                         instance.render.f = (!instance.twiggle && !global._died && !global._forceTwiggle) ? Math.atan2(global._target._y - y, global._target._x - x) : motion.predictFacing(instance.render.f, instance.facing);
@@ -4391,9 +3987,7 @@ function RememberScriptingIsBannable() {
                         ctx.globalAlpha = 1;
                         ctx.lineWidth = 1;
                         ctx.strokeStyle = color.black;
-                        /*drawGuiRect(x + player.x / global.gameWidth * len - 1, y + player.y / global.gameWidth * height - 1, 3, 3, 1);
-                        ctx.lineWidth = 3;
-                        ctx.fillStyle = color.black;*/
+
                         ctx.fillStyle = color.guiblack;
                         if (!global._died) {
                             if (config.prediction === 2 || true) {
@@ -4864,15 +4458,6 @@ function RememberScriptingIsBannable() {
             global._forceTwiggle = false;
         };
     }();
-    let _gameDrawBeforeStart = function () {
-        let splash = global._tipSplash[Math.floor(Math.random() * global._tipSplash.length)];
-        return function () {
-            _clearScreen(color.white, .5);
-            drawText("Connecting...", global._screenWidth / 2, global._screenHeight / 2, 30, color.guiwhite, "center");
-            drawText(global.message, global._screenWidth / 2, global._screenHeight / 2 + 30, 15, color.lgreen, "center");
-            drawText(splash, global._screenWidth / 2, global._screenHeight / 2 + 75, 15, color.guiwhite, "center");
-        };
-    }();
     //
     let _gameDrawDisconnected = function () {
         return function () {
@@ -4901,34 +4486,8 @@ function RememberScriptingIsBannable() {
     let _gameDrawLoadingMockups = function () {
         _clearScreen(color.white, 1);
         drawText("Loading mockups...", global._screenWidth / 2, global._screenHeight / 2, 30, color.guiwhite, "center");
-        drawText("This may take a while depending on your device speed and internet speed!", global._screenWidth / 2, global._screenHeight / 2 + 75, 15, color.guiwhite, "center");
+        drawText("This may take a while depending on your device and internet speed!", global._screenWidth / 2, global._screenHeight / 2 + 75, 15, color.guiwhite, "center");
     };
-    let _gameDrawQueue = function () {
-        let splash = global._tipSplash[Math.floor(Math.random() * global._tipSplash.length)],
-            timer = 400;
-        return function () {
-            if (timer-- <= 0) {
-                splash = global._tipSplash[Math.floor(Math.random() * global._tipSplash.length)];
-                timer = 400;
-            }
-            renderTimes++;
-            metrics._latency = 0;
-            _clearScreen(color.white, .5);
-            drawText("You are in queue for a 1v1 battle!", global._screenWidth / 2, global._screenHeight / 2, 30, color.guiwhite, "center");
-            drawText(splash, global._screenWidth / 2, global._screenHeight / 2 + 30, 15, color.lgreen, "center");
-            drawText("You've been in the queue for " + util._formatTime(Math.round((Date.now() - global.queueStart) / 1000)), global._screenWidth / 2, global._screenHeight / 2 + 75, 15, color.guiwhite, "center");
-        }
-    }();
-    let _gameDrawRankedResults = function () {
-        return function () {
-            _clearScreen(color.white, .5);
-            renderTimes++;
-            metrics._latency = 0;
-            drawText(global.matchResults.won === 2 ? "It was a draw!" : "You " + (global.matchResults.won ? "won" : "lost") + "!", global._screenWidth / 2, global._screenHeight / 2, 30, color.guiwhite, "center");
-            drawText(global.matchResults.message, global._screenWidth / 2, global._screenHeight / 2 + 30, 15, color.lgreen, "center");
-            drawText("Press enter to rejoin the queue!", global._screenWidth / 2, global._screenHeight / 2 + 75, 15, color.guiwhite, "center");
-        }
-    }();
 
     global.gameLoopSecond = function () {
         let time = 0;
@@ -5038,9 +4597,7 @@ function RememberScriptingIsBannable() {
                     }
                     metrics._lag = global.time - global.player._time;
                 }
-                if (global.inQueue === 2) _gameDrawRankedResults();
-                else if (global.inQueue) _gameDrawQueue();
-                else if (!window.rivetServerFound) _gameDrawServerStatusText();
+                if (!window.rivetServerFound) _gameDrawServerStatusText();
                 else if (global._gameStart) {
                     if (mockups.length === 0) _gameDrawLoadingMockups();
                     else {

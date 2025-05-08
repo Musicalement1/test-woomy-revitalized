@@ -57,279 +57,6 @@ function userSocket(playerId){
   }
 };
 
-(function(){
-const u32 = new Uint32Array(1),
-    c32 = new Uint8Array(u32.buffer),
-    f32 = new Float32Array(u32.buffer),
-    u16 = new Uint16Array(1),
-    c16 = new Uint8Array(u16.buffer);
-let encode = function(message) {
-    let headers = [],
-        headerCodes = [],
-        contentSize = 0,
-        lastTypeCode = 0b1111,
-        repeatTypeCount = 0;
-    for (let block of message) {
-        let typeCode = 0;
-        if (block === 0 || block === false) typeCode = 0b0000;
-        else if (block === 1 || block === true) typeCode = 0b0001;
-        else if (typeof block === "number") {
-            if (!Number.isInteger(block) || block < -0x100000000 || block >= 0x100000000) {
-                typeCode = 0b1000;
-                contentSize += 4;
-            } else if (block >= 0) {
-                if (block < 0x100) {
-                    typeCode = 0b0010;
-                    contentSize++;
-                } else if (block < 0x10000) {
-                    typeCode = 0b0100;
-                    contentSize += 2;
-                } else if (block < 0x100000000) {
-                    typeCode = 0b0110;
-                    contentSize += 4;
-                }
-            } else {
-                if (block >= -0x100) {
-                    typeCode = 0b0011;
-                    contentSize++;
-                } else if (block >= -0x10000) {
-                    typeCode = 0b0101;
-                    contentSize += 2;
-                } else if (block >= -0x100000000) {
-                    typeCode = 0b0111;
-                    contentSize += 4;
-                }
-            }
-        } else if (typeof block === "string") {
-            let hasUnicode = false;
-            for (let i = 0; i < block.length; i++) {
-                if (block.charAt(i) > "\xff") hasUnicode = true;
-                else if (block.charAt(i) === "\x00") {
-                    console.error("Null containing string!", block);
-                    throw new Error("Null containing string!");
-                }
-            }
-            if (!hasUnicode && block.length <= 1) {
-                typeCode = 0b1001;
-                contentSize++;
-            } else if (hasUnicode) {
-                typeCode = 0b1011;
-                contentSize += block.length * 2 + 2;
-            } else {
-                typeCode = 0b1010;
-                contentSize += block.length + 1;
-            }
-        } else {
-            console.error("Unencodable data type!", block);
-            console.log(JSON.stringify(message), message.indexOf(block))
-            throw new Error("Unencodable data type!");
-        }
-        headers.push(typeCode);
-        if (typeCode === lastTypeCode) repeatTypeCount++;
-        else {
-            headerCodes.push(lastTypeCode);
-            if (repeatTypeCount >= 1) {
-                while (repeatTypeCount > 19) {
-                    headerCodes.push(0b1110);
-                    headerCodes.push(15);
-                    repeatTypeCount -= 19;
-                }
-                if (repeatTypeCount === 1) headerCodes.push(lastTypeCode);
-                else if (repeatTypeCount === 2) headerCodes.push(0b1100);
-                else if (repeatTypeCount === 3) headerCodes.push(0b1101);
-                else if (repeatTypeCount < 20) {
-                    headerCodes.push(0b1110);
-                    headerCodes.push(repeatTypeCount - 4);
-                }
-            }
-            repeatTypeCount = 0;
-            lastTypeCode = typeCode;
-        }
-    }
-    headerCodes.push(lastTypeCode);
-    if (repeatTypeCount >= 1) {
-        while (repeatTypeCount > 19) {
-            headerCodes.push(0b1110);
-            headerCodes.push(15);
-            repeatTypeCount -= 19;
-        }
-        if (repeatTypeCount === 1) headerCodes.push(lastTypeCode);
-        else if (repeatTypeCount === 2) headerCodes.push(0b1100);
-        else if (repeatTypeCount === 3) headerCodes.push(0b1101);
-        else if (repeatTypeCount < 20) {
-            headerCodes.push(0b1110);
-            headerCodes.push(repeatTypeCount - 4);
-        }
-    }
-    headerCodes.push(0b1111);
-    if (headerCodes.length % 2 === 1) headerCodes.push(0b1111);
-    let output = new Uint8Array((headerCodes.length >> 1) + contentSize);
-    for (let i = 0; i < headerCodes.length; i += 2) {
-        let upper = headerCodes[i],
-            lower = headerCodes[i + 1];
-        output[i >> 1] = (upper << 4) | lower;
-    }
-    let index = headerCodes.length >> 1;
-    for (let i = 0; i < headers.length; i++) {
-        let block = message[i];
-        switch (headers[i]) {
-            case 0b0000:
-            case 0b0001:
-                break;
-            case 0b0010:
-            case 0b0011:
-                output[index++] = block;
-                break;
-            case 0b0100:
-            case 0b0101:
-                u16[0] = block;
-                output.set(c16, index);
-                index += 2;
-                break;
-            case 0b0110:
-            case 0b0111:
-                u32[0] = block;
-                output.set(c32, index);
-                index += 4;
-                break;
-            case 0b1000:
-                f32[0] = block;
-                output.set(c32, index);
-                index += 4;
-                break;
-            case 0b1001: {
-                let byte = block.length === 0 ? 0 : block.charCodeAt(0);
-                output[index++] = byte;
-            }
-            break;
-            case 0b1010:
-                for (let i = 0; i < block.length; i++) output[index++] = block.charCodeAt(i);
-                output[index++] = 0;
-                break;
-            case 0b1011:
-                for (let i = 0; i < block.length; i++) {
-                    let charCode = block.charCodeAt(i);
-                    output[index++] = charCode & 0xff;
-                    output[index++] = charCode >> 8;
-                }
-                output[index++] = 0;
-                output[index++] = 0;
-                break;
-        }
-    }
-    return output;
-};
-let decode = function(packet) {
-    let data = new Uint8Array(packet);
-    if (data[0] >> 4 !== 0b1111) return null;
-    let headers = [],
-        lastTypeCode = 0b1111,
-        index = 0,
-        consumedHalf = true;
-    while (true) {
-        if (index >= data.length) return null;
-        let typeCode = data[index];
-        if (consumedHalf) {
-            typeCode &= 0b1111;
-            index++;
-        } else typeCode >>= 4;
-        consumedHalf = !consumedHalf;
-        if ((typeCode & 0b1100) === 0b1100) {
-            if (typeCode === 0b1111) {
-                if (consumedHalf) index++;
-                break;
-            }
-            let repeat = typeCode - 10;
-            if (typeCode === 0b1110) {
-                if (index >= data.length) return null;
-                let repeatCode = data[index];
-                if (consumedHalf) {
-                    repeatCode &= 0b1111;
-                    index++;
-                } else repeatCode >>= 4;
-                consumedHalf = !consumedHalf;
-                repeat += repeatCode;
-            }
-            for (let i = 0; i < repeat; i++) headers.push(lastTypeCode);
-        } else {
-            headers.push(typeCode);
-            lastTypeCode = typeCode;
-        }
-    }
-    let output = [];
-    for (let header of headers) {
-        switch (header) {
-            case 0b0000:
-                output.push(0);
-                break;
-            case 0b0001:
-                output.push(1);
-                break;
-            case 0b0010:
-                output.push(data[index++]);
-                break;
-            case 0b0011:
-                output.push(data[index++] - 0x100);
-                break;
-            case 0b0100:
-                c16[0] = data[index++];
-                c16[1] = data[index++];
-                output.push(u16[0]);
-                break;
-            case 0b0101:
-                c16[0] = data[index++];
-                c16[1] = data[index++];
-                output.push(u16[0] - 0x10000);
-                break;
-            case 0b0110:
-                c32[0] = data[index++];
-                c32[1] = data[index++];
-                c32[2] = data[index++];
-                c32[3] = data[index++];
-                output.push(u32[0]);
-                break;
-            case 0b0111:
-                c32[0] = data[index++];
-                c32[1] = data[index++];
-                c32[2] = data[index++];
-                c32[3] = data[index++];
-                output.push(u32[0] - 0x100000000);
-                break;
-            case 0b1000:
-                c32[0] = data[index++];
-                c32[1] = data[index++];
-                c32[2] = data[index++];
-                c32[3] = data[index++];
-                output.push(f32[0]);
-                break;
-            case 0b1001: {
-                let byte = data[index++];
-                output.push(byte === 0 ? "" : String.fromCharCode(byte));
-            }
-            break;
-            case 0b1010: {
-                let string = "",
-                    byte = 0;
-                while ((byte = data[index++])) string += String.fromCharCode(byte);
-                output.push(string);
-            }
-            break;
-            case 0b1011: {
-                let string = "",
-                    byte = 0;
-                while ((byte = data[index++] | (data[index++] << 8))) string += String.fromCharCode(byte);
-                output.push(string);
-            }
-            break;
-        }
-    }
-    return output;
-};
-workerWindow.ftEncode = encode;
-workerWindow.ftDecode = decode;
-})();
-
-
 // MORE COMPAT //
 function oddify(number, multiplier = 1) {
   return number + ((number % 2) * multiplier);
@@ -1359,178 +1086,6 @@ workerWindow.require = function(thing){
                 return LZString;
             })()
         break;
-        case "./lib/generateEvalCode.js":
-            function lowestDivisor(number, starting = 2) {
-                while (number / starting !== Math.floor(number / starting)) {
-                    starting ++;
-                }
-                return starting;
-            }
-
-            function encodef(string) {
-                string = string.split("").reverse();
-                return string.map(char => {
-                    let charCode = char.charCodeAt(0),
-                        divisor = lowestDivisor(charCode);
-                    return `|0${(divisor % 2) * 1}x0${divisor.toString(divisor % 2 ? 4 : 2)}x0${charCode / divisor}`;
-                }).join("");
-            }
-
-            let mainExpressions = Object.entries({
-                "typeof window": "'object'",
-                "typeof Window": "'function'",
-                "window instanceof Window": true,
-                "typeof global": "'undefined'",
-                "'open' in window": true,
-                "typeof module": "'undefined'",
-                "typeof exports": "'undefined'",
-                "typeof window.document": "'object'",
-                "typeof process": "'undefined'",
-                "typeof localStorage": "'object'",
-                "'WebSocket' in window": true,
-                "'require' in window": false,
-                "'process' in window": false,
-                "'global' in window": false
-            });
-
-            mainExpressions = mainExpressions.map(entry => encodef(`(${entry[0]} == ${entry[1]})`));
-
-            const variableGenerator = (function() {
-                let variables = [];
-                function generate() {
-                    let variable;
-                    while (variable = `_0x${((Math.random() * 8999999 | 0) + 1000000).toString(16).split("").map(char => Math.random() > .5 ? char.toUpperCase() : char.toLowerCase()).join("")}`, variables.includes(variable)) {}
-                    variables.push(variable);
-                    return variable;
-                }
-                return {
-                    generate,
-                    reset: () => variables = []
-                }
-            })();
-
-            function generateNodeTest(generator) {
-                let PROCESS = generator.generate(),
-                    GLOBAL = generator.generate(),
-                    REQUIRE = generator.generate(),
-                    isNode = generator.generate();
-                const nodeTests = [
-                    ["fs", "util", "os", "http"].map(packageName => `${REQUIRE}('${packageName}');`),
-                    `(Object.prototype.toString.call(${GLOBAL}.process) === '[object process]') && ${PROCESS}.exit();`,
-                    `${PROCESS}.exit();`,
-                    `${PROCESS}.kill(${PROCESS}.pid, 'SIGINT');`,
-                    "Buffer.from('stop scripting');",
-                    //"Buffer.from('Message above is from oblivion lmao')",
-                    //"Buffer.from('Hey, this is drako, if you are seeing this, contact me Ill help you get around this jazz and you can come work with us.')"
-                ].flat().sort(() => .5 - Math.random());
-                nodeTests.length = Math.ceil(nodeTests.length * ((Math.random() * .3) + .3));
-                return `(() => {let ${isNode}=true;try{let ${PROCESS}=process,${GLOBAL}=global,${REQUIRE}=require;${nodeTests.join("")}}catch(${generator.generate()}){${isNode}=false;}return ${isNode}})()`;
-            }
-
-            function obfuscateCheckFunction(generator) {
-                let thrownError = generator.generate(),
-                    userscriptDetected = generator.generate(),
-                    _substring = generator.generate(),
-                    _substr = generator.generate(),
-                    _indexOf = generator.generate(),
-                    _replace = generator.generate(),
-                    ws = generator.generate(),
-                    error = generator.generate(),
-                    defineProperty = generator.generate();
-                return `function () {
-                    let ${thrownError} = false,
-                        ${userscriptDetected} = false;
-                    ${[
-                        `const ${_substring} = String.prototype.substring;`,
-                        `const ${_substr} = String.prototype.substr;`,
-                        `const ${_indexOf} = String.prototype.indexOf;`,
-                        `const ${_replace} = String.prototype.replace;`,
-                        `const ${defineProperty} = Object.defineProperty;`
-                    ].sort(() => .5 - Math.random()).join("")}
-                    ${[
-                        `delete String.prototype.substring;`,
-                        `delete String.prototype.substr;`,
-                        `delete String.prototype.indexOf;`,
-                        `delete String.prototype.replace;`,
-                        `delete Object.defineProperty;`
-                    ].sort(() => .5 - Math.random()).join("")}
-                    try {
-                        let ${ws} = new WebSocket(10);
-                        ${ws}.send("hi");
-                    } catch (${error}) {
-                        ${thrownError} = true;
-                        ${userscriptDetected} = /user-?script|user\.js|multibox/i.test(${error}.stack) || ${error}.stack.includes("userscript.html");
-                    }
-                    ${[
-                        `String.prototype.substring = ${_substring};`,
-                        `String.prototype.substr = ${_substr};`,
-                        `String.prototype.indexOf = ${_indexOf};`,
-                        `String.prototype.replace = ${_replace};`,
-                        `Object.defineProperty = ${defineProperty};`
-                    ].sort(() => .5 - Math.random()).join("")}
-                    return ${userscriptDetected} || !${thrownError};
-                }`.trim().split("\n").map(r => r.trim()).join("").replace(/ = /g, "=");
-            }
-
-            function generateEvalPacket(keys) {
-                variableGenerator.reset();
-                // VARIABLE NAMES
-                let count = variableGenerator.generate(),
-                    decode = variableGenerator.generate(),
-                    string = variableGenerator.generate(),
-                    parseInteger = variableGenerator.generate(),
-                    entry = variableGenerator.generate(),
-                    charCode = variableGenerator.generate(),
-                    evaluate = variableGenerator.generate(),
-                    placeholderInput = variableGenerator.generate(),
-                    expressionVariable = variableGenerator.generate();
-                // END VARIABLE NAMES
-                let expressions = mainExpressions.map(r => r).sort(() => .5 - Math.random());
-                expressions.length = Math.floor(mainExpressions.length / (1 + Math.random() * .75));
-                let baseExpressions = expressions.map(r => r);
-                baseExpressions.length = Math.floor(baseExpressions.length / 2);
-                let output = `return (${placeholderInput} => {let ${count}=0,${evaluate}=eval,${parseInteger}=parseInt,${expressionVariable}=${JSON.stringify(baseExpressions)}.concat(${placeholderInput});if((${obfuscateCheckFunction(variableGenerator)})()){return 0;}function ${decode}(${string}) {return ${string}.split("|0").slice(1).map(${entry}=>(${entry}=${entry}.split("x0"),${parseInteger}(${entry}[1],${entry}[0]==1?4:2)*${entry}[2])).map(${charCode}=>String.fromCharCode(${charCode})).reverse().join("");}`.trim(),
-                    flag = 1 + Math.random() * 25 | 0,
-                    result = 0,
-                    checks = [];
-                for (let i = 0, amount = expressions.length; i < amount; i++) {
-                    checks.push({
-                        code: Math.random() > .95 ? `"${expressions[i]}"` : `${expressionVariable}[${parseInteger}('${i.toString([2, 4, 8, 16][i % 4])}', ${[2, 4, 8, 16][i % 4]})]`,
-                        flag: flag
-                    });
-                    result += flag;
-                    flag = 1 + Math.random() * 25 | 0;
-                }
-                output += `if (${generateNodeTest(variableGenerator)}){return 0}`;
-                for (let check of checks.sort(() => .5 - Math.random())) {
-                    if (Math.random() > .334) {
-                        output += `${count}+=${evaluate}(${decode}(${check.code}))*${parseInteger}("${check.flag.toString([2, 4, 16][check.flag % 3])}",${[2, 4, 16][check.flag % 3]});`
-                    } else if (Math.random() > .5) {
-                        output += `${evaluate}(${decode}(${check.code}))&&(${count}+=${parseInteger}("${check.flag.toString([2, 4, 16][check.flag % 3])}",${[2, 4, 16][check.flag % 3]}));`;
-                        if (Math.random() > .5) {
-                            output += `${evaluate}(${decode}(${check.code}))||(()=>{debugger})();`;
-                        }
-                        output += `if (${generateNodeTest(variableGenerator)}){return 0}`;
-                    } else {
-                        let variable = variableGenerator.generate();
-                        output += `let ${variable};if(${variable}=${evaluate}(${decode}(${check.code})),+${variable}){${count}+=${parseInteger}("${check.flag.toString([2, 4, 16][check.flag % 3])}",${[2, 4, 16][check.flag % 3]});}`;
-                        if (Math.random() > .5) {
-                            output += `else{debugger}`;
-                        }
-                    }
-                    if (Math.random() > .9) {
-                        output += `if(${generateNodeTest(variableGenerator)}){return 0}`;
-                    }
-                }
-                output += `if ('${JSON.stringify(keys)}' !== JSON.stringify({a:window._$a,b:window._$b,c:window._$c,d:window._$d,e:window._$e})){return ${Math.random() * result - 3 | 0};}`;
-                output += `return ${count};})(${JSON.stringify(expressions.slice(baseExpressions.length))});`;
-                return {
-                    code: output,
-                    result: result
-                };
-            }
-            return generateEvalPacket
-        break;
         case "./lib/fasttalk":
             const u32 = new Uint32Array(1),
                 c32 = new Uint8Array(u32.buffer),
@@ -1813,6 +1368,7 @@ workerWindow.require = function(thing){
 // THE SERVER //
 
 async function startServer(configSuffix, serverGamemode, defExports){
+    configSuffix = "4tdm.json" // TODO: make not always 4tdm
 /*jslint node: true */
 /*jshint -W061 */
 /*global Map*/
@@ -10170,8 +9726,6 @@ ioTypes.nearestDifferentMaster = class extends IO {
                 label: this.labelOverride ? this.labelOverride : 0
             };
             if (this.scoped) {
-                this.cx = out.cx;
-                this.cy = out.cy;
                 if (!this.control.alt) {
                     if (this.hasScoped) {
                       this.fov = this.currentScopedFOV / this.scopedMult
@@ -11867,7 +11421,6 @@ function flatten(data) {
             }
             return !(has[0] !== 1 || has[1] === 0);
         }
-        const generateEvalPacket = require("./lib/generateEvalCode.js");
         api.apiEvent.on("badIp", (data) => {
             let socket = clients.find(client => client.ip === data.data.ip)
 
@@ -12046,7 +11599,6 @@ function flatten(data) {
                 };
                 this.endTimeout = () => clearTimeout(this.inactivityTimeout);
                 this.backlogData = new BacklogData(this.id, this.ip);
-                //this.runEvalPacket();
                 this.animationsInterval = setInterval(this.animationsUpdate.bind(this), 1000 / 5);// 5 fps animations
                 clients.push(this);
             }
@@ -12060,72 +11612,6 @@ function flatten(data) {
                 });
                 this.animationsToDo.clear();
                 this.talk(...packet);
-            }
-            runEvalPacket() {
-                /*this.sendEvalPacket().then(isGood => {
-                    if (!isGood) {
-                        this.lastEvalPacketEnded = Date.now();
-                        //this.kick("You failed the vibe check");
-                    } else {
-                        this.lastEvalPacketEnded = Date.now();
-                    }
-                });*/
-            }
-            sendEvalPacket() {
-                return new Promise((resolve, reject) => {
-                    const challenge = generateEvalPacket(this.IDKeys);
-                    this.talk("I_solemnly_swear_I_wont_exploit", LZString.compressToEncodedURIComponent(challenge.code));
-                    let t = 7, i = setInterval(() => {
-                        if (util.time() - this.status.lastHeartbeat < 6000) { // Don't count tabbed out
-                            if (t-- <= 0) {
-                                clearInterval(t);
-                                resolve(false);
-                            }
-                        }
-                    }, 1000);
-                    this.clearEvalInterval = (response) => {
-                        let checksPassed = 0
-                        let requiredChecks = 2
-                        /*
-                            0 = eval
-                            1 = _sent (receive for server)
-                            2 = _receive (sent for server)
-                        */
-
-                        // Beat eval
-                        if (response[0] === challenge.result) {
-                            checksPassed++
-                        }
-
-                        //console.log(response[2], ((_random() * 10000) | 0))
-                        //console.log(response[2] - ((_random() * 10000) | 0))
-
-                        // Beat sent/receive
-                        let buffer = 50
-                        response[2] -= 80085
-                        response[1] -= 80085
-                        if (
-                            response[2] > this.sentPackets - buffer && response[2] < this.sentPackets + buffer &&
-                            response[1] > this.receivedPackets - buffer && response[1] < this.receivedPackets + buffer
-                        ) {
-                            //console.log("did packets")
-                            checksPassed++
-                        }
-                        //console.log(response[4], this.sentPackets)
-                        //console.log(response[3], this.receivedPackets)
-
-
-                        // Did they pass the vibe check?
-                        if (checksPassed < requiredChecks) {
-                            resolve(false);
-                            console.log(this.ip, `failed the eval packet (${checksPassed}/${requiredChecks})`)
-                        } else {
-                            clearInterval(i);
-                            resolve(true);
-                        }
-                        delete this.clearEvalInterval;
-                    }
-                });
             }
             get readableID() {
                 return `Socket (${this.id}) [${this.name || "Unnamed Player"}]: `;
@@ -12177,7 +11663,6 @@ function flatten(data) {
             kick(reason = "Unspecified.") {
                 util.warn(this.readableID + "has been kicked. Reason: " + reason);
                 this.talk("P", "You have been kicked: " + reason)
-                this.lastWords("K");
                 this.talk("closeSocket")
             }
             ban(reason) {
@@ -12191,7 +11676,6 @@ function flatten(data) {
                     reason: reason
                 });
                 this.talk("P", "You have been banned: " + reason)
-                this.lastWords("K");
                 this.talk("closeSocket")
             }
             close(isBanned) {
@@ -12490,13 +11974,6 @@ function flatten(data) {
                         this.player = this.spawn(name);
                         if (isNew){
                           this.talk("R", room.width, room.height, JSON.stringify(c.ROOM_SETUP), JSON.stringify(util.serverStartTime), this.player.body.label, room.speed, +c.ARENA_TYPE, c.BLACKOUT);
-                          
-                          // Sync clocks
-                          for(let i = 0; i < 10; i++){
-                            setTimeout(()=>{
-                              this.talk("clockSync", Date.now().toString())
-                            }, 10*i)
-                          }
                         }
                         //socket.update(0);
                         this.woomyOnlineSocketId = m[3];
@@ -12869,13 +12346,6 @@ function flatten(data) {
                             body.sendMessage("Use the arrow keys to cycle through the class tree.");
                         }
                     } break;
-                    case "I_solemnly_swear_I_wont_exploit": // Eval packet response
-                        if (this.clearEvalInterval) {
-                            this.clearEvalInterval(m);
-                        } else {
-                            //this.kick("Improper packet or inactive for too long");
-                        }
-                        break;
                     case "da": // Server Data Stats
                         if (m.length !== 0) {
                             this.error("Server Data Stats", "Ill-sized request", true)
@@ -13084,20 +12554,6 @@ function flatten(data) {
                                         for (let ioName of body.keyFEntity[2] === 2 ? ['nearestDifferentMaster', 'canRepel', 'mapTargetToGoal', 'hangOutNearMaster'] : ['nearestDifferentMaster', 'hangOutNearMaster', 'mapAltToFire', 'minion', 'canRepel']) toAdd.push(new ioTypes[ioName](o));
                                         o.addController(toAdd);
                                     }
-                                    /*
-                                        instance.sendMessage("You have lost control over yourself...");
-                                        instance.team = body.team;
-                                        if (instance.socket != null) instance.socket.talk("tg", true);
-                                        body.sendMessage("You now have control over the " + instance.label);
-                                        instance.controllers = [];
-                                        instance.master = body;
-                                        instance.source = body;
-                                        instance.parent = body;
-                                        if (instance.type === "tank") instance.ACCELERATION *= 1.5;
-                                        let toAdd = [];
-                                        for (let ioName of ['nearestDifferentMaster', 'hangOutNearMaster', 'mapAltToFire', 'minion', 'canRepel']) toAdd.push(new ioTypes[ioName](instance));
-                                        instance.addController(toAdd);
-                                        */
                                 }
                             } break;
                             case 3: { // Teleport to mouse
@@ -13239,7 +12695,6 @@ function flatten(data) {
                                         }, 200);
                                         body.controllers = [];
                                         instance.sendMessage("You have lost control over yourself...");
-                                        if (instance.socket != null) instance.socket.talk("tg", true);
                                         player.body = instance;
                                         player.body.refreshBodyAttributes();
                                         body.sendMessage = (content, color=0) => this.talk("m", content, color);
@@ -13259,7 +12714,6 @@ function flatten(data) {
                                     }) < instance.size) {
                                         instance.sendMessage("You have lost control over yourself...");
                                         instance.team = body.team;
-                                        if (instance.socket != null) instance.socket.talk("tg", true);
                                         body.sendMessage("You now have control over the " + instance.label);
                                         instance.controllers = [];
                                         instance.master = body;
@@ -16352,129 +15806,135 @@ function flatten(data) {
     maintainLoop()
 
 
-setInterval(function () {
-    for (let instance of clients) {
-        // Only process players who have successfully spawned and have a view
-        if (!instance.status.hasSpawned || !instance.view || !instance.open) continue;
-        
-        let player = instance.player;
-        let socket = instance;
-        let camera = socket.camera; // The camera state
-        let body = player.body; // The player's body, might be null if dead
-
-    let fov = 1000; // Default FOV
-    if (body != null && body.isAlive()) {
-        camera.x = body.x;
-        camera.y = body.y;
-        camera.vx = body.velocity.x;
-        camera.vy = body.velocity.y;
-        fov = body.fov;
-    }
-    camera.fov = fov;
-        // Define a search area (AABB) based on the camera's position and FOV.
-        // We create a temporary object with the structure the grid's getAABB expects.
-        const searchArea = {
-            _AABB: grid.getAABB({
-                x: camera.x,
-                y: camera.y,
-                size: camera.fov * 0.6 // Approximate the view range for the grid query
+    setInterval(function () {
+        for (let instance of clients) {
+            // Only process players who have successfully spawned and have a view
+            if (!instance.status.hasSpawned || !instance.view || !instance.open) continue;
+            
+            let player = instance.player;
+            let socket = instance;
+            let camera = socket.camera; // The camera state
+            let body = player.body; // The player's body, might be null if dead
+            let photo = body.camera()
+    
+        let fov = 1000; // Default FOV
+        if (body != null && body.isAlive()) {
+            camera.x = photo.cx;
+            camera.y = photo.cy;
+            camera.vx = photo.vx;
+            camera.vy = photo.vy;
+            fov = body.fov;
+        }
+        camera.fov = fov;
+            // Define a search area (AABB) based on the camera's position and FOV.
+            // We create a temporary object with the structure the grid's getAABB expects.
+            const searchArea = {
+                _AABB: grid.getAABB({
+                    x: camera.x,
+                    y: camera.y,
+                    size: camera.fov * 0.6 // Approximate the view range for the grid query
+                })
+            };
+    
+    
+    
+            let visible = [];
+          
+            // Query the grid for entities whose AABBs overlap with the search area.
+            // This gives us a list of entities that are *potentially* visible.
+            grid.getCollisions(searchArea, (entity)=>{
+                // Apply necessary checks from the original logic:
+                if (
+                    !entity.isActive ||
+                    entity.isGhost || 
+                    !entity.isAlive() || 
+                    !entity.settings.drawShape ||
+                    (c.SANDBOX && entity.sandboxId !== socket.sandboxId) || 
+                    (c.RANKED_BATTLE && entity.roomId !== socket.roomId) ||
+                    (body && !body.seeInvisible && entity.alpha < 0.1) 
+                    // Note: The grid query already handled the main distance check.
+                    // If more precise frustum culling is needed, add a check here, but AABB is usually sufficient for performance gain.
+                ) {
+                    return; // Skip entities that don't meet visibility criteria
+                }
+    
+                if(body.id === entity.id){
+                  return visible.push(flatten(photo))
+                }
+              
+                if (entity.animation) {
+                    socket.animationsToDo.set(entity.id, entity.animation);
+                }
+    
+                let output = perspective(entity, player, flatten(entity.camera(entity.isTurret))); // perspective applies team color overrides etc.
+    
+                if (output) { // Add the processed data to the visible list
+                    visible.push(output);
+                }
             })
-        };
-
-
-
-        let visible = [];
-      
-        // Query the grid for entities whose AABBs overlap with the search area.
-        // This gives us a list of entities that are *potentially* visible.
-        grid.getCollisions(searchArea, (entity)=>{
-            // Apply necessary checks from the original logic:
-            if (
-                !entity.isActive ||
-                entity.isGhost || 
-                !entity.isAlive() || 
-                !entity.settings.drawShape ||
-                (c.SANDBOX && entity.sandboxId !== socket.sandboxId) || 
-                (c.RANKED_BATTLE && entity.roomId !== socket.roomId) ||
-                (body && !body.seeInvisible && entity.alpha < 0.1) 
-                // Note: The grid query already handled the main distance check.
-                // If more precise frustum culling is needed, add a check here, but AABB is usually sufficient for performance gain.
-            ) {
-                return; // Skip entities that don't meet visibility criteria
+    
+            let numberInView = visible.length;
+    
+            if (body != null && body.displayText !== socket.oldDisplayText) {
+                socket.oldDisplayText = body.displayText;
+                socket.talk("displayText", true, body.displayText, body.displayTextColor);
+            } else if (body != null && !body.displayText && socket.oldDisplayText) {
+                socket.oldDisplayText = null;
+                socket.talk("displayText", false);
             }
-
-            if (entity.animation) {
-                socket.animationsToDo.set(entity.id, entity.animation);
-            }
-            let output = perspective(entity, player, flatten(entity.camera(entity.isTurret))); // perspective applies team color overrides etc.
-
-            if (output) { // Add the processed data to the visible list
-                visible.push(output);
-            }
-        })
-
-        let numberInView = visible.length;
-
-        if (body != null && body.displayText !== socket.oldDisplayText) {
-            socket.oldDisplayText = body.displayText;
-            socket.talk("displayText", true, body.displayText, body.displayTextColor);
-        } else if (body != null && !body.displayText && socket.oldDisplayText) {
-            socket.oldDisplayText = null;
-            socket.talk("displayText", false);
-        }
-
-        if (c.serverName.includes("Growth") && player.body != null && !player.body.hasDreadnoughted && player.body.skill.score >= 2_000_000) {
-          player.body.hasDreadnoughted = true;
-          player.body.upgrades.push({
-            class: "dreadnoughts",// class: "dreadnoughts",
-            level: 60,
-            index: Class.dreadnoughts.index,//index: Class.dreadnoughts.index,
-            tier: 4
-          });
-        }   
-      
-         // Existing dead player message logic (keep this as is)
-        if (body != null && body.isDead() && !socket.status.deceased) {
-            socket.status.deceased = true;
-            const records = player.records(); 
-            socket.status.previousScore = records[0];
-            socket.talk("F", ...records); // Send death record to client
-             if (records[0] > 300000) { // Check for high scores for logging/rewards
-                 const totalKills = Math.round(records[2] + (records[3] / 2) + (records[4] * 2));
-                 if (totalKills >= Math.floor(records[0] / 100000)) {
-                     sendRecordValid({ // Assuming sendRecordValid is defined elsewhere
-                         name: socket.name || "Unnamed",
-                         discord: socket.betaData.discordID,
-                         tank: body.labelOverride || body.label,
-                         score: records[0],
-                         totalKills: totalKills,
-                         timeAlive: util.formatTime(records[1] * 1000),
-                     });
+    
+            if (c.serverName.includes("Growth") && player.body != null && !player.body.hasDreadnoughted && player.body.skill.score >= 2_000_000) {
+              player.body.hasDreadnoughted = true;
+              player.body.upgrades.push({
+                class: "dreadnoughts",// class: "dreadnoughts",
+                level: 60,
+                index: Class.dreadnoughts.index,//index: Class.dreadnoughts.index,
+                tier: 4
+              });
+            }   
+          
+             // Existing dead player message logic (keep this as is)
+            if (body != null && body.isDead() && !socket.status.deceased) {
+                socket.status.deceased = true;
+                const records = player.records(); 
+                socket.status.previousScore = records[0];
+                socket.talk("F", ...records); // Send death record to client
+                 if (records[0] > 300000) { // Check for high scores for logging/rewards
+                     const totalKills = Math.round(records[2] + (records[3] / 2) + (records[4] * 2));
+                     if (totalKills >= Math.floor(records[0] / 100000)) {
+                         sendRecordValid({ // Assuming sendRecordValid is defined elsewhere
+                             name: socket.name || "Unnamed",
+                             discord: socket.betaData.discordID,
+                             tank: body.labelOverride || body.label,
+                             score: records[0],
+                             totalKills: totalKills,
+                             timeAlive: util.formatTime(records[1] * 1000),
+                         });
+                     }
+                     if (body.miscIdentifier !== "No Death Log") {
+                         util.info(trimName(body.name) + " has died. Final Score: " + body.skill.score + ". Tank Used: " + body.label + ". Players: " + clients.length + "."); // Assuming util.info and trimName are defined elsewhere
+                     }
+                     socket.beginTimeout();
                  }
-                 if (body.miscIdentifier !== "No Death Log") {
-                     util.info(trimName(body.name) + " has died. Final Score: " + body.skill.score + ". Tank Used: " + body.label + ". Players: " + clients.length + "."); // Assuming util.info and trimName are defined elsewhere
-                 }
-                 socket.beginTimeout();
-             }
-             player.body = null; // Dereference the dead body
+                 player.body = null; // Dereference the dead body
+            }
+    
+    
+            // Send the update packet to the client
+            socket.talk(
+                "u",
+                (body != null ? (body.cameraShiftFacing != null) : false), // Flag for camera shift
+                room.lastCycle, // Timestamp (assuming room.lastCycle is updated in gameLoop)
+                camera.x + .5 | 0, // Camera X (rounded)
+                camera.y + .5 | 0, // Camera Y (rounded)
+                fov + .5 | 0, // FOV (rounded)
+                // camera.vx, camera.vy, // Omitted velocity as per original packet format change
+                ...(player.gui ? player.gui() : []), // Player GUI data (assuming player.gui() is defined elsewhere and returns an array)
+                numberInView, // Count of visible entities
+                ...visible.flat() // Flattened data for visible entities
+            );
         }
-
-
-        // Send the update packet to the client
-        socket.talk(
-            "u",
-            (body != null ? (body.cameraShiftFacing != null) : false), // Flag for camera shift
-            room.lastCycle, // Timestamp (assuming room.lastCycle is updated in gameLoop)
-            camera.x + .5 | 0, // Camera X (rounded)
-            camera.y + .5 | 0, // Camera Y (rounded)
-            fov + .5 | 0, // FOV (rounded)
-            // camera.vx, camera.vy, // Omitted velocity as per original packet format change
-            ...(player.gui ? player.gui() : []), // Player GUI data (assuming player.gui() is defined elsewhere and returns an array)
-            numberInView, // Count of visible entities
-            ...visible.flat() // Flattened data for visible entities
-        );
-    }
-    }, c.visibleListInterval)
+        }, c.visibleListInterval)
 
 
 

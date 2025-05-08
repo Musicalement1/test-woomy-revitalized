@@ -2,6 +2,7 @@ import { global } from "./global.js"
 import { config } from "./config.js"
 import { resizeEvent } from "/js/util.js"
 import { themes, setColor, color } from "./colors.js";
+import { rewardManager } from "./achievements.js";
 
 const initSettingsMenu = function () {
 	// Increase this value if you change something huge

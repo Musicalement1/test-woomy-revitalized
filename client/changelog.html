@@ -1,6 +1,12 @@
 <div class="patchnoteSection">
-    <p class="patchnoteTitle">Welcome Back!<span class="patchnoteTime">May ?, 2025</span></p>
+    <p class="patchnoteTitle">Woomy Rehydrated<span class="patchnoteTime">May ?, 2025</span></p>
     <ul class="patchnoteBody">
+        <h3><b>Note</b></h3>
+        <li>This is one part of a larger series of changes (although, this is probably the biggest one). The main goal is to clean up all of Woomy's code, seperate the game from the game engine, and expand modding support/capabilities.
+        A large part of that is making sure the game can handle some crazy things (namely mega bosses).</li>
+        <li>This first part is a massive overhaul of the client which has been the main bottleneck.</li>
+        <li>You might notice some things no longer in the game and things appearing different than you're used to. In most of these cases it's unavoidable and marginal compared to the performance and organizational improvements.</li>
+        <h3><b>Changes</b></h3>
         <li>Went through all of the code and refactored almost everything</li>
         <li>Split up the client into different files</li>
         <li>Removed bloat from the client:</li>
@@ -10,10 +16,26 @@
             <li>Tint Nests option</li>
             <li>Name gradients</li>
             <li>Name badges</li>
-            <li>Removed minimap graphs (pressing L a few times)</li>
-            <li>Removed remaints of the branch tree</li>
+            <li>Minimap debug graphs (pressing L a few times)</li>
+            <li>Remaints of the branch tree</li>
             <ul>
                 <li>This does not mean that there wont be some equivalent in the future but its not a priority</li>
+            </ul>
+            <li>Remaints of the 1v1/Ranked system</li>
+            <ul>
+                <li>Same case as the branch tree</li>
+            </ul>
+            <li>Clock syncing</li>
+            <li>Remaints of squadrons</li>
+            <ul>
+                <li>V packet type</li>
+            </ul>
+            <li>cr packet type</li>
+            <li>tg packet type</li>
+            <li>K packet type</li>
+            <li>Remaints of the eval packet code (anti-botting)</li>
+            <ul>
+                <li>I_solemnly_swear_I_wont_exploit packet type</li>
             </ul>
         </ul>
     </ul>

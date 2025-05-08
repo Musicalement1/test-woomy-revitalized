@@ -1,3 +1,4 @@
+import { global } from "./global.js"
 import { util } from "/js/util.js"
 
 const rewardManager = new class {
