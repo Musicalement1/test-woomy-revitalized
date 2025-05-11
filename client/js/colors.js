@@ -594,7 +594,8 @@ let themes = {
 const mixColorsCache = new Map()
 function mixColors(primary, secondary, amount) {
 	const key = `${primary}${secondary}${amount}`;
-	if (mixColorsCache.has(key)) return mixColorsCache.get(key);
+	const saved = mixColorsCache.get(key)
+	if (saved !== undefined) return saved;
 	const pr = parseInt(primary.slice(1), 16);
 	const sr = parseInt(secondary.slice(1), 16);
 	const hex = `#${(

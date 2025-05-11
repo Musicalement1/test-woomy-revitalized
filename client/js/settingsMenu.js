@@ -243,20 +243,15 @@ config.Woomy = (() => {
 	new Setting("inverseBorderColor", "Inverse Border Color", "boolean", false);
 	new Setting("noBorders", "No Borders", "boolean", false);
 	new Setting("tintedDamage", "Red Damage", "boolean", true);
-	new Setting("miterText", "Sharp Text", "boolean", false);
 	new Setting("tintedHealth", "Tinted Health Bars", "boolean", true);
 	new Setting("coloredHealthBars", "Colored Health Bars", "boolean", false);
 	new Setting("shieldbars", "Split Health Bars", "boolean", true);
-	new Setting("fancyAnimations", "Fancy Animations", "boolean", true, () => global._gameStart && resizeEvent());
-	new Setting("useFourRows", "Four Upgrade Rows", "boolean", true);
 	new Setting("roundUpgrades", "Round Upgrades", "boolean", false);
 	new Setting("disableMessages", "Disable Messages", "boolean", false);
 	new Setting("autoUpgrade", "Auto Level Up", "boolean", global.mobile);
-	new Setting("drawOwnName", "Render Own Name", "boolean", false);
 	new Setting("screenshotMode", "Screenshot Mode", "boolean", false);
-	new Setting("lerpSize", "Lerp Entity Sizes", "boolean", false);
-	new Setting("localmotion", "Local Motion", "boolean", false);
-	new Setting("gameAnimations", "Game Menu Animations", "boolean", true);
+	new Setting("hideMiniRenders", "Hide Mini-Renders", "boolean", false);
+	new Setting("lerpSize", "Lerp Entity Sizes", "boolean", true);
 	new Setting("mainMenuStyle", "Menu Dark Mode", "boolean", false, enabled => {
 		const setProperties = vars => {
 			if (enabled) {
@@ -280,7 +275,6 @@ config.Woomy = (() => {
 	new Setting("borderChunk", "Border Width", "number", 6);
 	new Setting("mininumBorderChunk", "Min Border Thickness", "number", 3);
 	new Setting("barChunk", "Bar Stroke Thickness", "number", 4.5);
-	new Setting("deathExpandRatio", "Death Expand Ratio", "number", 1.35);
 	new Setting("fontSizeBoost", "Font Size", "number", 10);
 	new Setting("fpsCap", "FPS Cap", "number", 45, value => {
 		global._fpscap = 1000 / Math.max(value, 1);

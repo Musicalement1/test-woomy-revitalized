@@ -11,16 +11,12 @@ let config = {
 	noBorders: 0,
 	colors: "classic",
 	pointy: false,
-	deathExpandRatio: true,
-	fancyAnimations: true,
 	resolutionScale: 1,
 	fontSizeBoost: 10,
 	fontStrokeRatio: 4.5,
 	neon: 0,
-	useFourRows: 1,
 	disableMessages: 0,
 	roundUpgrades: 0,
-	drawOwnName: false,
 	autoUpgrade: true,
 	tintedDamage: true,
 	lerpSize: true,
@@ -32,8 +28,7 @@ let config = {
 	memory: 60,
 	newPrediction: 0,
 	prediction: 2,
-	fontFamily: "Ubuntu",
-	localmotion: false,
+	fontFamily: "Ubuntu"
 };
 
 export { config }

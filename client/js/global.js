@@ -7,7 +7,7 @@ function Smoothbar(value, speed) {
 	let render = value;
 	return {
 		set: val => value = val,
-		get: () => render = lerp(render, value, speed ? speed : config.fancyAnimations ? 0.12 : 1) // speed / 6
+		get: () => render = lerp(render, value, speed ? speed : 0.12 ) // speed / 6
 	};
 	/*let sharpness = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 3,
 		time = Date.now(),
@@ -42,12 +42,6 @@ const global = {
 	guiMouse: {
 		x: 0,
 		y: 0
-	},
-	_localmotion: {
-		x: 0,
-		y: 0,
-		rx: 0,
-		ry: 0,
 	},
 	_mapType: 0,
 	_killTracker: 0,
@@ -149,7 +143,6 @@ const global = {
 		"Hold the L key to show extra debug stuff above the minimap.",
 		"If you have a low frame rate, you can try enabling Low Graphics in the options menu, which removes death fade.",
 		"Don't like seeing a lot of messages? Or maybe they cause you lag? Consider enabling the Disable Messages option.",
-		"The Four Upgrade Rows option may make the upgrade menu look and fit on the screen better.",
 		"Don't like the rounded edges look of Arras? Try the Use Miter Edges option.",
 		"Begging for beta-tester on this server is like digging your own grave.",
 		"Naming yourself Trans Rights makes your name have the colors of the Transgender Pride Flag.",
@@ -429,7 +422,6 @@ global.player = { // Why var?
 		"score": 0,
 		"render": {
 			"draws": true,
-			"expandsWithDeath": 2,
 			"lastRender": 0,
 			"x": 0,
 			"y": 0,

@@ -1368,7 +1368,7 @@ workerWindow.require = function(thing){
 // THE SERVER //
 
 async function startServer(configSuffix, serverGamemode, defExports){
-    configSuffix = "4tdm.json" // TODO: make not always 4tdm
+    configSuffix = "hangout.js" // TODO: make not always 4tdm
 /*jslint node: true */
 /*jshint -W061 */
 /*global Map*/
@@ -4967,7 +4967,7 @@ ioTypes.nearestDifferentMaster = class extends IO {
         }
         
         // Target processing timer
-        if (++this.tick > 30) {
+        if (++this.tick > 15) {
             this.tick = 0;
             
             // Bot range adjustment
@@ -13946,8 +13946,8 @@ function flatten(data) {
                                     y: impulse * dir.y
                                 },
                                 modifiers = {
-                                    _me: c.KNOCKBACK_CONSTANT * my.pushability / my.mass * deathFactor._n * 1.05,
-                                    _n: c.KNOCKBACK_CONSTANT * n.pushability / n.mass * deathFactor._me * 1.05
+                                    _me: c.KNOCKBACK_CONSTANT * my.pushability / my.mass * deathFactor._n * .6,
+                                    _n: c.KNOCKBACK_CONSTANT * n.pushability / n.mass * deathFactor._me * .6
                                 };
                             my.accel.x += modifiers._me * force.x;
                             my.accel.y += modifiers._me * force.y;
@@ -15815,7 +15815,7 @@ function flatten(data) {
             let socket = instance;
             let camera = socket.camera; // The camera state
             let body = player.body; // The player's body, might be null if dead
-            let photo = body.camera()
+            let photo = body?body.camera():{}
     
         let fov = 1000; // Default FOV
         if (body != null && body.isAlive()) {
@@ -15858,7 +15858,7 @@ function flatten(data) {
                     return; // Skip entities that don't meet visibility criteria
                 }
     
-                if(body.id === entity.id){
+                if(body && body.id === entity.id){
                   return visible.push(flatten(photo))
                 }
               

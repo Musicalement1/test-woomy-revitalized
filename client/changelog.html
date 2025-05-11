@@ -13,6 +13,7 @@
         <ul>
             <li>Remaints of the ad system</li>
             <li>Main menu background animations</li>
+            <li>Game menu animations setting (related to main menu background animations)</li>
             <li>Tint Nests option</li>
             <li>Name gradients</li>
             <li>Name badges</li>
@@ -37,7 +38,52 @@
             <ul>
                 <li>I_solemnly_swear_I_wont_exploit packet type</li>
             </ul>
+            <li>A few secret colored names (their sizes were bugged depending on the fov)</li>
+            <li>Death expand ratio setting</li>
+            <li>Render own name setting</li>
+            <li>Local motion setting (didnt do anything)</li>
+            <li>Four upgrade rows setting</li>
+            <ul>
+                <li>Now enabled by default</li>
+                <li>Removed the tip message as well</li>
+            </ul>
+            <li>Sharp test setting</li>
+            <ul>
+                <li>There was almost no discernible difference</li>
+                <li>Now uses a mix between the two which looks better in almost all cases</li>
+            </ul>
+            <li>Fancy Animations</li>
+            <ul>
+                <li>Proved to be a much larger detriment than I thought</li>
+                <li>Transparency is now on by default, but more performant</li>
+                <li>Might add a "Performance Mode" setting that disables much of the rendering (like certain images) at another point</li>
+            </ul>
         </ul>
+        <h3><b>Optimizations</b></h3>
+        <ul>
+            <li>Entities now use a Map instead of an array in the client</li>
+            <li>Data is handled more efficently in broadcast packets</li>
+            <li>Gun renders are now cached</li>
+            <li>Path2Ds are now cached</li>
+            <li>Gradient renders are now cached</li>
+        </ul>
+        <h3><b>Bug Fixes</b></h3>
+        <li>Fixed a bug where traps would fling eachother</li>
+        <li>Fixed the long-standing bug where large entities would look messed up in smaller renders</li>
+        <ul>
+            <li>Upgrades in general should be noticeably more accurate</li>
+        </ul>
+        <h3><b>Changes</b></h3>
+        <li>Lerp Entity Sizes is now on by default</li>
+        <li>Things now shrink instead of expand on death</li>
+        <li>Changed how transparency works</li>
+        <ul>
+            <li>It now functions similarly to how glassmode functions</li>
+            <li>I understand this can be undesirable for some</li>
+            <li>I deemed the performance boost to be significant enough for the change in style to be warrented</li>
+        </ul>
+        <h3><b>Additions</b></h3>
+        <li>Added a "Hide Mini-Renders" setting which will disable tank rendering for upgrades and the leaderboard</li>
     </ul>
 </div>
 <div class="patchnoteSection">
