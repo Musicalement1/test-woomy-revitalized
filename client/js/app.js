@@ -48,7 +48,8 @@ function RememberScriptingIsBannable() {
 
     window._socket = null;
 
-    let entities = new Map(),
+    let entityMap = new Map(),
+        entityArr = [],
         particles = [],
         upgradeSpin = 0,
         metrics = {
@@ -298,370 +299,420 @@ function RememberScriptingIsBannable() {
     let _anims = {};
     let socketInit = async function () {
         resizeEvent();
-        let protocol = fasttalk,
-            convert = function () {
-                let get = function () {
-                    let index = 0,
-                        crawlData = [];
-                    return {
-                        next: function () {
-                            if (index >= crawlData.length) {
-                                logger.norm(crawlData);
-                                throw new Error("Trying to crawl past the end of the provided data!");
-                            } else return crawlData[index++];
-                        },
-                        all: () => crawlData.slice(index),
-                        take: amount => {
-                            index += amount;
-                            if (index > crawlData.length) {
-                                console.error(crawlData);
-                                throw new Error("Trying to crawl past the end of the provided data!");
-                            }
-                        },
-                        set: function (data) {
-                            crawlData = data;
-                            index = 0;
-                        }
-                    };
-                }();
+        let protocol = fasttalk;
+        const convert = function () {
+            // Reader
+            let get = function () {
+                let index = 0,
+                    crawlData = [];
                 return {
-                    begin: function (data) {
-                        return get.set(data);
+                    next: function () {
+                        if (index >= crawlData.length) {
+                            logger.norm(crawlData);
+                            throw new Error("Trying to crawl past the end of the provided data!");
+                        } else return crawlData[index++];
                     },
-                    data: function () {
-                        const process = function () {
-                            const GunContainer = function () {
-                                function physics(g) {
-                                    g.isUpdated = 1;
-                                    if (g.motion || g.position) {
-                                        g.motion -= .2 * g.position;
-                                        g.position += g.motion;
-                                        if (g.position < 0) {
-                                            g.position = 0;
-                                            g.motion = -g.motion;
-                                        }
-                                        if (g.motion > 0) g.motion *= .5;
-                                    }
-                                }
-                                return function (n) {
-                                    let a = [];
-                                    for (let i = 0; i < n; i++) a.push({
-                                        motion: 0,
-                                        position: 0,
-                                        isUpdated: 1
-                                    });
-                                    return {
-                                        getPositions: function () {
-                                            return a.map(function (g) {
-                                                return g.position;
-                                            });
-                                        },
-                                        update: function () {
-                                            return a.forEach(physics);
-                                        },
-                                        fire: function (i, power) {
-                                            if (a[i].isUpdated) a[i].motion += Math.sqrt(power) / 20;
-                                            a[i].isUpdated = 0;
-                                        },
-                                        length: a.length
-                                    };
-                                };
-                            }();
-
-                            function Status() {
-                                let state = "normal",
-                                    time = getNow();
-                                return {
-                                    set: function (val) {
-                                        if (val !== state || state === "injured") {
-                                            if (state !== "dying") time = getNow();
-                                            state = val;
-                                        }
-                                    },
-                                    getFade: function () {
-                                        return (state === "dying" || state === "killed") ? 1 - Math.min(1, (getNow() - time) / 300) : 1;
-                                    },
-                                    getColor: function () {
-                                        return config.tintedDamage ? mixColors(color.red, color.guiblack, 0.2) : "#FFFFFF";
-                                    },
-                                    getBlend: function () {
-                                        let o = state === "normal" || state === "dying" ? 0 : 1 - Math.min(1, (getNow() - time) / 80);
-                                        if (getNow() - time > 500 && state === "injured") state = "normal";
-                                        return o;
-                                    }
-                                };
-                            }
-                            const unpacking = {
-                                new: function (entity) {
-                                    let isNew = entity.facing == null;
-                                    const type = get.next();
-                                    if (type & 0x01) {
-                                        entity.facing = get.next();
-                                        entity.layer = get.next();
-                                    } else {
-                                        entity.interval = metrics._rendergap;
-                                        entity.id = get.next();
-                                        let iii = entities.get(entity.id)
-                                        if (iii !== undefined) {
-                                            entity = iii
-                                        }
-                                        isNew = iii === undefined;
-                                        if (!isNew) {
-                                            entity.render.draws = true;
-                                            entity.render.lastx = entity.x;
-                                            entity.render.lasty = entity.y;
-                                            entity.render.lastvx = entity.vx;
-                                            entity.render.lastvy = entity.vy;
-                                            entity.render.lastf = entity.facing;
-                                            entity.render.lastRender = global.player._time;
-                                        }
-                                        const flags = get.next();
-                                        entity.index = get.next();
-                                        entity.x = get.next();
-                                        entity.y = get.next();
-                                        entity.vx = 0;//get.next();
-                                        entity.vy = 0;//get.next();
-                                        entity.size = get.next();
-                                        entity.facing = get.next();
-                                        entity.twiggle = (flags & 1);
-                                        entity.layer = (flags & 2) ? get.next() : 0;
-                                        entity.color = get.next();
-                                        entity.team = get.next();
-                                        if (isNew) {
-                                            entity.health = (flags & 4) ? (get.next() / 255) : 1;
-                                            entity.shield = (flags & 8) ? (get.next() / 255) : 1;
-                                        } else {
-                                            let hh = entity.health,
-                                                ss = entity.shield;
-                                            entity.health = (flags & 4) ? (get.next() / 255) : 1;
-                                            entity.shield = (flags & 8) ? (get.next() / 255) : 1;
-                                            if (entity.health < hh || entity.shield < ss) {
-                                                entity.render.status.set("injured");
-                                            } else if (entity.render.status.getFade() !== 1) {
-                                                entity.render.status.set("normal");
-                                            }
-                                        }
-                                        entity.alpha = (flags & 16) ? (get.next() / 255) : 1;
-                                        entity.seeInvisible = flags & 32;
-                                        entity.nameColor = flags & 64 ? get.next() : "#FFFFFF";
-                                        entity.label = flags & 128 ? get.next() : mockups.get(entity.index).name
-                                        entity.widthHeightRatio = [(flags & 256) ? get.next() : 1, (flags & 512) ? get.next() : 1];
-                                        entity.drawsHealth = true//type & 0x02;
-                                        entity.nameplate = type & 0x04;
-                                        entity.invuln = (type & 0x08 ? entity.invuln || Date.now() : 0);
-                                        if (type & 0x04) {
-                                            entity.name = get.next();
-                                            entity.score = get.next();
-                                            entity.messages = get.next();
-                                        }
-                                        if (isNew) {
-                                            entity.render = {
-                                                real: true,
-                                                draws: false,
-                                                lastRender: global.player._time,
-                                                x: entity.x,
-                                                y: entity.y,
-                                                lastx: entity.x - metrics._rendergap * config.roomSpeed * (1000 / 30) * entity.vx,
-                                                lasty: entity.y - metrics._rendergap * config.roomSpeed * (1000 / 30) * entity.vy,
-                                                lastvx: entity.vx,
-                                                lastvy: entity.vy,
-                                                lastf: entity.facing,
-                                                f: entity.facing,
-                                                h: entity.health,
-                                                s: entity.shield,
-                                                interval: metrics._rendergap,
-                                                slip: 0,
-                                                status: Status(),
-                                                health: Smoothbar(entity.health),
-                                                shield: Smoothbar(entity.shield),
-                                                size: 1,
-                                                extra: [1, 0], // for props
-                                            };
-
-                                            let mockup = mockups.get(entity.index);
-                                            if (mockup != null && mockup.shape > 2 && mockup.shape < 6) {
-                                                switch (mockup.color) {
-                                                    case 207:
-                                                        rewardManager.unlockAchievement("hot");
-                                                        break;
-                                                    case 31:
-                                                        rewardManager.unlockAchievement("toxic");
-                                                        break;
-                                                    case 261:
-                                                        rewardManager.unlockAchievement("mystic");
-                                                        break;
-                                                }
-                                            }
-                                            if (entity.color === -1) {
-                                                rewardManager.unlockAchievement("realShiny")
-                                            }
-                                        }
-                                        entity.render.health.set(entity.health);
-                                        entity.render.shield.set(entity.shield);
-                                        if (!isNew && entity.oldIndex !== entity.index) isNew = true;
-                                        entity.oldIndex = entity.index;
-                                    }
-                                    let gunnumb = get.next();
-                                    if (isNew) {
-                                        entity.guns = GunContainer(gunnumb);
-                                    } else if (gunnumb !== entity.guns.length) {
-                                        throw new Error("Mismatch between data gun number and remembered gun number!");
-                                    }
-                                    for (let i = 0; i < gunnumb; i++) {
-                                        let time = get.next(),
-                                            power = get.next();
-                                        if (time > global.player._lastUpdate - metrics._rendergap) {
-                                            entity.guns.fire(i, power);
-                                        }
-                                    }
-                                    let turnumb = get.next();
-                                    if (isNew) {
-                                        entity.turrets = [];
-                                        for (let i = 0; i < turnumb; i++) {
-                                            entity.turrets.push(process());
-                                        }
-                                    } else {
-                                        if (entity.turrets.length !== turnumb) {
-                                            console.log(entity);
-                                            throw new Error("Mismatch between data turret number and remembered turret number!");
-                                        }
-                                        for (let i = 0; i < entity.turrets.length; i++) {
-                                            process(entity.turrets[i]);
-                                        }
-                                    }
-
-                                    return entity;
-                                }
-                            }
-                            // Return our function
-                            return (z = {}) => {
-                                return unpacking.new(z);
-                            };
-                        }();
-                        return function () {
-                            let output = [];
-                            for (let i = 0, len = get.next(); i < len; i++) {
-                                let e = process()
-                                e.render.status.set(e.health === 1 ? "dying" : "killed")
-                                output.push(e);
-                            }
-                            output.sort((a, b) => {
-                                let sort = a.layer - b.layer;
-                                if (sort === 0) sort = b.id - a.id;
-                                return sort;
-                            });
-                            entities.clear()
-                            for(let e of output) entities.set(e.id, e)
-                        };
-                    }(),
-                    gui: function () {
-                        let index = get.next(),
-                            indices = {
-                                topSpeed: index & 0x0100,
-                                accel: index & 0x0080,
-                                skills: index & 0x0040,
-                                statsdata: index & 0x0020,
-                                upgrades: index & 0x0010,
-                                points: index & 0x0008,
-                                score: index & 0x0004,
-                                label: index & 0x0002,
-                                fps: index & 0x0001
-                            };
-                        if (indices.fps) _gui._fps = get.next();
-                        if (indices.label) {
-                            _gui._type = get.next();
-                            _gui._color = get.next();
-                            _gui._playerid = get.next();
+                    all: () => crawlData.slice(index),
+                    take: amount => {
+                        index += amount;
+                        if (index > crawlData.length) {
+                            console.error(crawlData);
+                            throw new Error("Trying to crawl past the end of the provided data!");
                         }
-                        if (indices.score) _gui._skill.setScores(get.next());
-                        if (indices.points) _gui._points = get.next();
-                        if (indices.upgrades) {
-                            const upgrades = [];
-                            for (let i = 0, len = get.next(); i < len; i++) upgrades.push(get.next());
-
-                            if (upgrades.toString() !== _gui._realUpgrades.toString()) {
-                                _gui._realUpgrades = upgrades;
-                                _gui._upgrades = upgrades;
-                            }
-                        }
-                        if (indices.statsdata)
-                            for (let i = 9; i >= 0; i--) {
-                                _gui._skills[i].name = get.next();
-                                _gui._skills[i].cap = get.next();
-                                _gui._skills[i].softcap = get.next();
-                            }
-                        if (indices.skills) {
-                            let skk = parseInt(get.next(), 36).toString(16);
-                            skk = "0000000000".substring(skk.length) + skk;
-                            _gui._skills[0].amount = parseInt(skk.slice(0, 1), 16);
-                            _gui._skills[1].amount = parseInt(skk.slice(1, 2), 16);
-                            _gui._skills[2].amount = parseInt(skk.slice(2, 3), 16);
-                            _gui._skills[3].amount = parseInt(skk.slice(3, 4), 16);
-                            _gui._skills[4].amount = parseInt(skk.slice(4, 5), 16);
-                            _gui._skills[5].amount = parseInt(skk.slice(5, 6), 16);
-                            _gui._skills[6].amount = parseInt(skk.slice(6, 7), 16);
-                            _gui._skills[7].amount = parseInt(skk.slice(7, 8), 16);
-                            _gui._skills[8].amount = parseInt(skk.slice(8, 9), 16);
-                            _gui._skills[9].amount = parseInt(skk.slice(9, 10), 16);
-                        }
-                        if (indices.accel) _gui._accel = get.next();
-                        if (indices.topSpeed) _gui._topSpeed = get.next();
                     },
-                    // Broadcast for minimap and leaderboard
-                    newbroadcast: data => {
-                        data.shift = (function () {
-                            let i = 0;
-                            return () => {
-                                return data[i++]
-                            }
-                        })()
-
-                        // So let's start unpacking!
-                        _gui._minimap._server = [];
-                        _gui._leaderboard._server = [];
-                        let minimapAllLength = data.shift();
-                        for (let i = 0; i < minimapAllLength; i++) {
-                            _gui._minimap._server.push({
-                                id: data.shift(),
-                                type: data.shift(),
-                                x: (data.shift() * global._gameWidth) / 255,
-                                y: (data.shift() * global._gameHeight) / 255,
-                                color: data.shift(),
-                                size: data.shift(),
-                                width: data.shift(),
-                                height: data.shift()
-                            });
-                        }
-                        let minimapTeamLength = data.shift();
-                        for (let i = 0; i < minimapTeamLength; i++) {
-                            _gui._minimap._server.push({
-                                id: data.shift(),
-                                x: (data.shift() * global._gameWidth) / 255,
-                                y: (data.shift() * global._gameHeight) / 255,
-                                color: data.shift(),
-                                type: 0,
-                                size: 0
-                            });
-                        }
-                        let leaderboardLength = data.shift();
-                        for (let i = 0; i < leaderboardLength; i++) {
-                            let instance = {
-                                id: data.shift(),
-                                score: data.shift(),
-                                index: data.shift(),
-                                name: data.shift(),
-                                color: data.shift(),
-                                barColor: data.shift(),
-                                nameColor: data.shift(),
-                            };
-                            instance.label = data.shift() || mockups.get(instance.index).label
-                            if (global.gamemodeAlteration !== "sbx" || data.shift() === global.party) {
-                                _gui._leaderboard._server.push(instance);
-                            }
-                        }
+                    set: function (data) {
+                        crawlData = data;
+                        index = 0;
                     }
                 };
             }();
+
+            // Convert API
+            return {
+                begin: function (data) {
+                    return get.set(data);
+                },
+                data: function () {
+                    const GunContainer = function () {
+                        function physics(g) {
+                            g.isUpdated = 1;
+                            if (g.motion || g.position) {
+                                g.motion -= .2 * g.position;
+                                g.position += g.motion;
+                                if (g.position < 0) {
+                                    g.position = 0;
+                                    g.motion = -g.motion;
+                                }
+                                if (g.motion > 0) g.motion *= .5;
+                            }
+                        }
+                        return function (n) {
+                            let a = [];
+                            for (let i = 0; i < n; i++) a.push({
+                                motion: 0,
+                                position: 0,
+                                isUpdated: 1
+                            });
+                            return {
+                                getPositions: function () {
+                                    return a.map(function (g) {
+                                        return g.position;
+                                    });
+                                },
+                                update: function () {
+                                    for (let i = 0; i < a.length; i++) {
+                                        physics(a[i])
+                                    }
+                                },
+                                fire: function (i, power) {
+                                    if (a[i].isUpdated) a[i].motion += Math.sqrt(power) / 20;
+                                    a[i].isUpdated = 0;
+                                },
+                                length: a.length
+                            };
+                        };
+                    }();
+
+                    function Status() {
+                        let state = "normal",
+                            time = getNow();
+                        return {
+                            set: function (val) {
+                                // Only update time and state if the new value is different,
+                                // OR if we're explicitly re-setting "injured" (to refresh its timer)
+                                if (val !== state || val === "injured") {
+                                    if (state !== "killed" && val !== "normal") {
+                                        time = getNow(); // injured/killed timer
+                                    }
+                                    state = val;
+                                }
+                            },
+                            getFade: function () {
+                                return  state === "killed" ? 1 - Math.min(1, (getNow() - time) / 300) : 1;
+                            },
+                            getColor: function () {
+                                return config.tintedDamage ? mixColors(color.red, color.guiblack, 0.2) : "#FFFFFF";
+                            },
+                            getBlend: function () {
+                                let o = (state === "normal" || state === "killed") ? 0 : 1 - Math.min(1, (getNow() - time) / 80);
+                                // Injured state wears off after some time and reverts to normal
+                                if (getNow() - time > 500 && state === "injured") {
+                                    state = "normal";
+                                }
+                                return o;
+                            },
+                            getCurrentState: function () { // Getter for current state
+                                return state;
+                            }
+                        };
+                    }
+
+                    const process = function () {
+                        const unpacking = {
+                            new: function (entity) {
+                                let isNew = entity.facing == null;
+                                const type = get.next();
+                                if (type & 0x01) {
+                                    entity.facing = get.next();
+                                    entity.layer = get.next();
+                                } else {
+                                    entity.interval = metrics._rendergap;
+                                    entity.id = get.next();
+                                    let iii = entityMap.get(entity.id)
+                                    if (iii !== undefined) {
+                                        entity = iii
+                                    }
+                                    isNew = iii === undefined;
+                                    if (!isNew) {
+                                        entity.render.draws = true;
+                                        entity.render.lastx = entity.x;
+                                        entity.render.lasty = entity.y;
+                                        entity.render.lastvx = entity.vx;
+                                        entity.render.lastvy = entity.vy;
+                                        entity.render.lastf = entity.facing;
+                                        entity.render.lastRender = global.player._time;
+                                    }
+                                    const flags = get.next();
+                                    entity.index = get.next();
+                                    entity.x = get.next();
+                                    entity.y = get.next();
+                                    entity.vx = 0;//get.next();
+                                    entity.vy = 0;//get.next();
+                                    entity.size = get.next();
+                                    entity.facing = get.next();
+                                    entity.twiggle = (flags & 1);
+                                    entity.layer = (flags & 2) ? get.next() : 0;
+                                    entity.color = get.next();
+                                    entity.team = get.next();
+                                    if (isNew) {
+                                        entity.health = (flags & 4) ? (get.next() / 255) : 1;
+                                        entity.shield = (flags & 8) ? (get.next() / 255) : 1;
+                                    } else {
+                                        let hh = entity.health,
+                                            ss = entity.shield;
+                                        entity.health = (flags & 4) ? (get.next() / 255) : 1;
+                                        entity.shield = (flags & 8) ? (get.next() / 255) : 1;
+                                        if (entity.health < hh || entity.shield < ss) {
+                                            entity.render.status.set("injured");
+                                        } else if (entity.render.status.getFade() !== 1) {
+                                            entity.render.status.set("normal");
+                                        }
+                                    }
+                                    entity.alpha = (flags & 16) ? (get.next() / 255) : 1;
+                                    entity.seeInvisible = flags & 32;
+                                    entity.nameColor = flags & 64 ? get.next() : "#FFFFFF";
+                                    entity.label = flags & 128 ? get.next() : mockups.get(entity.index).name
+                                    entity.widthHeightRatio = [(flags & 256) ? get.next() : 1, (flags & 512) ? get.next() : 1];
+                                    entity.drawsHealth = type & 0x02;
+                                    entity.nameplate = type & 0x04;
+                                    entity.invuln = (type & 0x08 ? entity.invuln || Date.now() : 0);
+                                    if (type & 0x04) {
+                                        entity.name = get.next();
+                                        entity.score = get.next();
+                                        entity.messages = get.next();
+                                    }
+                                    if (isNew) {
+                                        entity.render = {
+                                            real: true,
+                                            draws: false,
+                                            expandsWithDeath: entity.drawsHealth,
+                                            lastRender: global.player._time,
+                                            x: entity.x,
+                                            y: entity.y,
+                                            lastx: entity.x - metrics._rendergap * config.roomSpeed * (1000 / 30) * entity.vx,
+                                            lasty: entity.y - metrics._rendergap * config.roomSpeed * (1000 / 30) * entity.vy,
+                                            lastvx: entity.vx,
+                                            lastvy: entity.vy,
+                                            lastf: entity.facing,
+                                            f: entity.facing,
+                                            h: entity.health,
+                                            s: entity.shield,
+                                            interval: metrics._rendergap,
+                                            slip: 0,
+                                            status: Status(),
+                                            health: Smoothbar(entity.health),
+                                            shield: Smoothbar(entity.shield),
+                                            size: 1,
+                                            extra: [1, 0], // for props
+                                        };
+
+                                        let mockup = mockups.get(entity.index);
+                                        if (mockup != null && mockup.shape > 2 && mockup.shape < 6) {
+                                            switch (mockup.color) {
+                                                case 207:
+                                                    rewardManager.unlockAchievement("hot");
+                                                    break;
+                                                case 31:
+                                                    rewardManager.unlockAchievement("toxic");
+                                                    break;
+                                                case 261:
+                                                    rewardManager.unlockAchievement("mystic");
+                                                    break;
+                                            }
+                                        }
+                                        if (entity.color === -1) {
+                                            rewardManager.unlockAchievement("realShiny")
+                                        }
+                                    }
+                                    entity.render.health.set(entity.health);
+                                    entity.render.shield.set(entity.shield);
+                                    if (!isNew && entity.oldIndex !== entity.index) isNew = true;
+                                    entity.oldIndex = entity.index;
+                                }
+                                let gunnumb = get.next();
+                                if (isNew) {
+                                    entity.guns = GunContainer(gunnumb);
+                                } else if (gunnumb !== entity.guns.length) {
+                                    throw new Error("Mismatch between data gun number and remembered gun number!");
+                                }
+                                for (let i = 0; i < gunnumb; i++) {
+                                    let time = get.next(),
+                                        power = get.next();
+                                    if (time > global.player._lastUpdate - metrics._rendergap) {
+                                        entity.guns.fire(i, power);
+                                    }
+                                }
+                                let turnumb = get.next();
+                                if (isNew) {
+                                    entity.turrets = [];
+                                    for (let i = 0; i < turnumb; i++) {
+                                        entity.turrets.push(process());
+                                    }
+                                } else {
+                                    if (entity.turrets.length !== turnumb) {
+                                        console.log(entity);
+                                        throw new Error("Mismatch between data turret number and remembered turret number!");
+                                    }
+                                    for (let i = 0; i < entity.turrets.length; i++) {
+                                        process(entity.turrets[i]);
+                                    }
+                                }
+
+                                return entity;
+                            }
+                        }
+                        // Return our function
+                        return (z = {}) => {
+                            return unpacking.new(z);
+                        };
+                    }();
+
+                    return function () {
+                        const updatedEntityIds = new Set(); // Keep track of IDs received in this packet
+
+                        // This loop updates existing entities or adds new ones to the 'entities' Map.
+                        // It also populates 'updatedEntityIds' with the IDs of all entities
+                        // for which data was received in this packet.
+                        for (let i = 0, len = get.next(); i < len; i++) {
+                            const e = process();
+                            entityMap.set(e.id, e);
+                            updatedEntityIds.add(e.id);
+                        }
+
+                        entityArr.length = 0;
+                        for (let [id, e] of entityMap) {
+                            entityArr.push(e);
+                            // This entity was in our client's list from the PREVIOUS frame,
+                            // but was NOT included in the server's update THIS frame.
+                            // This implies the server has stopped sending data for it, likely because it's dead.
+                            if (updatedEntityIds.has(id) === true) continue;
+
+                            // Check conditions for removing the entity from the client
+                            // (either its death animation finished, or it's out of view).
+                            if (e.render.status.getFade() === 0 ||
+                                !isInView(e.render.x - global.player._renderx, e.render.y - global.player._rendery, e.size, 1)) {
+                                entityMap.delete(id);
+                                continue;
+                            }
+
+                            // We apply the old "death inference" logic here.
+                            // The `e.health` here refers to its *last known health* from the previous packet.
+                            // Only change status if it's not already in a death state to avoid resetting fade.
+                            if (e.render.status.getCurrentState() !== "killed") {
+                                e.render.status.set("killed");
+                                // This "e.health === 1 ? 'dying' : 'killed'" was the original logic.
+                                // It implies: if an entity disappears and its last health was 1, it's "dying".
+                                // Otherwise (last health < 1, or even 0 if server sent that before stopping), it's "killed".
+                                // However that doesn't seem to matter
+                            }
+
+                        }
+
+                        entityArr.sort((a, b) => {
+                            let sort = a.layer - b.layer;
+                            if (!sort) sort = b.id - a.id; // Or a.id - b.id depending on desired tie-break
+                            return sort;
+                        });
+                    };
+                }(),
+                gui: function () {
+                    let index = get.next(),
+                        indices = {
+                            topSpeed: index & 0x0100,
+                            accel: index & 0x0080,
+                            skills: index & 0x0040,
+                            statsdata: index & 0x0020,
+                            upgrades: index & 0x0010,
+                            points: index & 0x0008,
+                            score: index & 0x0004,
+                            label: index & 0x0002,
+                            fps: index & 0x0001
+                        };
+                    if (indices.fps) _gui._fps = get.next();
+                    if (indices.label) {
+                        _gui._type = get.next();
+                        _gui._color = get.next();
+                        _gui._playerid = get.next();
+                    }
+                    if (indices.score) _gui._skill.setScores(get.next());
+                    if (indices.points) _gui._points = get.next();
+                    if (indices.upgrades) {
+                        const upgrades = [];
+                        for (let i = 0, len = get.next(); i < len; i++) upgrades.push(get.next());
+
+                        if (upgrades.toString() !== _gui._realUpgrades.toString()) {
+                            _gui._realUpgrades = upgrades;
+                            _gui._upgrades = upgrades;
+                        }
+                    }
+                    if (indices.statsdata)
+                        for (let i = 9; i >= 0; i--) {
+                            _gui._skills[i].name = get.next();
+                            _gui._skills[i].cap = get.next();
+                            _gui._skills[i].softcap = get.next();
+                        }
+                    if (indices.skills) {
+                        let skk = parseInt(get.next(), 36).toString(16);
+                        skk = "0000000000".substring(skk.length) + skk;
+                        _gui._skills[0].amount = parseInt(skk.slice(0, 1), 16);
+                        _gui._skills[1].amount = parseInt(skk.slice(1, 2), 16);
+                        _gui._skills[2].amount = parseInt(skk.slice(2, 3), 16);
+                        _gui._skills[3].amount = parseInt(skk.slice(3, 4), 16);
+                        _gui._skills[4].amount = parseInt(skk.slice(4, 5), 16);
+                        _gui._skills[5].amount = parseInt(skk.slice(5, 6), 16);
+                        _gui._skills[6].amount = parseInt(skk.slice(6, 7), 16);
+                        _gui._skills[7].amount = parseInt(skk.slice(7, 8), 16);
+                        _gui._skills[8].amount = parseInt(skk.slice(8, 9), 16);
+                        _gui._skills[9].amount = parseInt(skk.slice(9, 10), 16);
+                    }
+                    if (indices.accel) _gui._accel = get.next();
+                    if (indices.topSpeed) _gui._topSpeed = get.next();
+                },
+                // Broadcast for minimap and leaderboard
+                newbroadcast: data => {
+                    data.shift = (function () {
+                        let i = 0;
+                        return () => {
+                            return data[i++]
+                        }
+                    })()
+
+                    // So let's start unpacking!
+                    _gui._minimap._server = [];
+                    _gui._leaderboard._server = [];
+                    let minimapAllLength = data.shift();
+                    for (let i = 0; i < minimapAllLength; i++) {
+                        _gui._minimap._server.push({
+                            id: data.shift(),
+                            type: data.shift(),
+                            x: (data.shift() * global._gameWidth) / 255,
+                            y: (data.shift() * global._gameHeight) / 255,
+                            color: data.shift(),
+                            size: data.shift(),
+                            width: data.shift(),
+                            height: data.shift()
+                        });
+                    }
+                    let minimapTeamLength = data.shift();
+                    for (let i = 0; i < minimapTeamLength; i++) {
+                        _gui._minimap._server.push({
+                            id: data.shift(),
+                            x: (data.shift() * global._gameWidth) / 255,
+                            y: (data.shift() * global._gameHeight) / 255,
+                            color: data.shift(),
+                            type: 0,
+                            size: 0
+                        });
+                    }
+                    let leaderboardLength = data.shift();
+                    for (let i = 0; i < leaderboardLength; i++) {
+                        let instance = {
+                            id: data.shift(),
+                            score: data.shift(),
+                            index: data.shift(),
+                            name: data.shift(),
+                            color: data.shift(),
+                            barColor: data.shift(),
+                            nameColor: data.shift(),
+                        };
+                        instance.label = data.shift() || mockups.get(instance.index).label
+                        if (global.gamemodeAlteration !== "sbx" || data.shift() === global.party) {
+                            _gui._leaderboard._server.push(instance);
+                        }
+                    }
+                }
+            };
+        }();
 
         return async function ag(roomHost) {
             let validLobbyId = false
@@ -1425,8 +1476,8 @@ function RememberScriptingIsBannable() {
             } {
                 let frameplate = [];
                 ctx.translate(global._screenWidth / 2, global._screenHeight / 2);
-                for (let [_, v] of entities) {
-                    let instance = v
+                for (let i = 0; i < entityArr.length; i++) {
+                    let instance = entityArr[i]
                     if (!instance.render.draws) continue;
                     let motion = compensation();
                     let isMe = instance.id === _gui._playerid;
@@ -1486,8 +1537,8 @@ function RememberScriptingIsBannable() {
                     darknessCtx.globalAlpha = 1;
                     darknessCtx.globalCompositeOperation = "destination-out";
                     darknessCtx.translate(global._screenWidth / 2, global._screenHeight / 2);
-                    for (let [_, v] of entities) {
-                        let instance = v
+                    for (let i = 0; i < entityArr.length; i++) {
+                        let instance = entityArr[i]
                         x = ratio * instance.render.x - px,
                             y = ratio * instance.render.y - py,
                             size = ((Math.min(15 + instance.size * 12, instance.size + 200)) * instance.render.status.getFade()) * ratio

@@ -1736,7 +1736,7 @@ let drawEntity = function () {
 			shadowRelativeColor = false;
 		if (config.hideMiniRenders === true && !render.real) return;
 		if (fade === 0 || alpha === 0) return;
-		drawSize *= fade;
+		if(config.lerpSize) drawSize *= fade;
 		ctx.globalAlpha = (config.glassMode ? .7 : 1) * alpha * fade
 		context.lineCap = "round";
 		context.lineJoin = config.pointy ? "miter" : "round";
@@ -2062,7 +2062,7 @@ let drawEntity = function () {
 			}
 		}
 		ctx.globalAlpha = 1
-		if (gunCache.size > 30000) {
+		if (gunCache.size > 4000) {
 			console.log("[LOG] Cleared client gunCache")
 			gunCache.clear()
 		}

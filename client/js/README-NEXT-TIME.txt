@@ -1,6 +1,5 @@
 - Server selection
 	- Requires content packs to be done
 - Sockets
-- Fix fade
 - implement _anim
-- 
+- Rework some of the ui, mostly scaling
