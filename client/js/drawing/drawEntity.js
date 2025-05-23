@@ -1465,7 +1465,6 @@ let drawEntity = function () {
 	}
 
 	function handleAnimation(animInfo) {
-		return; // TODO: implement
 		if (_anims[animInfo.id] != undefined) {
 			switch (_anims[animInfo.id][0]) {
 				case 0: { // Surge
@@ -1675,7 +1674,6 @@ let drawEntity = function () {
 						const key = `${pColor}`
 						let grad = gradientCache.get(key)
 						if (grad === undefined) {
-							console.log("new")
 							grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
 							grad.addColorStop(0, pColor);
 							grad.addColorStop(1, `${pColor}00`);
@@ -1812,18 +1810,15 @@ let drawEntity = function () {
 				context.shadowOffsetY = 4;
 				break;
 		};
-		if (!source.guns.update) return;
-		source.guns.update()
+		source.guns?.update?.()
 		let renderColor = render.status.getColor(),
 			renderBlend = render.status.getBlend(),
 			finalColor = mixColors(getColor(instance.color), renderColor, renderBlend),
 			invulnTicker = instance.invuln && (Date.now() - instance.invuln) % 200 > 110;
 		if (invulnTicker) finalColor = mixColors(finalColor, color.vlgrey, .5);
-		context.lineWidth = Math.max(config.mininumBorderChunk, ratio * config.borderChunk);
+		context.lineWidth = ratio * config.borderChunk
 		if(scale < 1){ // big/messy mini-render fix
 			context.lineWidth *= scale
-		}else if(render.real === false){
-			context.lineWidth /= scale
 		}
 
 		// PROP RENDEIRNG - LAYER -2
@@ -1856,7 +1851,7 @@ let drawEntity = function () {
 					let ang = t.direction + t.angle + rot,
 						len = t.offset * drawSize;
 					source.turrets[i].lerpedFacing = lerpAngle(source.turrets[i].lerpedFacing || source.turrets[i].facing, source.turrets[i].facing, .15);
-					drawEntity(xx + len * Math.cos(ang), yy + len * Math.sin(ang), t, ratio, alpha, drawSize / ratio / t.size * t.sizeFactor, (source?.turrets?.[i]?.lerpedFacing || 0) + turretsObeyRot * rot, turretsObeyRot, context, source.turrets[i], render);
+					drawEntity(xx + len * Math.cos(ang), yy + len * Math.sin(ang), t, ratio, alpha, (drawSize / ratio / t.size * t.sizeFactor), (source?.turrets?.[i]?.lerpedFacing || 0) + turretsObeyRot * rot, turretsObeyRot, context, source.turrets[i], render);
 				}
 			}
 		} else throw new Error(`Mismatch turret number! Expected: ${m.turrets.length} Reality: ${source.turrets.length}`);
@@ -1941,8 +1936,8 @@ let drawEntity = function () {
 					guns: m.guns // Consider if only m.guns[i] (i.e., g) is needed by handleAnimation
 				});
 
-				const gunDrawLength = ((g.length / 2) * 100 | 0) / 100;
-				const gunDrawWidth = ((g.width / 2) * 100 | 0) / 100;
+				const gunDrawLength = ((g.length / 2) * 1000 | 0) / 1000;
+				const gunDrawWidth = ((g.width / 2) * 1000 | 0) / 1000;
 				//const pivotX = xx + drawSize * offsetX * cosAnglePlusRot;
 				//const pivotY = yy + drawSize * offsetY * sinAnglePlusRot;
 

@@ -5,7 +5,7 @@ let config = {
 	screenshotMode: 0,
 	borderChunk: 5,
 	barChunk: 5,
-	mininumBorderChunk: 3,
+	barStyle: "Circle",
 	darkBorders: 0,
 	rgbBorders: false,
 	noBorders: 0,

@@ -1,6 +1,5 @@
-import { global } from "./global.js"
+import { global, resizeEvent } from "./global.js"
 import { config } from "./config.js"
-import { resizeEvent } from "/js/util.js"
 import { themes, setColor, color } from "./colors.js";
 import { rewardManager } from "./achievements.js";
 
@@ -67,6 +66,7 @@ const initSettingsMenu = function () {
 		document.getElementById("Woomy_shaders").value = config.Woomy["Shader Casting"].value;
 		document.getElementById("Woomy_filter").value = config.Woomy["Filters"].value;
 		document.getElementById("Woomy_resolutionScale").value = config.Woomy["Resolution"].value;
+		document.getElementById("Woomy_barStyle").value = config.Woomy["Bar Style"].value;
 		document.getElementById("Woomy_fontFamily").value = config.Woomy["Font Family"].value;
 		let toggle = document.createElement("div");
 		toggle.id = "settings-button";
@@ -245,7 +245,7 @@ config.Woomy = (() => {
 	new Setting("tintedDamage", "Red Damage", "boolean", true);
 	new Setting("tintedHealth", "Tinted Health Bars", "boolean", true);
 	new Setting("coloredHealthBars", "Colored Health Bars", "boolean", false);
-	new Setting("shieldbars", "Split Health Bars", "boolean", true);
+	new Setting("shieldbars", "Split Health Bars", "boolean", false);
 	new Setting("roundUpgrades", "Round Upgrades", "boolean", false);
 	new Setting("disableMessages", "Disable Messages", "boolean", false);
 	new Setting("autoUpgrade", "Auto Level Up", "boolean", global.mobile);
@@ -271,16 +271,19 @@ config.Woomy = (() => {
 		}
 		setProperties(document.querySelector(":root").style);
 	});
-	new Setting("fontStrokeRatio", "Font Stroke Ratio", "number", 6);
-	new Setting("borderChunk", "Border Width", "number", 6);
-	new Setting("mininumBorderChunk", "Min Border Thickness", "number", 3);
-	new Setting("barChunk", "Bar Stroke Thickness", "number", 4.5);
+	new Setting("fontStrokeRatio", "Font Stroke Ratio", "number", 7);
+	new Setting("borderChunk", "Border Width", "number", 3.5);
+	new Setting("barChunk", "Bar Stroke Thickness", "number", 3);
 	new Setting("fontSizeBoost", "Font Size", "number", 10);
 	new Setting("fpsCap", "FPS Cap", "number", 45, value => {
 		global._fpscap = 1000 / Math.max(value, 1);
 		if (global._fpscap !== global._oldFpsCap) global._sendMessageToClient("Max FPS changed, it may take a few seconds to show any difference.");
 		if (value === 1) rewardManager.unlockAchievement("artificial_lag");
 		global._oldFpsCap = global._fpscap;
+	});
+	new Setting("barStyle", "Bar Style", "string", "Circle", resizeEvent, {
+		keys: ["Circle", "Square", "Triangle"],
+		suffix: ""
 	});
 	new Setting("resolutionScale", "Resolution", "string", "High (100%)", resizeEvent, {
 		keys: ["Very Low (35%)", "Low (50%)", "Medium (75%)", "High (100%)"],

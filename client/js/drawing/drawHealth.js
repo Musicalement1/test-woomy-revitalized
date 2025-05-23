@@ -26,9 +26,9 @@ function drawHealth(x, y, instance, ratio, alpha) {
 		realSize = size / m.size * m.realSize;
 	let health = instance.render.health.get(),
 		shield = instance.render.shield.get();
-	if (health < .999 || shield < .999) {
+	if (health < 1 || shield < 1) {
 		let yy = y + 1.1 * realSize + 22;
-		ctx.globalAlpha = alpha * alpha * fade;
+		ctx.globalAlpha = alpha * fade;
 		size *= 1.1;
 		let mixc = config.coloredHealthBars ? mixColors(getColor(instance.color), color.guiwhite, .5) : config.tintedHealth ? mixColors(color.lgreen, color.red, 1 - health) : color.lgreen;
 		if (config.shieldbars) {
@@ -36,7 +36,7 @@ function drawHealth(x, y, instance, ratio, alpha) {
 			if (shield) {
 				if (health > 0.01) drawBar(x - size, x - size + 2 * size * health, yy + 1.5, 3, mixc);
 				ctx.globalAlpha *= 0.7;
-				if (shield > 0.01) drawBar(x - size, x - size + 2 * size * shield, yy - 1.5, 3, config.coloredHealthBars ? mixColors(getColor(instance.color), color.guiwhite, .8) : color.teal);
+				if (shield > 0.01) drawBar(x - size, x - size + 2 * size * shield, yy - 1.5, 3, config.coloredHealthBars ? mixColors(getColor(instance.color), color.dgrey, .8) : color.dgrey);
 			} else {
 				if (health > 0.01) drawBar(x - size, x - size + 2 * size * health, yy, 4, mixc);
 			}
@@ -45,7 +45,7 @@ function drawHealth(x, y, instance, ratio, alpha) {
 			if (health > 0.01) drawBar(x - size, x - size + 2 * size * health, yy, 3, mixc);
 			if (shield) {
 				ctx.globalAlpha = (0.3 + shield * .3) * alpha * alpha * fade;
-				if (shield > 0.01) drawBar(x - size, x - size + 2 * size * shield, yy, 3, config.coloredHealthBars ? mixColors(getColor(instance.color), color.guiwhite, .8) : color.teal);
+				if (shield > 0.01) drawBar(x - size, x - size + 2 * size * shield, yy, 3, config.coloredHealthBars ? mixColors(getColor(instance.color), color.dgrey, .8) : color.dgrey);
 				ctx.globalAlpha = 1;
 			}
 		}

@@ -599,493 +599,6 @@ workerWindow.require = function (thing) {
                 }
             }
             break;
-        case "./lib/LZString":
-            return (function () {
-                // private property
-                var f = String.fromCharCode;
-                var keyStrBase64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-                var keyStrUriSafe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$";
-                var baseReverseDic = {};
-
-                function getBaseValue(alphabet, character) {
-                    if (!baseReverseDic[alphabet]) {
-                        baseReverseDic[alphabet] = {};
-                        for (var i = 0; i < alphabet.length; i++) {
-                            baseReverseDic[alphabet][alphabet.charAt(i)] = i;
-                        }
-                    }
-                    return baseReverseDic[alphabet][character];
-                }
-
-                var LZString = {
-                    compressToBase64: function (input) {
-                        if (input == null) return "";
-                        var res = LZString._compress(input, 6, function (a) { return keyStrBase64.charAt(a); });
-                        switch (res.length % 4) { // To produce valid Base64
-                            default: // When could this happen ?
-                            case 0: return res;
-                            case 1: return res + "===";
-                            case 2: return res + "==";
-                            case 3: return res + "=";
-                        }
-                    },
-
-                    decompressFromBase64: function (input) {
-                        if (input == null) return "";
-                        if (input == "") return null;
-                        return LZString._decompress(input.length, 32, function (index) { return getBaseValue(keyStrBase64, input.charAt(index)); });
-                    },
-
-                    compressToUTF16: function (input) {
-                        if (input == null) return "";
-                        return LZString._compress(input, 15, function (a) { return f(a + 32); }) + " ";
-                    },
-
-                    decompressFromUTF16: function (compressed) {
-                        if (compressed == null) return "";
-                        if (compressed == "") return null;
-                        return LZString._decompress(compressed.length, 16384, function (index) { return compressed.charCodeAt(index) - 32; });
-                    },
-
-                    //compress into uint8array (UCS-2 big endian format)
-                    compressToUint8Array: function (uncompressed) {
-                        var compressed = LZString.compress(uncompressed);
-                        var buf = new Uint8Array(compressed.length * 2); // 2 bytes per character
-
-                        for (var i = 0, TotalLen = compressed.length; i < TotalLen; i++) {
-                            var current_value = compressed.charCodeAt(i);
-                            buf[i * 2] = current_value >>> 8;
-                            buf[i * 2 + 1] = current_value % 256;
-                        }
-                        return buf;
-                    },
-
-                    //decompress from uint8array (UCS-2 big endian format)
-                    decompressFromUint8Array: function (compressed) {
-                        if (compressed === null || compressed === undefined) {
-                            return LZString.decompress(compressed);
-                        } else {
-                            var buf = new Array(compressed.length / 2); // 2 bytes per character
-                            for (var i = 0, TotalLen = buf.length; i < TotalLen; i++) {
-                                buf[i] = compressed[i * 2] * 256 + compressed[i * 2 + 1];
-                            }
-
-                            var result = [];
-                            buf.forEach(function (c) {
-                                result.push(f(c));
-                            });
-                            return LZString.decompress(result.join(''));
-
-                        }
-
-                    },
-
-
-                    //compress into a string that is already URI encoded
-                    compressToEncodedURIComponent: function (input) {
-                        if (input == null) return "";
-                        return LZString._compress(input, 6, function (a) { return keyStrUriSafe.charAt(a); });
-                    },
-
-                    //decompress from an output of compressToEncodedURIComponent
-                    decompressFromEncodedURIComponent: function (input) {
-                        if (input == null) return "";
-                        if (input == "") return null;
-                        input = input.replace(/ /g, "+");
-                        return LZString._decompress(input.length, 32, function (index) { return getBaseValue(keyStrUriSafe, input.charAt(index)); });
-                    },
-
-                    compress: function (uncompressed) {
-                        return LZString._compress(uncompressed, 16, function (a) { return f(a); });
-                    },
-                    _compress: function (uncompressed, bitsPerChar, getCharFromInt) {
-                        if (uncompressed == null) return "";
-                        var i, value,
-                            context_dictionary = {},
-                            context_dictionaryToCreate = {},
-                            context_c = "",
-                            context_wc = "",
-                            context_w = "",
-                            context_enlargeIn = 2, // Compensate for the first entry which should not count
-                            context_dictSize = 3,
-                            context_numBits = 2,
-                            context_data = [],
-                            context_data_val = 0,
-                            context_data_position = 0,
-                            ii;
-
-                        for (ii = 0; ii < uncompressed.length; ii += 1) {
-                            context_c = uncompressed.charAt(ii);
-                            if (!Object.prototype.hasOwnProperty.call(context_dictionary, context_c)) {
-                                context_dictionary[context_c] = context_dictSize++;
-                                context_dictionaryToCreate[context_c] = true;
-                            }
-
-                            context_wc = context_w + context_c;
-                            if (Object.prototype.hasOwnProperty.call(context_dictionary, context_wc)) {
-                                context_w = context_wc;
-                            } else {
-                                if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
-                                    if (context_w.charCodeAt(0) < 256) {
-                                        for (i = 0; i < context_numBits; i++) {
-                                            context_data_val = (context_data_val << 1);
-                                            if (context_data_position == bitsPerChar - 1) {
-                                                context_data_position = 0;
-                                                context_data.push(getCharFromInt(context_data_val));
-                                                context_data_val = 0;
-                                            } else {
-                                                context_data_position++;
-                                            }
-                                        }
-                                        value = context_w.charCodeAt(0);
-                                        for (i = 0; i < 8; i++) {
-                                            context_data_val = (context_data_val << 1) | (value & 1);
-                                            if (context_data_position == bitsPerChar - 1) {
-                                                context_data_position = 0;
-                                                context_data.push(getCharFromInt(context_data_val));
-                                                context_data_val = 0;
-                                            } else {
-                                                context_data_position++;
-                                            }
-                                            value = value >> 1;
-                                        }
-                                    } else {
-                                        value = 1;
-                                        for (i = 0; i < context_numBits; i++) {
-                                            context_data_val = (context_data_val << 1) | value;
-                                            if (context_data_position == bitsPerChar - 1) {
-                                                context_data_position = 0;
-                                                context_data.push(getCharFromInt(context_data_val));
-                                                context_data_val = 0;
-                                            } else {
-                                                context_data_position++;
-                                            }
-                                            value = 0;
-                                        }
-                                        value = context_w.charCodeAt(0);
-                                        for (i = 0; i < 16; i++) {
-                                            context_data_val = (context_data_val << 1) | (value & 1);
-                                            if (context_data_position == bitsPerChar - 1) {
-                                                context_data_position = 0;
-                                                context_data.push(getCharFromInt(context_data_val));
-                                                context_data_val = 0;
-                                            } else {
-                                                context_data_position++;
-                                            }
-                                            value = value >> 1;
-                                        }
-                                    }
-                                    context_enlargeIn--;
-                                    if (context_enlargeIn == 0) {
-                                        context_enlargeIn = Math.pow(2, context_numBits);
-                                        context_numBits++;
-                                    }
-                                    delete context_dictionaryToCreate[context_w];
-                                } else {
-                                    value = context_dictionary[context_w];
-                                    for (i = 0; i < context_numBits; i++) {
-                                        context_data_val = (context_data_val << 1) | (value & 1);
-                                        if (context_data_position == bitsPerChar - 1) {
-                                            context_data_position = 0;
-                                            context_data.push(getCharFromInt(context_data_val));
-                                            context_data_val = 0;
-                                        } else {
-                                            context_data_position++;
-                                        }
-                                        value = value >> 1;
-                                    }
-
-
-                                }
-                                context_enlargeIn--;
-                                if (context_enlargeIn == 0) {
-                                    context_enlargeIn = Math.pow(2, context_numBits);
-                                    context_numBits++;
-                                }
-                                // Add wc to the dictionary.
-                                context_dictionary[context_wc] = context_dictSize++;
-                                context_w = String(context_c);
-                            }
-                        }
-
-                        // Output the code for w.
-                        if (context_w !== "") {
-                            if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
-                                if (context_w.charCodeAt(0) < 256) {
-                                    for (i = 0; i < context_numBits; i++) {
-                                        context_data_val = (context_data_val << 1);
-                                        if (context_data_position == bitsPerChar - 1) {
-                                            context_data_position = 0;
-                                            context_data.push(getCharFromInt(context_data_val));
-                                            context_data_val = 0;
-                                        } else {
-                                            context_data_position++;
-                                        }
-                                    }
-                                    value = context_w.charCodeAt(0);
-                                    for (i = 0; i < 8; i++) {
-                                        context_data_val = (context_data_val << 1) | (value & 1);
-                                        if (context_data_position == bitsPerChar - 1) {
-                                            context_data_position = 0;
-                                            context_data.push(getCharFromInt(context_data_val));
-                                            context_data_val = 0;
-                                        } else {
-                                            context_data_position++;
-                                        }
-                                        value = value >> 1;
-                                    }
-                                } else {
-                                    value = 1;
-                                    for (i = 0; i < context_numBits; i++) {
-                                        context_data_val = (context_data_val << 1) | value;
-                                        if (context_data_position == bitsPerChar - 1) {
-                                            context_data_position = 0;
-                                            context_data.push(getCharFromInt(context_data_val));
-                                            context_data_val = 0;
-                                        } else {
-                                            context_data_position++;
-                                        }
-                                        value = 0;
-                                    }
-                                    value = context_w.charCodeAt(0);
-                                    for (i = 0; i < 16; i++) {
-                                        context_data_val = (context_data_val << 1) | (value & 1);
-                                        if (context_data_position == bitsPerChar - 1) {
-                                            context_data_position = 0;
-                                            context_data.push(getCharFromInt(context_data_val));
-                                            context_data_val = 0;
-                                        } else {
-                                            context_data_position++;
-                                        }
-                                        value = value >> 1;
-                                    }
-                                }
-                                context_enlargeIn--;
-                                if (context_enlargeIn == 0) {
-                                    context_enlargeIn = Math.pow(2, context_numBits);
-                                    context_numBits++;
-                                }
-                                delete context_dictionaryToCreate[context_w];
-                            } else {
-                                value = context_dictionary[context_w];
-                                for (i = 0; i < context_numBits; i++) {
-                                    context_data_val = (context_data_val << 1) | (value & 1);
-                                    if (context_data_position == bitsPerChar - 1) {
-                                        context_data_position = 0;
-                                        context_data.push(getCharFromInt(context_data_val));
-                                        context_data_val = 0;
-                                    } else {
-                                        context_data_position++;
-                                    }
-                                    value = value >> 1;
-                                }
-
-
-                            }
-                            context_enlargeIn--;
-                            if (context_enlargeIn == 0) {
-                                context_enlargeIn = Math.pow(2, context_numBits);
-                                context_numBits++;
-                            }
-                        }
-
-                        // Mark the end of the stream
-                        value = 2;
-                        for (i = 0; i < context_numBits; i++) {
-                            context_data_val = (context_data_val << 1) | (value & 1);
-                            if (context_data_position == bitsPerChar - 1) {
-                                context_data_position = 0;
-                                context_data.push(getCharFromInt(context_data_val));
-                                context_data_val = 0;
-                            } else {
-                                context_data_position++;
-                            }
-                            value = value >> 1;
-                        }
-
-                        // Flush the last char
-                        while (true) {
-                            context_data_val = (context_data_val << 1);
-                            if (context_data_position == bitsPerChar - 1) {
-                                context_data.push(getCharFromInt(context_data_val));
-                                break;
-                            }
-                            else context_data_position++;
-                        }
-                        return context_data.join('');
-                    },
-
-                    decompress: function (compressed) {
-                        if (compressed == null) return "";
-                        if (compressed == "") return null;
-                        return LZString._decompress(compressed.length, 32768, function (index) { return compressed.charCodeAt(index); });
-                    },
-
-                    _decompress: function (length, resetValue, getNextValue) {
-                        var dictionary = [],
-                            next,
-                            enlargeIn = 4,
-                            dictSize = 4,
-                            numBits = 3,
-                            entry = "",
-                            result = [],
-                            i,
-                            w,
-                            bits, resb, maxpower, power,
-                            c,
-                            data = { val: getNextValue(0), position: resetValue, index: 1 };
-
-                        for (i = 0; i < 3; i += 1) {
-                            dictionary[i] = i;
-                        }
-
-                        bits = 0;
-                        maxpower = Math.pow(2, 2);
-                        power = 1;
-                        while (power != maxpower) {
-                            resb = data.val & data.position;
-                            data.position >>= 1;
-                            if (data.position == 0) {
-                                data.position = resetValue;
-                                data.val = getNextValue(data.index++);
-                            }
-                            bits |= (resb > 0 ? 1 : 0) * power;
-                            power <<= 1;
-                        }
-
-                        switch (next = bits) {
-                            case 0:
-                                bits = 0;
-                                maxpower = Math.pow(2, 8);
-                                power = 1;
-                                while (power != maxpower) {
-                                    resb = data.val & data.position;
-                                    data.position >>= 1;
-                                    if (data.position == 0) {
-                                        data.position = resetValue;
-                                        data.val = getNextValue(data.index++);
-                                    }
-                                    bits |= (resb > 0 ? 1 : 0) * power;
-                                    power <<= 1;
-                                }
-                                c = f(bits);
-                                break;
-                            case 1:
-                                bits = 0;
-                                maxpower = Math.pow(2, 16);
-                                power = 1;
-                                while (power != maxpower) {
-                                    resb = data.val & data.position;
-                                    data.position >>= 1;
-                                    if (data.position == 0) {
-                                        data.position = resetValue;
-                                        data.val = getNextValue(data.index++);
-                                    }
-                                    bits |= (resb > 0 ? 1 : 0) * power;
-                                    power <<= 1;
-                                }
-                                c = f(bits);
-                                break;
-                            case 2:
-                                return "";
-                        }
-                        dictionary[3] = c;
-                        w = c;
-                        result.push(c);
-                        while (true) {
-                            if (data.index > length) {
-                                return "";
-                            }
-
-                            bits = 0;
-                            maxpower = Math.pow(2, numBits);
-                            power = 1;
-                            while (power != maxpower) {
-                                resb = data.val & data.position;
-                                data.position >>= 1;
-                                if (data.position == 0) {
-                                    data.position = resetValue;
-                                    data.val = getNextValue(data.index++);
-                                }
-                                bits |= (resb > 0 ? 1 : 0) * power;
-                                power <<= 1;
-                            }
-
-                            switch (c = bits) {
-                                case 0:
-                                    bits = 0;
-                                    maxpower = Math.pow(2, 8);
-                                    power = 1;
-                                    while (power != maxpower) {
-                                        resb = data.val & data.position;
-                                        data.position >>= 1;
-                                        if (data.position == 0) {
-                                            data.position = resetValue;
-                                            data.val = getNextValue(data.index++);
-                                        }
-                                        bits |= (resb > 0 ? 1 : 0) * power;
-                                        power <<= 1;
-                                    }
-
-                                    dictionary[dictSize++] = f(bits);
-                                    c = dictSize - 1;
-                                    enlargeIn--;
-                                    break;
-                                case 1:
-                                    bits = 0;
-                                    maxpower = Math.pow(2, 16);
-                                    power = 1;
-                                    while (power != maxpower) {
-                                        resb = data.val & data.position;
-                                        data.position >>= 1;
-                                        if (data.position == 0) {
-                                            data.position = resetValue;
-                                            data.val = getNextValue(data.index++);
-                                        }
-                                        bits |= (resb > 0 ? 1 : 0) * power;
-                                        power <<= 1;
-                                    }
-                                    dictionary[dictSize++] = f(bits);
-                                    c = dictSize - 1;
-                                    enlargeIn--;
-                                    break;
-                                case 2:
-                                    return result.join('');
-                            }
-
-                            if (enlargeIn == 0) {
-                                enlargeIn = Math.pow(2, numBits);
-                                numBits++;
-                            }
-
-                            if (dictionary[c]) {
-                                entry = dictionary[c];
-                            } else {
-                                if (c === dictSize) {
-                                    entry = w + w.charAt(0);
-                                } else {
-                                    return null;
-                                }
-                            }
-                            result.push(entry);
-
-                            // Add w+entry[0] to the dictionary.
-                            dictionary[dictSize++] = w + entry.charAt(0);
-                            enlargeIn--;
-
-                            w = entry;
-
-                            if (enlargeIn == 0) {
-                                enlargeIn = Math.pow(2, numBits);
-                                numBits++;
-                            }
-
-                        }
-                    }
-                };
-                return LZString;
-            })()
-            break;
         case "./lib/fasttalk":
             const u32 = new Uint32Array(1),
                 c32 = new Uint8Array(u32.buffer),
@@ -1368,7 +881,7 @@ workerWindow.require = function (thing) {
 // THE SERVER //
 
 async function startServer(configSuffix, serverGamemode, defExports) {
-    configSuffix = "4tdm.json" // TODO: make not always 4tdm
+    configSuffix = "blackout4tdm.json" // TODO: make not always 4tdm
     /*jslint node: true */
     /*jshint -W061 */
     /*global Map*/
@@ -1807,7 +1320,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
     }
 
     let apiJs = getApiJazz();
-    ((r, e) => { "function" == typeof define && define.amd ? define([], e) : "object" == typeof module && module.exports ? module.exports = e() : r.fuzzysort = e() })(this, r => { "use strict"; var i, o, e, a, f = r => { var e = v(r = "string" != typeof r ? "" : r); return { target: r, t: e.i, o: e.v, u: N, l: e.g, score: N, _: [0], obj: N } }, t = r => { r = (r = "string" != typeof r ? "" : r).trim(); var e = v(r), a = []; if (e.p) for (var f, t = r.split(/\s+/), t = [...new Set(t)], n = 0; n < t.length; n++)"" !== t[n] && (f = v(t[n]), a.push({ v: f.v, i: t[n].toLowerCase(), p: !1 })); return { v: e.v, g: e.g, p: e.p, i: e.i, h: a } }, M = r => { var e; return 999 < r.length ? f(r) : (void 0 === (e = n.get(r)) && (e = f(r), n.set(r, e)), e) }, q = r => { var e; return 999 < r.length ? t(r) : (void 0 === (e = s.get(r)) && (e = t(r), s.set(r, e)), e) }, D = (r, e, a = !1) => { if (!1 === a && r.p) return j(r, e); for (var a = r.i, f = r.v, t = f[0], n = e.o, i = f.length, o = n.length, v = 0, s = 0, u = 0; ;) { if (t === n[s]) { if (C[u++] = s, ++v === i) break; t = f[v] } if (o <= ++s) return N } var v = 0, l = !1, g = 0, d = e.u, c = (d === N && (d = e.u = k(e.target)), s = 0 === C[0] ? 0 : d[C[0] - 1], 0); if (s !== o) for (; ;)if (o <= s) { if (v <= 0) break; if (200 < ++c) break; --v; s = d[L[--g]] } else if (f[v] === n[s]) { if (L[g++] = s, ++v === i) { l = !0; break } ++s } else s = d[s]; var w = e.t.indexOf(a, C[0]), r = ~w; if (r && !l) for (var _ = 0; _ < u; ++_)C[_] = w + _; a = !1; r && (a = e.u[w - 1] === w); p = l ? (b = L, g) : (b = C, u); for (var b, p, x = 0, h = 0, _ = 1; _ < i; ++_)b[_] - b[_ - 1] != 1 && (x -= b[_], ++h); if (x -= (12 + (b[i - 1] - b[0] - (i - 1))) * h, 0 !== b[0] && (x -= b[0] * b[0] * .2), l) { for (var y = 1, _ = d[0]; _ < o; _ = d[_])++y; 24 < y && (x *= 10 * (y - 24)) } else x *= 1e3; r && (x /= 1 + i * i * 1), a && (x /= 1 + i * i * 1), e.score = x -= o - i; for (_ = 0; _ < p; ++_)e._[_] = b[_]; return e._.j = p, e }, j = (r, e) => { for (var a = new Set, f = 0, t = N, n = 0, i = r.h, o = 0; o < i.length; ++o) { var v = i[o]; if ((t = D(v, e)) === N) return N; f += t.score, t._[0] < n && (f -= n - t._[0]); for (var n = t._[0], s = 0; s < t._.j; ++s)a.add(t._[s]) } r = D(r, e, !0); if (r !== N && r.score > f) return r; t.score = f; var u, o = 0; for (u of a) t._[o++] = u; return t._.j = o, t }, v = r => { for (var e = r.length, a = r.toLowerCase(), f = [], t = 0, n = !1, i = 0; i < e; ++i) { var o = f[i] = a.charCodeAt(i); 32 === o ? n = !0 : t |= 1 << (97 <= o && o <= 122 ? o - 97 : 48 <= o && o <= 57 ? 26 : o <= 127 ? 30 : 31) } return { v: f, g: t, p: n, i: a } }, k = r => { for (var e = r.length, a = (r => { for (var e = r.length, a = [], f = 0, t = !1, n = !1, i = 0; i < e; ++i) { var o = r.charCodeAt(i), v = 65 <= o && o <= 90, o = v || 97 <= o && o <= 122 || 48 <= o && o <= 57, s = v && !t || !n || !o, t = v, n = o; s && (a[f++] = i) } return a })(r), f = [], t = a[0], n = 0, i = 0; i < e; ++i)i < t ? f[i] = t : (t = a[++n], f[i] = void 0 === t ? e : t); return f }, n = new Map, s = new Map, C = [], L = [], E = r => { for (var e = J, a = r.length, f = 0; f < a; ++f) { var t = r[f]; t !== N && e < (t = t.score) && (e = t) } return e === J ? N : e }, F = (r, e) => { var a = r[e]; if (void 0 !== a) return a; for (var f = e, t = (f = Array.isArray(e) ? f : e.split(".")).length, n = -1; r && ++n < t;)r = r[f[n]]; return r }, G = r => "object" == typeof r, H = 1 / 0, J = -H, K = [], N = null, O = (i = [], o = K.total = 0, a = r => { for (var e = i[t = 0], a = 1; a < o;) { var f = a + 1, t = a; f < o && i[f].score < i[a].score && (t = f), i[t - 1 >> 1] = i[t], a = 1 + (t << 1) } for (var n = t - 1 >> 1; 0 < t && e.score < i[n].score; n = (t = n) - 1 >> 1)i[t] = i[n]; i[t] = e }, (e = {}).add = r => { var e = o; i[o++] = r; for (var a = e - 1 >> 1; 0 < e && r.score < i[a].score; a = (e = a) - 1 >> 1)i[e] = i[a]; i[e] = r }, e.k = r => { var e; if (0 !== o) return e = i[0], i[0] = i[--o], a(), e }, e.C = r => { if (0 !== o) return i[0] }, e.L = r => { i[0] = r, a() }, e); return { single: (r, e) => { var a; return "farzher" == r ? { target: "farzher was here (^-^*)/", score: 0, _: [0] } : !r || !e || (r = q(r), G(e) || (e = M(e)), ((a = r.g) & e.l) !== a) ? N : D(r, e) }, go: (r, e, a) => { if ("farzher" == r) return [{ target: "farzher was here (^-^*)/", score: 0, _: [0], obj: e ? e[0] : N }]; if (!r) if (a && a.all) { var f = e; var t = a; var n = [], i = (n.total = f.length, t && t.limit || H); if (t && t.key) for (var o = 0; o < f.length; o++) { var v = f[o]; var s = F(v, t.key); if (!s) continue; if (!G(s)) s = M(s); s.score = J; s._.j = 0; var u = s; u = { target: u.target, t: "", o: N, u: N, l: 0, score: s.score, _: N, obj: v }; n.push(u); if (n.length >= i) return n } else if (t && t.keys) for (o = 0; o < f.length; o++) { v = f[o]; var l = new Array(t.keys.length); for (var g = t.keys.length - 1; g >= 0; --g) { s = F(v, t.keys[g]); if (!s) { l[g] = N; continue } if (!G(s)) s = M(s); s.score = J; s._.j = 0; l[g] = s } l.obj = v; l.score = J; n.push(l); if (n.length >= i) return n } else for (o = 0; o < f.length; o++) { s = f[o]; if (!s) continue; if (!G(s)) s = M(s); s.score = J; s._.j = 0; n.push(s); if (n.length >= i) return n } return n; return } else return K; var d = q(r), c = d.g, w = (d.p, a && a.threshold || J), _ = a && a.limit || H, b = 0, p = 0, x = e.length; if (a && a.key) for (var h = a.key, y = 0; y < x; ++y) { var j = e[y]; !(m = F(j, h)) || (c & (m = G(m) ? m : M(m)).l) !== c || (B = D(d, m)) === N || B.score < w || (B = { target: B.target, t: "", o: N, u: N, l: 0, score: B.score, _: B._, obj: j }, b < _ ? (O.add(B), ++b) : (++p, B.score > O.C().score && O.L(B))) } else if (a && a.keys) for (var k = a.scoreFn || E, C = a.keys, L = C.length, y = 0; y < x; ++y) { for (var j = e[y], S = new Array(L), z = 0; z < L; ++z) { h = C[z]; (m = F(j, h)) ? (c & (m = G(m) ? m : M(m)).l) !== c ? S[z] = N : S[z] = D(d, m) : S[z] = N } S.obj = j; var A = k(S); A === N || A < w || (S.score = A, b < _ ? (O.add(S), ++b) : (++p, A > O.C().score && O.L(S))) } else for (var m, B, y = 0; y < x; ++y)!(m = e[y]) || (c & (m = G(m) ? m : M(m)).l) !== c || (B = D(d, m)) === N || B.score < w || (b < _ ? (O.add(B), ++b) : (++p, B.score > O.C().score && O.L(B))); if (0 === b) return K; for (var I = new Array(b), y = b - 1; 0 <= y; --y)I[y] = O.k(); return I.total = b + p, I }, highlight: (r, e, a) => { if ("function" == typeof e) { var f = e; if ((l = r) === N) return N; for (var t = l.target, n = t.length, i = (i = l._).slice(0, i.j).sort((r, e) => r - e), o = "", v = 0, s = 0, u = !1, l = [], g = 0; g < n; ++g) { var d = t[g]; if (i[s] === g) { if (++s, u || (u = !0, l.push(o), o = ""), s === i.length) { o += d, l.push(f(o, v++)), o = "", l.push(t.substr(g + 1)); break } } else u && (u = !1, l.push(f(o, v++)), o = ""); o += d } return l } if (r === N) return N; void 0 === e && (e = "<b>"), void 0 === a && (a = "</b>"); for (var c = "", w = 0, _ = !1, b = r.target, p = b.length, x = (x = r._).slice(0, x.j).sort((r, e) => r - e), h = 0; h < p; ++h) { var y = b[h]; if (x[w] === h) { if (_ || (_ = !0, c += e), ++w === x.length) { c += y + a + b.substr(h + 1); break } } else _ && (_ = !1, c += a); c += y } return c }, prepare: f, indexes: r => r._.slice(0, r._.j).sort((r, e) => r - e), cleanup: () => { n.clear(), s.clear(), C = [], L = [] } } });
     let api = apiJs.getApiStuff()
     let forcedProfile = false;
     api.apiEvent.on("forcedProfile", (data) => {
@@ -1831,7 +1343,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
     (async () => {
         //const WASMModule = await loadWASM();
 
-        //"use strict";
         let serverPrefix;
         //global.c = require("./configs/sterilize.js")(`config`),
         api = await apiJs.connectToApi(/*c*/)
@@ -1868,7 +1379,7 @@ async function startServer(configSuffix, serverGamemode, defExports) {
             "BETA": 0,
             "networkFrontlog": 1,
             "networkFallbackTime": 150,
-            "visibleListInterval": 60,
+            "visibleListInterval": 40,
             "gameSpeed": 1,
             "runSpeed": 1.75,
             "maxHeartbeatInterval": 1000,
@@ -2125,7 +1636,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
         webhooks.log("Server initializing!");
         const defsPrefix = "";//process.argv[3] || "";
         const ran = require("./lib/random");
-        const LZString = require("./lib/LZString");
         global.sandboxRooms = [];
         Array.prototype.remove = index => {
             if (index === this.length - 1) return this.pop();
@@ -2482,393 +1992,492 @@ async function startServer(configSuffix, serverGamemode, defExports) {
             }
         }
 
-        function newMockups() {
+function newMockups() {
+    // Pre-calculate constants
+    const PI = Math.PI;
+    const PI2 = PI * 2;
+    
+    // Defaults applied to every mockup
+    const defaults = {
+        x: 0,
+        y: 0,
+        color: 16,
+        shape: 0,
+        size: 1,
+        realSize: 1,
+        facing: 0,
+        layer: 0,
+        statnames: 0,
+        defaultArrayLength: 0,
+        aspect: 1,
+        skin: 0,
+        colorUnmix: 0,
+        angle: 0
+    };
 
-            // Defaults
-            // Applied to every mockup, adds the value if its missing
-            const defaults = {
-                x: 0,
-                y: 0,
-                color: 16,
-                shape: 0,
-                size: 1,
-                realSize: 1,
-                facing: 0,
-                layer: 0,
-                statnames: 0,
-                defaultArrayLength: 0,
-                aspect: 1,
-                skin: 0,
-                colorUnmix: 0,
-                angle: 0
-            };
+    // Pre-calculate real sizes for polygons
+    const lazyRealSizes = (() => {
+        const sizes = [1, 1, 1];
+        for (let i = 3; i < 17; i++) {
+            sizes.push(Math.sqrt((PI2 / i) * (1 / Math.sin(PI2 / i))));
+        }
+        return sizes;
+    })();
 
-            function applyDefaults(mockup) {
-                for (const key in mockup) {
-                    if (defaults[key] != null) {
-                        if (mockup[key] == defaults[key] || mockup[key] == null) {
-                            delete mockup[key];
-                        }
-                    } else if (Array.isArray(mockup[key]) && mockup[key].length === defaults.defaultArrayLength) {
-                        delete mockup[key];
-                    }
+    // Priority Queue implementation for efficient sorting
+    class PriorityQueue {
+        constructor() {
+            this.array = [];
+            this.sorted = true;
+        }
+        
+        enqueue(priority, item) {
+            this.array.push([priority, item]);
+            this.sorted = false;
+        }
+        
+        dequeue() {
+            if (!this.sorted) {
+                this.array.sort((a, b) => b[0] - a[0]);
+                this.sorted = true;
+            }
+            if (this.array.length === 0) return null;
+            return this.array.pop()[1];
+        }
+        
+        get length() {
+            return this.array.length;
+        }
+    }
+
+    // Helper function to round values and remove near-zero values
+    function rounder(val) {
+        return Math.abs(val) < 0.001 ? 0 : +val.toPrecision(12);
+    }
+
+    // Apply defaults to mockup objects by removing default values
+    function applyDefaults(mockup) {
+        // Process main mockup properties
+        for (const key in mockup) {
+            if (defaults[key] != null) {
+                if (mockup[key] === defaults[key] || mockup[key] == null) {
+                    delete mockup[key];
                 }
-                (mockup.guns || []).forEach(gun => {
-                    for (const key in gun) {
-                        if (defaults[key] != null) {
-                            if (gun[key] == defaults[key] || gun[key] == null) {
-                                delete gun[key];
-                            }
-                        } else if (Array.isArray(mockup[key]) && gun[key].length === defaults.defaultArrayLength) {
+            } else if (Array.isArray(mockup[key]) && mockup[key].length === defaults.defaultArrayLength) {
+                delete mockup[key];
+            }
+        }
+        
+        // Process gun properties
+        const guns = mockup.guns;
+        if (guns) {
+            for (let i = 0; i < guns.length; i++) {
+                const gun = guns[i];
+                for (const key in gun) {
+                    if (defaults[key] != null) {
+                        if (gun[key] === defaults[key] || gun[key] == null) {
                             delete gun[key];
                         }
-                    }
-                });
-                return mockup;
-            }
-
-
-            // Parsing
-            // Parses the mockups
-            class PriorityQueue {
-                constructor() {
-                    this.clear();
-                }
-                clear() {
-                    this.array = [];
-                    this.sorted = true;
-                }
-                enqueue(priority, to) {
-                    this.array.push([priority, to]);
-                    this.sorted = false;
-                }
-                dequeue() {
-                    if (!this.sorted) {
-                        this.array.sort((a, b) => b[0] - a[0]);
-                        this.sorted = true;
-                    }
-                    return this.array.pop()[1];
-                }
-                getCount() {
-                    return this.array.length;
-                }
-            }
-            function rounder(val) {
-                if (Math.abs(val) < 0.001) val = 0;
-                return +val.toPrecision();
-            }
-            const parseMockup = (e, p) => {
-                return {
-                    index: e.index,
-                    name: e.label,
-                    x: rounder(e.x),
-                    y: rounder(e.y),
-                    color: e.color,
-                    shape: e.shapeData || 0,
-                    size: rounder(e.size),
-                    realSize: rounder(e.realSize),
-                    facing: rounder(e.facing),
-                    layer: e.layer,
-                    statnames: e.settings.skillNames,
-                    position: p,
-                    upgrades: e.upgrades.map(r => ({
-                        tier: r.tier,
-                        index: r.index
-                    })),
-                    guns: e.guns.map(g => {
-                        return {
-                            offset: rounder(g.offset),
-                            direction: rounder(g.direction),
-                            length: rounder(g.length),
-                            width: rounder(g.width),
-                            aspect: rounder(g.aspect),
-                            angle: rounder(g.angle),
-                            color: rounder(g.color),
-                            skin: rounder(g.skin),
-                            color_unmix: rounder(g.color_unmix),
-                            alpha: g.alpha
-                        };
-                    }),
-                    turrets: e.turrets.map(t => {
-                        let out = parseMockup(t, {});
-                        out.sizeFactor = rounder(t.bound.size);
-                        out.offset = rounder(t.bound.offset);
-                        out.direction = rounder(t.bound.direction);
-                        out.layer = rounder(t.bound.layer);
-                        out.angle = rounder(t.bound.angle);
-                        return applyDefaults(out);
-                    }),
-                    lasers: e.lasers.map(l => {
-                        return {
-                            offset: rounder(l.offset),
-                            direction: rounder(l.direction),
-                            length: rounder(l.length),
-                            width: rounder(l.width),
-                            aspect: rounder(l.aspect),
-                            angle: rounder(l.angle),
-                            color: rounder(l.color),
-                            laserWidth: rounder(l.laserWidth)
-                        };
-                    }),
-                    props: e.props.map(p => {
-                        return {
-                            size: rounder(p.size),
-                            x: rounder(p.x),
-                            y: rounder(p.y),
-                            angle: rounder(p.angle),
-                            layer: rounder(p.layer),
-                            color: rounder(p.color),
-                            shape: p.shape,
-                            fill: p.fill,
-                            loop: p.loop,
-                            isAura: p.isAura,
-                            rpm: p.rpm,
-                            specific: p.specific,
-                            dip: p.dip,
-                            ring: p.ring,
-                            arclen: p.arclen
-                        };
-                    })
-                };
-            };
-
-            // Unknown
-            // I think this is what generates the upgrade icon data although im not sure
-            const lazyRealSizes = (() => {
-                let o = [1, 1, 1];
-                for (let i = 3; i < 17; i++) {
-                    // We say that the real size of a 0-gon, 1-gon, 2-gon is one, then push the real sizes of triangles, squares, etc...
-                    o.push(Math.sqrt((2 * Math.PI / i) * (1 / Math.sin(2 * Math.PI / i))));
-                }
-                return o;
-            })();
-            function getDimensions(entities) {
-                let endpoints = [];
-                let pointDisplay = [];
-                let pushEndpoints = function (model, scale, focus = {
-                    x: 0,
-                    y: 0
-                }, rot = 0) {
-                    let s = Math.abs(model.shape);
-                    let z = (Math.abs(s) > lazyRealSizes.length) ? 1 : lazyRealSizes[Math.abs(s)];
-                    if (z === 1) { // Body (octagon if circle)
-                        for (let i = 0; i < 2; i += 0.5) {
-                            endpoints.push({
-                                x: focus.x + scale * Math.cos(i * Math.PI),
-                                y: focus.y + scale * Math.sin(i * Math.PI)
-                            });
-                        }
-                    } else { // Body (otherwise vertices)
-                        for (let i = (s % 2) ? 0 : Math.PI / s; i < s; i++) {
-                            let theta = (i / s) * 2 * Math.PI;
-                            endpoints.push({
-                                x: focus.x + scale * z * Math.cos(theta),
-                                y: focus.y + scale * z * Math.sin(theta)
-                            });
-                        }
-                    }
-                    for (let i = 0; i < model.guns.length; i++) {
-                        let gun = model.guns[i];
-                        let h = gun.aspect > 0 ? ((scale * gun.width) / 2) * gun.aspect : (scale * gun.width) / 2;
-                        let r = Math.atan2(h, scale * gun.length) + rot;
-                        let l = Math.sqrt(scale * scale * gun.length * gun.length + h * h);
-                        let x = focus.x + scale * gun.offset * Math.cos(gun.direction + gun.angle + rot);
-                        let y = focus.y + scale * gun.offset * Math.sin(gun.direction + gun.angle + rot);
-                        endpoints.push({
-                            x: x + l * Math.cos(gun.angle + r),
-                            y: y + l * Math.sin(gun.angle + r)
-                        });
-                        endpoints.push({
-                            x: x + l * Math.cos(gun.angle - r),
-                            y: y + l * Math.sin(gun.angle - r)
-                        });
-                        pointDisplay.push({
-                            x: x + l * Math.cos(gun.angle + r),
-                            y: y + l * Math.sin(gun.angle + r)
-                        });
-                        pointDisplay.push({
-                            x: x + l * Math.cos(gun.angle - r),
-                            y: y + l * Math.sin(gun.angle - r)
-                        });
-                    }
-                    for (let i = 0; i < model.turrets.length; i++) {
-                        let turret = model.turrets[i];
-                        pushEndpoints(turret, turret.bound.size, {
-                            x: turret.bound.offset * Math.cos(turret.bound.angle),
-                            y: turret.bound.offset * Math.sin(turret.bound.angle)
-                        }, turret.bound.angle);
-                    }
-                };
-                pushEndpoints(entities, 1);
-                // 2) Find their mass center
-                let massCenter = {
-                    x: 0,
-                    y: 0
-                };
-                // 3) Choose three different points (hopefully ones very far from each other)
-                let chooseFurthestAndRemove = function (furthestFrom) {
-                    let index = 0;
-                    if (furthestFrom != -1) {
-                        let list = new PriorityQueue();
-                        let d;
-                        for (let i = 0; i < endpoints.length; i++) {
-                            let thisPoint = endpoints[i];
-                            d = Math.pow(thisPoint.x - furthestFrom.x, 2) + Math.pow(thisPoint.y - furthestFrom.y, 2) + 1;
-                            list.enqueue(1 / d, i);
-                        }
-                        index = list.dequeue();
-                    }
-                    let output = endpoints[index];
-                    endpoints.splice(index, 1);
-                    return output;
-                };
-                let point1 = chooseFurthestAndRemove(massCenter);
-                let point2 = chooseFurthestAndRemove(point1);
-                let chooseBiggestTriangleAndRemove = function (point1, point2) {
-                    let list = new PriorityQueue();
-                    let index = 0;
-                    let a;
-                    for (let i = 0; i < endpoints.length; i++) {
-                        let thisPoint = endpoints[i];
-                        a = Math.pow(thisPoint.x - point1.x, 2) + Math.pow(thisPoint.y - point1.y, 2) + Math.pow(thisPoint.x - point2.x, 2) + Math.pow(thisPoint.y - point2.y, 2);
-                        list.enqueue(1 / a, i);
-                    }
-                    index = list.dequeue();
-                    let output = endpoints[index];
-                    endpoints.splice(index, 1);
-                    return output;
-                };
-                let point3 = chooseBiggestTriangleAndRemove(point1, point2);
-                // 4) Define our first enclosing circle as the one which seperates these three furthest points
-                function circleOfThreePoints(p1, p2, p3) {
-                    let x1 = p1.x;
-                    let y1 = p1.y;
-                    let x2 = p2.x;
-                    let y2 = p2.y;
-                    let x3 = p3.x;
-                    let y3 = p3.y;
-                    let denom = x1 * (y2 - y3) - y1 * (x2 - x3) + x2 * y3 - x3 * y2;
-                    let xy1 = x1 * x1 + y1 * y1;
-                    let xy2 = x2 * x2 + y2 * y2;
-                    let xy3 = x3 * x3 + y3 * y3;
-                    let x = (xy1 * (y2 - y3) + xy2 * (y3 - y1) + xy3 * (y1 - y2)) / (2 * denom);
-                    let y = (xy1 * (x3 - x2) + xy2 * (x1 - x3) + xy3 * (x2 - x1)) / (2 * denom);
-                    let r = Math.sqrt(Math.pow(x - x1, 2) + Math.pow(y - y1, 2));
-                    let r2 = Math.sqrt(Math.pow(x - x2, 2) + Math.pow(y - y2, 2));
-                    let r3 = Math.sqrt(Math.pow(x - x3, 2) + Math.pow(y - y3, 2));
-                    //if (r != r2 || r != r3) util.log("Something is up with the mockups generation!");
-                    return {
-                        x: isNaN(x) ? 0 : x,
-                        y: isNaN(y) ? 0 : y,
-                        radius: isNaN(r) ? 1 : r
-                    };
-                }
-                let c = circleOfThreePoints(point1, point2, point3);
-                pointDisplay = [{
-                    x: rounder(point1.x),
-                    y: rounder(point1.y),
-                }, {
-                    x: rounder(point2.x),
-                    y: rounder(point2.y),
-                }, {
-                    x: rounder(point3.x),
-                    y: rounder(point3.y),
-                }];
-                let centerOfCircle = {
-                    x: c.x,
-                    y: c.y
-                };
-                let radiusOfCircle = c.radius;
-                // 5) Check to see if we enclosed everything
-                function checkingFunction() {
-                    for (let i = endpoints.length; i > 0; i--) {
-                        // Select the one furthest from the center of our circle and remove it
-                        point1 = chooseFurthestAndRemove(centerOfCircle);
-                        let vectorFromPointToCircleCenter = new Vector(centerOfCircle.x - point1.x, centerOfCircle.y - point1.y);
-                        // 6) If we're still outside of this circle build a new circle which encloses the old circle and the new point
-                        if (vectorFromPointToCircleCenter.length > radiusOfCircle) {
-                            pointDisplay.push({
-                                x: rounder(point1.x),
-                                y: rounder(point1.y)
-                            });
-                            // Define our new point as the far side of the cirle
-                            let dir = vectorFromPointToCircleCenter.direction;
-                            point2 = {
-                                x: centerOfCircle.x + radiusOfCircle * Math.cos(dir),
-                                y: centerOfCircle.y + radiusOfCircle * Math.sin(dir)
-                            };
-                            break;
-                        }
-                    }
-                    // False if we checked everything, true if we didn't
-                    return !!endpoints.length;
-                }
-                while (checkingFunction()) { // 7) Repeat until we enclose everything
-                    centerOfCircle = {
-                        x: (point1.x + point2.x) / 2,
-                        y: (point1.y + point2.y) / 2,
-                    };
-                    radiusOfCircle = Math.sqrt(Math.pow(point1.x - point2.x, 2) + Math.pow(point1.y - point2.y, 2)) / 2;
-                }
-                // 8) Since this algorithm isn't perfect but we know our shapes are bilaterally symmetrical, we bind this circle along the x-axis to make it behave better
-                return {
-                    middle: {
-                        x: rounder(centerOfCircle.x),
-                        y: 0
-                    },
-                    axis: rounder(radiusOfCircle * 2),
-                    points: pointDisplay,
-                };
-            }
-
-            // Mockup Generator
-            // Generates the actual mockup info
-            let cachedMockups = new Map()
-            return {
-                getMockup: function (entityIndex, skipCacheCheck) {
-                    // If we already made the mockup return the cached version
-                    if (!skipCacheCheck) {
-                        let cachedValue = cachedMockups.get(entityIndex)
-                        if (cachedValue) {
-                            return cachedValue
-                        }
-                    }
-
-                    // Make the mockup
-                    let classString = `${entityIndex} (entity index)`;
-                    try {
-                        classString = exportNames[entityIndex]
-                        if (!classString) {
-                            return ""
-                        }
-                        let o = new Entity({
-                            x: 0,
-                            y: 0
-                        });
-                        let temp = Class[classString];
-
-                        o.upgrades = [];
-                        o.settings.skillNames = null;
-                        o.minimalReset();
-                        o.minimalDefine(temp);
-                        o.name = temp.LABEL;
-                        temp.mockup = {
-                            body: o.camera(true),
-                            position: getDimensions(o)
-                        };
-                        temp.mockup.body.position = temp.mockup.position;
-                        let mockup = applyDefaults(parseMockup(o, temp.mockup.position));
-                        cachedMockups.set(entityIndex, mockup)
-                        o.destroy();
-                        purgeEntities();
-                        return mockup
-                    } catch (err) {
-                        console.error("ERROR WHILE GENERATING MOCKUP: " + classString)
-                        console.error(err)
+                    } else if (Array.isArray(gun[key]) && gun[key].length === defaults.defaultArrayLength) {
+                        delete gun[key];
                     }
                 }
             }
         }
+        
+        return mockup;
+    }
+
+    // Parse entity to mockup object
+    function parseMockup(e, p) {
+        const mockup = {
+            index: e.index,
+            name: e.label,
+            x: rounder(e.x),
+            y: rounder(e.y),
+            color: e.color,
+            shape: e.shapeData || 0,
+            size: rounder(e.size),
+            realSize: rounder(e.realSize),
+            facing: rounder(e.facing),
+            layer: e.layer,
+            statnames: e.settings.skillNames,
+            position: p,
+            upgrades: e.upgrades.map(r => ({
+                tier: r.tier,
+                index: r.index
+            })),
+            guns: e.guns.map(g => ({
+                offset: rounder(g.offset),
+                direction: rounder(g.direction),
+                length: rounder(g.length),
+                width: rounder(g.width),
+                aspect: rounder(g.aspect),
+                angle: rounder(g.angle),
+                color: rounder(g.color),
+                skin: rounder(g.skin),
+                color_unmix: rounder(g.color_unmix),
+                alpha: g.alpha
+            })),
+            turrets: e.turrets.map(t => {
+                const out = parseMockup(t, {});
+                out.sizeFactor = rounder(t.bound.size);
+                out.offset = rounder(t.bound.offset);
+                out.direction = rounder(t.bound.direction);
+                out.layer = rounder(t.bound.layer);
+                out.angle = rounder(t.bound.angle);
+                return applyDefaults(out);
+            }),
+            lasers: e.lasers.map(l => ({
+                offset: rounder(l.offset),
+                direction: rounder(l.direction),
+                length: rounder(l.length),
+                width: rounder(l.width),
+                aspect: rounder(l.aspect),
+                angle: rounder(l.angle),
+                color: rounder(l.color),
+                laserWidth: rounder(l.laserWidth)
+            })),
+            props: e.props.map(p => ({
+                size: rounder(p.size),
+                x: rounder(p.x),
+                y: rounder(p.y),
+                angle: rounder(p.angle),
+                layer: rounder(p.layer),
+                color: rounder(p.color),
+                shape: p.shape,
+                fill: p.fill,
+                loop: p.loop,
+                isAura: p.isAura,
+                rpm: p.rpm,
+                specific: p.specific,
+                dip: p.dip,
+                ring: p.ring,
+                arclen: p.arclen
+            }))
+        };
+        
+        return mockup;
+    }
+
+    // Calculate geometric dimensions of an entity
+    function getDimensions(entity) {
+        const endpoints = [];
+        let pointDisplay = [];
+        
+        // Push endpoints for model parts
+        function pushEndpoints(model, scale, focus = { x: 0, y: 0 }, rot = 0) {
+            const s = Math.abs(model.shape);
+            const z = (s >= lazyRealSizes.length) ? 1 : lazyRealSizes[s];
+            
+            // Body shape endpoints
+            if (z === 1) { // Circle/octagon
+                for (let i = 0; i < 2; i += 0.5) {
+                    endpoints.push({
+                        x: focus.x + scale * Math.cos(i * PI),
+                        y: focus.y + scale * Math.sin(i * PI)
+                    });
+                }
+            } else { // Polygon vertices
+                const startAngle = (s % 2) ? 0 : PI / s;
+                for (let i = 0; i < s; i++) {
+                    const theta = startAngle + (i / s) * PI2;
+                    endpoints.push({
+                        x: focus.x + scale * z * Math.cos(theta),
+                        y: focus.y + scale * z * Math.sin(theta)
+                    });
+                }
+            }
+            
+            // Gun endpoints
+            const guns = model.guns || [];
+            for (let i = 0; i < guns.length; i++) {
+                const gun = guns[i];
+                const h = gun.aspect > 0 ? ((scale * gun.width) / 2) * gun.aspect : (scale * gun.width) / 2;
+                const r = Math.atan2(h, scale * gun.length) + rot;
+                const l = Math.sqrt(scale * scale * gun.length * gun.length + h * h);
+                const x = focus.x + scale * gun.offset * Math.cos(gun.direction + gun.angle + rot);
+                const y = focus.y + scale * gun.offset * Math.sin(gun.direction + gun.angle + rot);
+                const angleR = gun.angle + r;
+                const angleNegR = gun.angle - r;
+                
+                const point1 = {
+                    x: x + l * Math.cos(angleR),
+                    y: y + l * Math.sin(angleR)
+                };
+                
+                const point2 = {
+                    x: x + l * Math.cos(angleNegR),
+                    y: y + l * Math.sin(angleNegR)
+                };
+                
+                endpoints.push(point1, point2);
+                pointDisplay.push({
+                    x: rounder(point1.x),
+                    y: rounder(point1.y)
+                }, {
+                    x: rounder(point2.x),
+                    y: rounder(point2.y)
+                });
+            }
+            
+            // Turret endpoints
+            const turrets = model.turrets || [];
+            for (let i = 0; i < turrets.length; i++) {
+                const turret = turrets[i];
+                const bound = turret.bound;
+                const offset = bound.offset*scale*.35
+                pushEndpoints(turret, bound.size, {
+                    x: focus.x + offset * Math.cos(bound.angle + rot),
+                    y: focus.y + offset * Math.sin(bound.angle + rot)
+                }, bound.angle + rot);
+            }
+        }
+        
+        // Push all endpoints for the entity
+        pushEndpoints(entity, 1);
+        
+        // Check if we have too few points to form a proper shape
+        if (endpoints.length < 3) {
+            // Return default dimensions for simple entities
+            return {
+                middle: { x: 0, y: 0 },
+                axis: 1,
+                points: []
+            };
+        }
+        
+        // Find extremes to help with finding initial points
+        let minX = Infinity, maxX = -Infinity;
+        let minY = Infinity, maxY = -Infinity;
+        
+        for (const point of endpoints) {
+            minX = Math.min(minX, point.x);
+            maxX = Math.max(maxX, point.x);
+            minY = Math.min(minY, point.y);
+            maxY = Math.max(maxY, point.y);
+        }
+        
+        // Initial extremal points for building a circle
+        let point1, point2, point3;
+        
+        // Find point with maximum x (rightmost)
+        let maxIndex = 0;
+        for (let i = 0; i < endpoints.length; i++) {
+            if (endpoints[i].x > endpoints[maxIndex].x) {
+                maxIndex = i;
+            }
+        }
+        point1 = endpoints[maxIndex];
+        
+        // Find point with minimum x (leftmost)
+        maxIndex = 0;
+        for (let i = 0; i < endpoints.length; i++) {
+            if (endpoints[i].x < endpoints[maxIndex].x) {
+                maxIndex = i;
+            }
+        }
+        point2 = endpoints[maxIndex];
+        
+        // Find point with maximum absolute y (furthest from x-axis)
+        maxIndex = 0;
+        for (let i = 0; i < endpoints.length; i++) {
+            if (Math.abs(endpoints[i].y) > Math.abs(endpoints[maxIndex].y)) {
+                maxIndex = i;
+            }
+        }
+        point3 = endpoints[maxIndex];
+        
+        // Define circle from three points
+        function circleFromThreePoints(p1, p2, p3) {
+            const x1 = p1.x;
+            const y1 = p1.y;
+            const x2 = p2.x;
+            const y2 = p2.y;
+            const x3 = p3.x;
+            const y3 = p3.y;
+            
+            const denom = x1 * (y2 - y3) - y1 * (x2 - x3) + x2 * y3 - x3 * y2;
+            if (Math.abs(denom) < 1e-10) {
+                // Points are collinear or too close - fallback to bounding circle
+                const centerX = (Math.min(x1, x2, x3) + Math.max(x1, x2, x3)) / 2;
+                const centerY = (Math.min(y1, y2, y3) + Math.max(y1, y2, y3)) / 2;
+                const radius = Math.max(
+                    Math.sqrt((centerX - x1) * (centerX - x1) + (centerY - y1) * (centerY - y1)),
+                    Math.sqrt((centerX - x2) * (centerX - x2) + (centerY - y2) * (centerY - y2)),
+                    Math.sqrt((centerX - x3) * (centerX - x3) + (centerY - y3) * (centerY - y3))
+                );
+                return { x: centerX, y: centerY, radius };
+            }
+            
+            const xy1 = x1 * x1 + y1 * y1;
+            const xy2 = x2 * x2 + y2 * y2;
+            const xy3 = x3 * x3 + y3 * y3;
+            
+            const x = (xy1 * (y2 - y3) + xy2 * (y3 - y1) + xy3 * (y1 - y2)) / (2 * denom);
+            const y = (xy1 * (x3 - x2) + xy2 * (x1 - x3) + xy3 * (x2 - x1)) / (2 * denom);
+            
+            const r = Math.sqrt((x - x1) * (x - x1) + (y - y1) * (y - y1));
+            
+            return {
+                x: isNaN(x) ? 0 : x,
+                y: isNaN(y) ? 0 : y,
+                radius: isNaN(r) ? 1 : r
+            };
+        }
+        
+        // Calculate initial circle
+        let circle = circleFromThreePoints(point1, point2, point3);
+        
+        // Create display points for debug/visualization
+        pointDisplay = [
+            { x: rounder(point1.x), y: rounder(point1.y) },
+            { x: rounder(point2.x), y: rounder(point2.y) },
+            { x: rounder(point3.x), y: rounder(point3.y) }
+        ];
+        
+        // Welzl's algorithm adapted - more efficient way to find minimum enclosing circle
+        // Iteratively expand the circle to include all points
+        for (const point of endpoints) {
+            // Skip the three points we used to create the initial circle
+            if (point === point1 || point === point2 || point === point3) {
+                continue;
+            }
+            
+            // Check if the point is outside the current circle
+            const dx = point.x - circle.x;
+            const dy = point.y - circle.y;
+            const distSq = dx * dx + dy * dy;
+            
+            if (distSq > circle.radius * circle.radius) {
+                // Point is outside, add it to display points
+                pointDisplay.push({ x: rounder(point.x), y: rounder(point.y) });
+                
+                // Find new circle through this point and the farthest point on current circle
+                const dir = Math.atan2(dy, dx);
+                const opposite = {
+                    x: circle.x - circle.radius * Math.cos(dir),
+                    y: circle.y - circle.radius * Math.sin(dir)
+                };
+                
+                // Create a new circle with diameter from point to opposite
+                const newCenterX = (point.x + opposite.x) / 2;
+                const newCenterY = (point.y + opposite.y) / 2;
+                const newRadius = Math.sqrt(
+                    Math.pow(point.x - opposite.x, 2) + 
+                    Math.pow(point.y - opposite.y, 2)
+                ) / 2;
+                
+                // Update circle
+                circle = {
+                    x: newCenterX, 
+                    y: newCenterY, 
+                    radius: newRadius
+                };
+                
+                // Verify all previously checked points are still inside
+                // If not, we need to adjust the circle further
+                let i = 0;
+                while (i < endpoints.indexOf(point)) {
+                    const prevPoint = endpoints[i];
+                    const pDx = prevPoint.x - circle.x;
+                    const pDy = prevPoint.y - circle.y;
+                    const pDistSq = pDx * pDx + pDy * pDy;
+                    
+                    if (pDistSq > circle.radius * circle.radius * 1.01) { // Small epsilon for floating point errors
+                        // This previously checked point is now outside
+                        // Create a new circle that includes both points
+                        const midX = (point.x + prevPoint.x) / 2;
+                        const midY = (point.y + prevPoint.y) / 2;
+                        const dist = Math.sqrt(
+                            Math.pow(point.x - prevPoint.x, 2) + 
+                            Math.pow(point.y - prevPoint.y, 2)
+                        );
+                        
+                        circle = {
+                            x: midX,
+                            y: midY,
+                            radius: dist / 2 * 1.01 // Slight expansion for stability
+                        };
+                        
+                        // Restart the check
+                        i = 0;
+                    } else {
+                        i++;
+                    }
+                }
+            }
+        }
+        
+        // Return dimensions with centered x-coordinate (fixing bug)
+        return {
+            middle: {
+                x: rounder(circle.x),
+                y: 0 // Always keep y at 0 for bilaterally symmetrical shapes
+            },
+            axis: rounder(circle.radius * 2),
+            points: pointDisplay
+        };
+    }
+
+    // Cache for generated mockups
+    const cachedMockups = new Map();
+    
+    // Return the API
+    return {
+        getMockup: function(entityIndex, skipCacheCheck) {
+            // Check cache first unless explicitly skipping
+            if (!skipCacheCheck) {
+                const cachedValue = cachedMockups.get(entityIndex);
+                if (cachedValue) {
+                    return cachedValue;
+                }
+            }
+
+            // Generate new mockup
+            const classString = exportNames[entityIndex];
+            if (!classString) {
+                return "";
+            }
+            
+            try {
+                // Create entity instance
+                const entity = new Entity({ x: 0, y: 0 });
+                const entityClass = Class[classString];
+                
+                entity.upgrades = [];
+                entity.settings.skillNames = null;
+                entity.minimalReset();
+                entity.minimalDefine(entityClass);
+                entity.name = entityClass.LABEL;
+                
+                // Get dimensions and camera view
+                const position = getDimensions(entity);
+                const body = entity.camera(true);
+                
+                // Create mockup data
+                entityClass.mockup = {
+                    body: body,
+                    position: position
+                };
+                
+                entityClass.mockup.body.position = position;
+                const mockup = applyDefaults(parseMockup(entity, position));
+                
+                // Cache and return
+                cachedMockups.set(entityIndex, mockup);
+                entity.destroy();
+                purgeEntities();
+                
+                return mockup;
+            } catch (err) {
+                console.error("ERROR WHILE GENERATING MOCKUP: " + (classString || entityIndex));
+                console.error(err);
+                return "";
+            }
+        }
+    };
+}
         global.mockups = newMockups()
 
         global.exportNames = []
@@ -11638,9 +11247,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                                 this.error("token verification", "Ill-sized token request", true);
                                 return 1;
                             }
-                            if (typeof m[1] !== "string") {
-                                this.error("token verification", "Non-string socket id was offered: " + typeof m[2])
-                            }
                             if (typeof m[2] !== "string") {
                                 this.error("token verification", "Non-string rivet player id was offered: " + typeof m[2])
                             }
@@ -11654,17 +11260,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                                 return 1;
                             }
 
-                            /*if(m[0]){
-                                await fetch("https://discord.com/api/v10/users/@me", {
-                                    headers: {
-                                        Authorization: "Bearer " + m[0],
-                                    },
-                                }).then((res) => res.json()).then((userData) => {
-                                    if (userData.code != undefined) {
-                                        return
-                                    };
-                                }).catch((err)=>{});
-                            }*/
                             if (players.length === 0) {
                                 this.betaData = {
                                     permissions: 3,
@@ -11685,10 +11280,8 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                             }*/
                             if (global.isVPS) rivet.matchmaker.players.connected({ playerToken: m[2] }).catch(err => this.closeWithReason("Rivet player verification failed"));
                             this.rivetPlayerToken = m[2]
-                            this.identification = m[1];
                             this.verified = true;
                             this.usingAdBlocker = m[3]
-                            this.talk("w", c.RANKED_BATTLE ? "queue" : true);
                             //                      if (c.serverName.includes("Sandbox") && this.betaData.permissions === 0) this.betaData.permissions = 1; 
                             if (key) {
                                 util.info("A socket was verified with the token: " + this.betaData.username || "Unknown Token" + ".");
@@ -12141,7 +11734,7 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                             break;
                         case "CTB":
                             if (body.switchingToBasic === true) return;
-                            body.sendMessage("Switching to Basic in 5 seconds...")
+                            body.sendMessage("Switching to Basic in 8 seconds...")
                             body.switchingToBasic = true;
                             setTimeout(() => {
                                 body.switchingToBasic = false;
@@ -12155,7 +11748,7 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                                     if (i === false) break;
                                 }
                                 body.refreshBodyAttributes();
-                            }, 3000)
+                            }, 8000)
                             break;
                         case "T": { // Beta-tester level 1 and 2 keys
                             if (m.length !== 1) {
@@ -12534,9 +12127,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                                 case 0: { // Broadcast
                                     sockets.broadcast(m[1], m[2]);
                                 } break;
-                                case 1: { // Color change
-                                    body.color = m[1];
-                                } break;
                                 case 2: { // Set skill points
                                     body.skill.points = m[1];
                                 } break;
@@ -12586,9 +12176,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                                 case 9: { // Teleport
                                     body.x = m[1];
                                     body.y = m[2];
-                                } break;
-                                case 10: {
-                                    body.invisible = [m[1], m[2], m[3]];
                                 } break;
                                 case 11: { // Set FOV
                                     body.FOV = m[1];
@@ -12785,29 +12372,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                                     return 1;
                             }
                         } break;
-                        case "M": // Sync name color
-                            break;
-                        case "N": { // Lol best antitab
-                            /*if (typeof m[0] !== "string") {
-                                this.kick("Packet shuffling failed!");
-                                return 0;
-                            }
-                            if (c.strictSingleTab) {
-                                let stop = false;
-                                for (let socket of clients) {
-                                    if (socket.identification === m[0]) {
-                                        if (socket.betaData.permissions < 1) {
-                                            this.kick("Please only use one tab at a time!");
-                                            stop = true;
-                                        }
-                                        break;
-                                    }
-                                }
-                                if (!stop) {
-                                    multitabIDs.push(m[0]);
-                                }
-                            }*/
-                        } break;
                         case "cs": // short for chat send
                             // Do they even exist
                             if (!body?.messages) {
@@ -12854,13 +12418,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
 
                             // clear out old chats
                             body.messages = body.messages.slice(-2).filter(e => Date.now() - e.when < 5000);
-
-                            // Have they said the same thing recently?
-                            if (fuzzysort.go(text, body.messages, { threshold: -1000, key: "text", }).length !== 0) {
-                                this.talk("m", "That message is too close to a recently sent message!", "#FF0000")
-                                return
-                            }
-
 
                             let replaces = {
                                 ":100:": "💯",
@@ -15642,12 +15199,12 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                         return; // Skip entities that don't meet visibility criteria
                     }
 
-                    if (body && body.id === entity.id) {
-                        return visible.push(perspective(entity, player, flatten(photo)))
-                    }
-
                     if (entity.animation) {
                         socket.animationsToDo.set(entity.id, entity.animation);
+                    }
+
+                    if (body && body.id === entity.id) {
+                        return visible.push(perspective(entity, player, flatten(photo)))
                     }
 
                     let output = perspective(entity, player, flatten(entity.camera(entity.isTurret))); // perspective applies team color overrides etc.

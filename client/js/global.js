@@ -1,43 +1,11 @@
-import { util } from "./util.js"
 import { color, getColor } from "/js/colors.js";
-
-
-// TODO: Move to ui
-function Smoothbar(value, speed) {
-	let render = value;
-	return {
-		set: val => value = val,
-		get: () => render = lerp(render, value, speed ? speed : 0.12 ) // speed / 6
-	};
-	/*let sharpness = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 3,
-		time = Date.now(),
-		display = value,
-		oldvalue = value;
-	return {
-		set: function (val) {
-			if (value !== val) {
-				oldvalue = display;
-				value = val;
-				time = Date.now();
-			}
-		},
-		get: function () {
-			let timediff = (Date.now() - time) / 1000;
-			display = timediff < speed ? oldvalue + (value - oldvalue) * Math.pow(timediff / speed, 1 / sharpness) : value;
-			return display;
-		}
-	};*/
-}
-//
-
+import { lerp } from "./lerp.js";
+import { config } from "./config.js";
+import { mockups, getEntityImageFromMockup } from "./mockups.js";
+import { Smoothbar } from "./util.js";
 
 const global = {
 	_selectedServer: 0,
-	_windowSearch: {
-		_server: "null",
-		_lobby: "null",
-		_party: "null",
-	},
 	mobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|android|mobi/i.test(navigator.userAgent),
 	guiMouse: {
 		x: 0,
@@ -235,121 +203,8 @@ const global = {
 	_mobileChatText: "Chat",
 	_standalone: window.navigator.standalone || (window.matchMedia && window.matchMedia("(display-mode: fullscreen), (display-mode: standalone), (display-mode: minimal-ui)").matches),
 }
-global.mobileClickables = [function () { // Toggle menu
-	let clickdata = global.clickables.mobileClicks.get()
-	if (!global._mobileOptions) {
-		for (let i = 1; i < clickdata.length; i++) {
-			clickdata[i].setActive(i <= 6 ? 1 : 0)
-		}
-		global._mobileOptions = true;
-	} else {
-		for (let i = 1; i < clickdata.length; i++) {
-			clickdata[i].setActive(i >= 7 ? 1 : 0)
-		}
-		global._mobileOptions = false;
-	}
-}, function () { // Level Up
-	for (let i = 0; i < 75; i++) {
-		setTimeout(() => _socket.talk('L'), i * 25);
-	}
-}, function () { // Testbed
-	_socket.talk("T", 0);
-}, function () { // Override
-	_socket.talk("t", 2);
-}, function () { // Reset Tank
-	_socket.talk("T", 2);
-}, function () { // Fullscreen
-	_tryFullScreen()
-}, function () { // Chat
-	let chatbox = document.getElementById("chatBox")
-	if (!chatbox) {
-		global._mobileChatText = "Chat"
-		global._canvas._cv.dispatchEvent(new KeyboardEvent('keydown', {
-			'keyCode': global.KEY_CHAT
-		}));
-	} else {
-		global._mobileChatText = "Chat"
-		chatbox.dispatchEvent(new KeyboardEvent('keydown', {
-			'keyCode': 13
-		}));
-	}
-
-}, function () { // Firing modes
-	_socket.cmd.set(global._mobileFiring[0], false);
-	if (global._mobileFiring[0] === 4) {
-		global._mobileFiring[0] = 6
-		if (global._mobileFiring[1]) _socket.cmd.set(global._mobileFiring[0], true);
-		return
-	}
-	global._mobileFiring[0] = 4
-	if (global._mobileFiring[1]) _socket.cmd.set(global._mobileFiring[0], true);
-}, function () {
-	_socket.talk("X");
-}];
 
 
-global.clickables = function () {
-	let Region = function () {
-		function Clickable() {
-			let region = {
-				_x: 0,
-				_y: 0,
-				_w: 0,
-				_h: 0
-			},
-				active = 0;
-			return {
-				set: function (x, y, w, h) {
-					region._x = x * global._ratio;
-					region._y = y * global._ratio;
-					region._w = w * global._ratio;
-					region._h = h * global._ratio;
-					active = 1;
-				},
-				check: function (target) {
-					let dx = Math.round(target.x - region._x),
-						dy = Math.round(target.y - region._y);
-					return active && dx >= 0 && dy >= 0 && dx <= region._w && dy <= region._h;
-				},
-				setActive: function (v) {
-					active = v;
-				}
-			};
-		}
-		return function (size) {
-			let data = [];
-			for (let i = 0; i < size; i++) data.push(Clickable());
-			return {
-				place: function (index, ...a) {
-					if (index >= data.length) {
-						logger.norm(index);
-						logger.norm(data);
-						throw new Error("Trying to reference a clickable outside a region!");
-					}
-					data[index].set(...a);
-				},
-				hide: function () {
-					for (let r of data) r.setActive(0);
-				},
-				get: function () {
-					return data
-				},
-				check: function (x) {
-					return data.findIndex(function (r) {
-						return r.check(x);
-					});
-				}
-			};
-		};
-	}();
-	return {
-		stat: Region(10),
-		upgrade: Region(40),
-		hover: Region(1),
-		skipUpgrades: Region(1),
-		mobileClicks: Region(global.mobileClickables.length),
-	};
-}();
 global.statHover = 0;
 global.upgradeHover = 0;
 global.messages = []
@@ -375,15 +230,13 @@ global.player = { // Why var?
 	_cy: 0,
 	_vx: 0,
 	_vy: 0,
-	_rendershiftx: 0,
+	rendershiftx: 0,
 	_rendershifty: 0,
 	_lastvx: 0,
 	_lastvy: 0,
 	_renderx: 0,
 	_rendery: 0,
 	_renderv: 1,
-	_lastx: 0,
-	_lasty: 0,
 	_name: "",
 	_view: 1,
 	_lastUpdate: 0,
@@ -429,7 +282,6 @@ global.player = { // Why var?
 			"lasty": 0,
 			"lastvx": 0,
 			"lastvy": 0,
-			"lastf": 0,
 			"f": 0,
 			"h": 1,
 			"s": 1,
@@ -460,493 +312,207 @@ global.player = { // Why var?
 	lsd: false
 }
 
-global._canvas = new (class Canvas {
-	constructor() {
-		let mobile = global.mobile;
-		this.mobile = mobile;
-		this._directionLock = 0;
-		this._reenviar = 1;
-		this._directions = [];
-		this._maxStats = false;
-		let self = this;
-		this._cv = document.getElementById("gameCanvas");
-		this._cv.width = global._screenWidth;
-		this._cv.height = global._screenHeight;
-		if (mobile) {
-			this.controlTouch = null;
-			this.movementTouch = null;
-			this.movementTop = false;
-			this.movementBottom = false;
-			this.movementLeft = false;
-			this.movementRight = false;
-			this.lastTap = 0;
-			this._cv.addEventListener('touchstart', this._touchStart, false);
-			this._cv.addEventListener('touchmove', this._touchMove, false);
-			this._cv.addEventListener('touchend', this._touchEnd, false);
-			this._cv.addEventListener('touchcancel', this._touchEnd, false);
-		} else {
-			this._cv.addEventListener('mousedown', this._mouseDown, false);
-			this._cv.addEventListener('mousemove', this._gameInput, false);
-			this._cv.addEventListener('mouseup', this._mouseUp, false);
-		}
-		this._cv.addEventListener('keydown', this._keyboardDown, false);
-		this._cv.addEventListener('keyup', this._keyboardUp, false);
-		this._cv.parent = self;
-		this._cv.mouse = {
-			x: 0,
-			y: 0,
-			down: false
-		};
-	}
-	_keyboardDown(event) {
-		if (!global._gameStart) return;
-		if (event.location === 3) {
-			let number = event.code.substring(6)
-			if (global["DEV_KEY_" + number]) {
-				let value = JSON.parse(localStorage.getItem("DEV_KEY_" + number))
-				if (!value[0]) {
-					global._sendMessageToClient(`To use DEV_KEY_${number} you must do setDevKey in the console`)
-					return
-				} else if (value[1]) {
-					eval(value[0])(global, _socket)
-				} else {
-					_socket.talk("D", 5, value[0]);
-				}
-			}
-			return
-		}
-		if (event.keyCode == global.KEY_UPGRADE_STR) {
-			event.preventDefault()
-		}
-		switch (event.keyCode) {
-			case global.KEY_UP_ARROW:
-				_socket.cmd.set(0, 1);
-				break;
-			case global.KEY_DOWN_ARROW:
-				_socket.cmd.set(1, 1);
-				break;
-			case global.KEY_LEFT_ARROW:
-				_socket.cmd.set(2, 1);
-				break;
-			case global.KEY_RIGHT_ARROW:
-				_socket.cmd.set(3, 1);
-				break;
-			case global.KEY_LEVEL_UP:
-				_socket.talk("L");
-				break;
-			// Beta-tester keys
-			case global.KEY_COLOR_CHANGE:
-				_socket.talk("B", 0);
-				break;
-			case global.KEY_SPAWN_SHAPES:
-				_socket.talk("B", 2);
-				break;
-			case global.KEY_TELEPORT:
-				_socket.talk("B", 3);
-				break;
-			case global.KEY_POWER_CYCLE_FIREFOX:
-			case global.KEY_POWER_CYCLE:
-				_socket.talk("B", 4);
-				break;
-			case global.KEY_BAN_PLAYER:
-				_socket.talk("banSocket")
-				break;
-			case global.KEY_KILL_WITH_MOUSE:
-				_socket.talk("B", 9);
-				break;
-			case global.KEY_STEALTH:
-				_socket.talk("B", 10);
-				break;
-			case global.KEY_CHAT:
-				let chatBox = document.getElementById("chatBox");
-				if (!chatBox & !global._died) {
-					_socket.cmd.reset()
-					chatBox = document.createElement("input");
-					chatBox.type = "text";
-					chatBox.id = "chatBox";
-					chatBox.classList.add("chatBox");
-					chatBox.placeholder = global.mobile ? "Press send to send" : "Press enter to send";
-					chatBox.maxLength = 50;
-					document.body.appendChild(chatBox);
-					chatBox.focus();
-					setTimeout(() => {
-						chatBox.style.opacity = 1;
-					}, 10);
-					chatBox.addEventListener("keydown", (e) => {
-						if (e.keyCode === global.KEY_CHAT) {
-							let input = chatBox.value;
-							removeChatBox();
-							_socket.talk("cs", input.substring(0, 50));
-						}
-					})
-					// detect lost focus
-					chatBox.addEventListener("blur", () => {
-						removeChatBox();
-					})
-				}
-				function removeChatBox() {
-					let chatBox = document.getElementById("chatBox");
-					let game = document.getElementById("gameCanvas");
-					if (chatBox) {
-						chatBox.style.opacity = 0;
-						setTimeout(() => {
-							chatBox.remove();
-						}, 200);
-					}
-					game.focus();
-				}
-				break;
-		}
-		if (global.canSkill) {
-			let amount = this._maxStats ? 16 : 1;
-			do {
-				switch (event.keyCode) {
-					case global.KEY_UPGRADE_ATK:
-						_socket.talk("x", 0);
-						break;
-					case global.KEY_UPGRADE_HTL:
-						_socket.talk("x", 1);
-						break;
-					case global.KEY_UPGRADE_SPD:
-						_socket.talk("x", 2);
-						break;
-					case global.KEY_UPGRADE_STR:
-						_socket.talk("x", 3);
-						break;
-					case global.KEY_UPGRADE_PEN:
-						_socket.talk("x", 4);
-						break;
-					case global.KEY_UPGRADE_DAM:
-						_socket.talk("x", 5);
-						break;
-					case global.KEY_UPGRADE_RLD:
-						_socket.talk("x", 6);
-						break;
-					case global.KEY_UPGRADE_MOB:
-						_socket.talk("x", 7);
-						break;
-					case global.KEY_UPGRADE_RGN:
-						_socket.talk("x", 8);
-						break;
-					case global.KEY_UPGRADE_SHI:
-						_socket.talk("x", 9);
-						break;
-				}
-			} while (--amount);
-		}
-		if (!event.repeat) {
-			switch (event.keyCode) {
-				case global.KEY_ENTER:
-					if (global._diedAt - Date.now() > 0 || (global._disconnected && global._gameStart)) return;
-					if (global._died) {
-						_displayDeathHTML(false)
-						let socketOut = util._cleanString(global.playerName, 25).split('');
-						for (let i = 0; i < socketOut.length; i++) socketOut[i] = socketOut[i].charCodeAt();
-						_socket.talk("s", global.party || 0, socketOut.toString(), 0, getWOSocketId());
-						if (config.autoUpgrade) for (let i = 0; i < 75; i++) setTimeout(() => _socket.talk('L'), i * 25);
-						global._diedAt = Date.now()
-						global._deathScreenState = 1
-						global._died = false;
-					}
-					break;
-				case 221:
-					global.playerKey.includes("DEV") && eval(window.prompt("Local eval: "));
-					break;
-				case global.KEY_UP:
-					_socket.cmd.set(0, 1);
-					break;
-				case global.KEY_DOWN:
-					_socket.cmd.set(1, 1);
-					break;
-				case global.KEY_LEFT:
-					_socket.cmd.set(2, 1);
-					break;
-				case global.KEY_RIGHT:
-					_socket.cmd.set(3, 1);
-					break;
-				case global.KEY_MOUSE_0:
-					_socket.cmd.set(4, 1);
-					break;
-				//case global.KEY_MOUSE_1:
-				//  _socket.cmd.set(5, 1);
-				//break;
-				case global.KEY_MOUSE_2:
-					_socket.cmd.set(6, 1);
-					break;
-				case global.KEY_AUTO_SPIN:
-					_socket.talk("t", 0);
-					break;
-				case global.KEY_AUTO_FIRE:
-					_socket.talk("t", 1);
-					break;
-				case global.KEY_OVER_RIDE:
-					_socket.talk("t", 2);
-					break;
-				case global.KEY_MAX_STATS:
-					this._maxStats = true;
-					break;
-				case global.KEY_DEBUG:
-					global._debug = global._debug % 4 + 1;
-					break;
-				case global.KEY_DRAG:
-					_socket.talk("B", 11);
-					break;
-				// Beta-tester keys
-				case global.KEY_TESTBED:
-				case global.KEY_TESTBED_FIREFOX:
-				case global.KEY_TESTBED_ALT:
-					_socket.talk("T", 0);
-					break;
-				case global.KEY_SUICIDE:
-					_socket.talk("T", 1);
-					break;
-				case global.KEY_RESET_BASIC_TANK:
-					_socket.talk("T", 2);
-					break;
-				case global.KEY_CHANGE_TO_BASIC:
-					_socket.talk("CTB");
-					break;
-				case global.KEY_GODMODE:
-				case global.KEY_GODMODE_2:
-					_socket.talk("B", 1);
-					break;
-				case global.KEY_PASSIVE_MODE:
-					_socket.talk("T", 4);
-					break;
-				case global.KEY_RAINBOW:
-				case global.KEY_RAINBOW_2:
-					_socket.talk("T", 5);
-					break;
-				case global.KEY_TIER_SWITCH:
-				case global.KEY_TIER_SWITCH_2:
-					_socket.talk("X");
-					break;
-				case global.KEY_OVERRIDE_ENTITY:
-					//_socket.talk("B", 6);
-					_socket.talk("B", 13);
-					break;
-				case global.KEY_INFECT_MINION:
-					//_socket.talk("B", 6);
-					_socket.talk("B", 14);
-					break;
-				case global.KEY_RESET_COLOR:
-					_socket.talk("T", 7);
-					break;
-				case global.KEY_CONTROL_DOM:
-					_socket.talk("l");
-					break;
-				case global.KEY_TANK_JOURNEY:
-					_socket.talk("B", 8);
-					break;
-				case 17:
-					_socket.talk("B", 12);
-					break;
-			}
-		}
-	}
-	_keyboardUp(event) {
-		if (!global._gameStart) return;
-		switch (event.keyCode) {
-			case global.KEY_UP_ARROW:
-			case global.KEY_UP:
-				_socket.cmd.set(0, 0);
-				break;
-			case global.KEY_DOWN_ARROW:
-			case global.KEY_DOWN:
-				_socket.cmd.set(1, 0);
-				break;
-			case global.KEY_LEFT_ARROW:
-			case global.KEY_LEFT:
-				_socket.cmd.set(2, 0);
-				break;
-			case global.KEY_RIGHT_ARROW:
-			case global.KEY_RIGHT:
-				_socket.cmd.set(3, 0);
-				break;
-			case global.KEY_MOUSE_0:
-				_socket.cmd.set(4, 0);
-				break;
-			//case global.KEY_MOUSE_1:
-			//  _socket.cmd.set(5, 0);
-			//break;
-			case global.KEY_MOUSE_2:
-				_socket.cmd.set(6, 0);
-				break;
-			case global.KEY_MAX_STATS:
-				this._maxStats = false;
-				break;
-		}
-	}
-	_mouseDown(mouse) {
-		global.mousedown = true
-		if (!global._gameStart) return;
-		switch (mouse.button) {
-			case 0:
-				const ratio = util._getScreenRatio();
-				let width = global._screenWidth / innerWidth;
-				let height = global._screenHeight / innerHeight;
-				this.mouse.x = mouse.clientX * global._ratio * width; //global.ratio / ratio;// / ratio;//(global.ratio * ratio);// / ratio;
-				this.mouse.y = mouse.clientY * global._ratio * height; //global.ratio / ratio;// / ratio;//(global.ratio * ratio);// / ratio;
-				this.mouse.down = true;
-				let statIndex = global.clickables.stat.check(this.mouse);
-				if (statIndex !== -1) _socket.talk("x", statIndex);
-				else if (global.clickables.skipUpgrades.check(this.mouse) !== -1) global.clearUpgrades();
-				else {
-					let uIndex = global.clickables.upgrade.check(this.mouse);
-					if (uIndex !== -1) {
-						_socket.talk("U", uIndex);
-					} else {
-						_socket.cmd.set(4, 1);
-					}
-				}
-				break;
-			case 1:
-				_socket.cmd.set(5, 1);
-				break;
-			case 2:
-				_socket.cmd.set(6, 1);
-				break;
-		}
-	}
-	_mouseUp(mouse) {
-		if (!global._gameStart) return;
-		switch (mouse.button) {
-			case 0:
-				this.mouse.down = true;
-				_socket.cmd.set(4, 0);
-				break;
-			case 1:
-				_socket.cmd.set(5, 0);
-				break;
-			case 2:
-				_socket.cmd.set(6, 0);
-				break;
-		}
-	}
-	_gameInput(mouse) {
-		let width = global._screenWidth / innerWidth;
-		let height = global._screenHeight / innerHeight;
-		this.mouse.x = mouse.clientX; // / rs;
-		this.mouse.y = mouse.clientY; // / rs;// / ratio;
-		if (global.player._cx != null && global.player._cy != null) {
-			if (global._target === undefined) {
-				console.log("GLOBAL", Object.entries(global).toString())
-				return;
-			}
-			global._target._x = (this.mouse.x - innerWidth / 2) * width; //this.parent.cv.width / 2;
-			global._target._y = (this.mouse.y - innerHeight / 2) * height; //this.parent.cv.height / 2;
-		}
-		global.statHover = global.clickables.hover.check({
-			x: mouse.clientX * global._ratio,
-			y: mouse.clientY * global._ratio
-		}) === 0;
-		global.guiMouse = {
-			x: mouse.clientX * height, // * global.ratio / ratio,//(global.ratio * ratio),
-			y: mouse.clientY * width // * global.ratio / ratio//(global.ratio * ratio)
-		};
-	}
-	_touchStart(e) {
-		e.preventDefault();
-		if (global._diedAt - Date.now() > 0 || (global._disconnected && global._gameStart)) return;
-		if (global._died) {
-			_displayDeathHTML(false)
-			let socketOut = util._cleanString(global.playerName, 25).split('');
-			for (let i = 0; i < socketOut.length; i++) socketOut[i] = socketOut[i].charCodeAt();
-			_socket.talk("s", global.party || 0, socketOut.toString(), 0, getWOSocketId());
-			if (config.autoUpgrade) {
-				for (let i = 0; i < 75; i++) {
-					setTimeout(() => _socket.talk('L'), i * 25);
-				}
-			}
-			global._diedAt = Date.now()
-			global._deathScreenState = 1
-			global._died = false;
-		}
-		let width = global._screenWidth / innerWidth;
-		let height = global._screenHeight / innerHeight;
-		for (let touch of e.changedTouches) {
-			let mpos = {
-				x: touch.clientX * global._ratio * width,
-				y: touch.clientY * global._ratio * height
-			};
-			let guiMpos = { // exactally where the mouse is, dk how the other ones manage to work but
-				x: touch.clientX * width,
-				y: touch.clientY * height
-			}
-			let id = touch.identifier;
-			let statIndex = global.clickables.stat.check(mpos);
-			let mobileClickIndex = global.clickables.mobileClicks.check(mpos);
-			if (mobileClickIndex !== -1) global.mobileClickables[mobileClickIndex]();
-			else if (statIndex !== -1) _socket.talk('x', statIndex);
-			else if (global.clickables.skipUpgrades.check(mpos) !== -1) global.clearUpgrades();
-			else {
-				let index = global.clickables.upgrade.check(mpos)
-				if (index !== -1) {
-					_socket.talk("U", index);
-				} else {
-					mpos.x /= width;
-					mpos.y /= height;
-					let onLeft = mpos.x < this.parent._cv.width / 2;
-					if (this.parent.movementTouch === null && onLeft) {
-						this.parent.movementTouch = id;
-					} else if (this.parent.controlTouch === null && !onLeft) {
-						this.parent.controlTouch = id;
-						global._mobileFiring[1] = true
-						_socket.cmd.set(global._mobileFiring[0], true);
-					}
-				}
-			}
-		}
-		this.parent._touchMove(e, false);
-	}
-	_touchMove(e, useParent = true) {
-		const _this = useParent ? this.parent : this;
-		e.preventDefault();
-		for (let touch of e.changedTouches) {
-			let mpos = {
-				x: touch.clientX * global._ratio,
-				y: touch.clientY * global._ratio
-			};
-			let id = touch.identifier;
-			if (_this.movementTouch === id) {
-				let x = mpos.x - _this._cv.width * 1 / 6;
-				let y = mpos.y - _this._cv.height * 2 / 3;
-				let norm = Math.sqrt(x * x + y * y);
-				x /= norm;
-				y /= norm;
-				let amount = 0.3826834323650898; // Math.sin(Math.PI / 8)
-				if ((y < -amount) !== _this.movementTop) _socket.cmd.set(0, _this.movementTop = y < -amount);
-				if ((y > amount) !== _this.movementBottom) _socket.cmd.set(1, _this.movementBottom = y > amount);
-				if ((x < -amount) !== _this.movementLeft) _socket.cmd.set(2, _this.movementLeft = x < -amount);
-				if ((x > amount) !== _this.movementRight) _socket.cmd.set(3, _this.movementRight = x > amount);
-			} else if (_this.controlTouch === id) {
-				global._target._x = (mpos.x - _this._cv.width * 5 / 6) * 4;
-				global._target._y = (mpos.y - _this._cv.height * 2 / 3) * 4;
-			}
-		}
-	}
-	_touchEnd(e) {
-		e.preventDefault();
-		for (let touch of e.changedTouches) {
-			let mpos = {
-				x: touch.clientX * window.devicePixelRatio,
-				y: touch.clientY * window.devicePixelRatio
-			};
-			let id = touch.identifier;
-			if (this.parent.movementTouch === id) {
-				this.parent.movementTouch = null;
-				if (this.parent.movementTop) _socket.cmd.set(0, this.parent.movementTop = false);
-				if (this.parent.movementBottom) _socket.cmd.set(1, this.parent.movementBottom = false);
-				if (this.parent.movementLeft) _socket.cmd.set(2, this.parent.movementLeft = false);
-				if (this.parent.movementRight) _socket.cmd.set(3, this.parent.movementRight = false);
-			} else if (this.parent.controlTouch === id) {
-				this.parent.controlTouch = null;
-				global._mobileFiring[1] = false
-				_socket.cmd.set(4, false);
-				_socket.cmd.set(6, false);
-			}
-		}
-	}
-});
+// TODO: Remove
+window._anims = []
+window._gui = {
+            _getStatNames: function (num) {
+                switch (num) {
+                    case 1:
+                        return ["Body Damage", "Max Health", "", "", "", "", "Acceleration", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+                    case 2:
+                        return ["Body Damage", "Max Health", "Drone Speed", "Drone Health", "Drone Penetration", "Drone Damage", "Respawn Rate", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+                    case 3:
+                        return ["Body Damage", "Max Health", "Drone Speed", "Drone Health", "Drone Penetration", "Drone Damage", "Max Drone Count", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+                    case 4:
+                        return ["Body Damage", "Max Health", "Swarm Speed", "Swarm Health", "Swarm Penetration", "Swarm Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+                    case 5:
+                        return ["Body Damage", "Max Health", "Trap Speed", "Trap Health", "Trap Penetration", "Trap Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+                    case 6:
+                        return ["Body Damage", "Max Health", "Weapon Speed", "Weapon Health", "Weapon Penetration", "Weapon Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+                    case 7:
+                        return ["Body Damage", "Max Health", "Bullet Speed", "Bullet Health", "Bullet Penetration", "Bullet Damage", "Reload & Acceleration", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+                    case 8:
+                        return ["Body Damage", "Max Health", "Minion Speed", "Minion Health", "Minion Penetration", "Minion Damage", "Respawn Rate", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+                    case 9:
+                        return ["Body Damage", "Max Health", "", "", "", "", "Jump Rate", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+                    case 10:
+                        return ["Body Damage", "Max Health", "Block Speed", "Block Health", "Block Penetration", "Block Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+                    case 11:
+                        return ["Body Damage", "Max Health", "Rebound Speed", "Boomerang Health", "Boomerang Penetration", "Boomerang Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+                    case 12:
+                        return ["Body Damage", "Max Health", "Lance Range", "Lance Longevity", "Lance Sharpness", "Lance Damage", "Lance Density", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+                    case 13:
+                        return ["Body Damage", "Max Health", "Flail Speed", "Flail Resistance", "Flail Penetration", "Flail Damage", "Flail Density", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+                    case 14:
+                        return ["Body Damage", "Max Health", "Syringe Range", "Syringe Longevity", "Syringe Sharpness", "Syringe Damage", "Refill Time", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+                    default:
+                        return ["Body Damage", "Max Health", "Bullet Speed", "Bullet Health", "Bullet Penetration", "Bullet Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+                }
+            },
+            _skills: [{
+                amount: 0,
+                color: "purple",
+                cap: 1,
+                softcap: 1
+            }, {
+                amount: 0,
+                color: "pink",
+                cap: 1,
+                softcap: 1
+            }, {
+                amount: 0,
+                color: "blue",
+                cap: 1,
+                softcap: 1
+            }, {
+                amount: 0,
+                color: "lgreen",
+                cap: 1,
+                softcap: 1
+            }, {
+                amount: 0,
+                color: "red",
+                cap: 1,
+                softcap: 1
+            }, {
+                amount: 0,
+                color: "yellow",
+                cap: 1,
+                softcap: 1
+            }, {
+                amount: 0,
+                color: "green",
+                cap: 1,
+                softcap: 1
+            }, {
+                amount: 0,
+                color: "teal",
+                cap: 1,
+                softcap: 1
+            }, {
+                amount: 0,
+                color: "gold",
+                cap: 1,
+                softcap: 1
+            }, {
+                amount: 0,
+                color: "orange",
+                cap: 1,
+                softcap: 1
+            }],
+            _points: 0,
+            _upgrades: [],
+            _realUpgrades: [],
+            _playerid: -1,
+            _skill: function () {
+                let levelScore = 0,
+                    deduction = 0,
+                    level = 0,
+                    score = Smoothbar(0);
+                return {
+                    setScores: function (s) {
+                        if (s) {
+                            score.set(s);
+                            if (deduction > score.get()) {
+                                level = 0;
+                                deduction = 0;
+                            }
+                        } else {
+                            score = Smoothbar(0);
+                            level = 0;
+                        }
+                    },
+                    update: function () {
+                        levelScore = Math.ceil(1.8 * Math.pow(level + 1, 1.8) - 2 * level + 0), score.get() - deduction >= levelScore && (deduction += levelScore, level += 1);
+                    },
+                    getProgress: function () {
+                        return levelScore ? Math.min(1, Math.max(0, (score.get() - deduction) / levelScore)) : 0;
+                    },
+                    getScore: function () {
+                        return score.get();
+                    },
+                    getLevel: function () {
+                        return level;
+                    }
+                };
+            }(),
+            _type: 0,
+            _fps: 0,
+            _color: 0,
+            _accel: 0,
+            _topSpeed: 1,
+            _minimap: {
+                _display: [],
+                _server: []
+            },
+            _leaderboard: {
+                _display: [],
+                _server: [],
+                _publish: (old, entry) => {
+                    let ref = mockups.get(entry.index);
+                    let trueLabel = entry.labelOverride ? entry.labelOverride : entry.label
+                    return {
+                        id: entry.id,
+                        image: getEntityImageFromMockup(entry.index, entry.color),
+                        position: ref.position,
+                        barColor: getColor(entry.barColor),
+                        label: entry.name ? entry.name + " - " + (trueLabel || ref.name) : (trueLabel || ref.name),
+                        score: lerp(old.score, entry.score, 0.03),
+                        nameColor: entry.nameColor,
+                    }
+                }
+            }
+        };
 
-export { global }
+function resizeEvent(e) {
+	if (!global._canvas) return
+	let scale = window.devicePixelRatio;
+	scale *= [0.15, 0.5, 0.75, 1, 0.08][["Very Low (35%)", "Low (50%)", "Medium (75%)", "High (100%)", "PixelMode (8%)"].indexOf(config.resolutionScale)];
+	global._canvas._cv.width = global._screenWidth = window.innerWidth * scale;
+	global._canvas._cv.height = global._screenHeight = window.innerHeight * scale;
+	global._ratio = scale;
+	if (!global.mobile) document.getElementById('gameCanvas').focus();
+	global._screenSize = Math.min(1920, Math.max(window.innerWidth, 1280));
+}
+
+window.metrics = {
+            _latency: 0,
+            _lag: 0,
+            _rendertime: 0,
+            _updatetime: 0,
+            _lastlag: 0,
+            _lastrender: 0,
+            _rendergap: 0,
+            _lastuplink: 0,
+            _serverCpuUsage: 0,
+            _serverMemUsage: 0
+        };
+window.roomSetup = [
+            ["norm"]
+        ];
+window.serverStart = 0;
+window.getNow = function () {
+            return Date.now() - serverStart;
+        };
+window.entityArr = [];
+window.entityMap = new Map()
+window.getRatio = function () {
+        return Math.max(global._screenWidth / global.player._renderv, global._screenHeight / global.player._renderv / 9 * 16);
+    };
+window.upgradeSpin = 0,
+window.lastPing = 0,
+window.lastServerStat = 0,
+window.renderTimes = 0,
+window.updateTimes = 0;
+window.isInView = function(x, y, r) {
+        let mid = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0,
+            ratio = getRatio();
+        r += config.borderChunk;
+        if (mid) {
+            ratio *= 2;
+            return x > -global._screenWidth / ratio - r && x < global._screenWidth / ratio + r && y > -global._screenHeight / ratio - r && y < global._screenHeight / ratio + r;
+        }
+        return x > -r && x < global._screenWidth / ratio + r && y > -r && y < global._screenHeight / ratio + r;
+    }
+
+export { global, resizeEvent }

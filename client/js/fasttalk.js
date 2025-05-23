@@ -1,6 +1,5 @@
 const fasttalk = (function () {
 	let exports = {};
-	"use strict";
 	const u32 = new Uint32Array(1),
 		c32 = new Uint8Array(u32.buffer),
 		f32 = new Float32Array(u32.buffer),

@@ -1,6 +1,7 @@
 import { global } from "/js/global.js"
 import { logger } from "/js/debug.js"
 import { config } from "./config.js";
+import { lerp } from "./lerp.js"
 
 const util = {};
 util._submitToLocalStorage = function (name) {
@@ -95,25 +96,67 @@ util._pullJSON = async function (filename, responseType = "json", filetypeOverri
 	});
 };
 util._getRatio = () => Math.max(global._screenWidth, 16 * global._screenHeight / 9) / _player._renderv;
-util._getScreenRatio = () => Math.max(global._screenWidth, 16 * global._screenHeight / 9) / global._screenSize;
+util._getScreenRatio = () => global._screenWidth / global._screenSize;
 util._getSpecialNameInfoById = id => [
 	["#2e6d9b", "#579acb", `'Merienda', cursive`, 1],
 	["#E673C4", "#ff00d0", `"Courier New", Courier, monospace`, 1],
 	["#EE8833", "#784216", `coffee`, 1]
 ][id];
 
+// HTML display on death
+let displayStatus = true;
+const displayDeathHTML = function (toggle) {
+	try {
+		if (displayStatus === toggle) {
+			return
+		}
+		displayStatus = toggle
 
-// TODO: Add to rendering file
-function resizeEvent(e) {
-	if(!global._canvas) return
-	let scale = window.devicePixelRatio;
-	scale *= [0.2, 0.5, 0.75, 1, 0.08][["Very Low (35%)", "Low (50%)", "Medium (75%)", "High (100%)", "PixelMode (8%)"].indexOf(config.resolutionScale)];
-	global._canvas._cv.width = global._screenWidth = window.innerWidth * scale;
-	global._canvas._cv.height = global._screenHeight = window.innerHeight * scale;
-	global._ratio = scale;
-	if(!global.mobile)document.getElementById('gameCanvas').focus();
-	global._screenSize = Math.min(1920, Math.max(window.innerWidth, 1280));
+		let wrapperWrapper = document.getElementById("wrapperWrapper")
+		wrapperWrapper.style.justifyContent = "flex-start"
+
+		if (toggle === true) {
+			wrapperWrapper.style.zIndex = 100
+			return
+		}
+
+		wrapperWrapper.style.zIndex = -100
+	} catch (e) {
+		console.error(e)
+	}
 }
 
+function getWOSocketId() {
+	if (!localStorage.getItem("socketId")) {
+		localStorage.setItem("socketId", Date.now().toString(16))
+	}
+	return localStorage.getItem("socketId");
+}
 
-export { util, resizeEvent }
+function Smoothbar(value, speed) {
+	let render = value;
+	return {
+		set: val => value = val,
+		get: () => render = lerp(render, value, speed ? speed : 0.12 ) // speed / 6
+	};
+	/*let sharpness = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 3,
+		time = Date.now(),
+		display = value,
+		oldvalue = value;
+	return {
+		set: function (val) {
+			if (value !== val) {
+				oldvalue = display;
+				value = val;
+				time = Date.now();
+			}
+		},
+		get: function () {
+			let timediff = (Date.now() - time) / 1000;
+			display = timediff < speed ? oldvalue + (value - oldvalue) * Math.pow(timediff / speed, 1 / sharpness) : value;
+			return display;
+		}
+	};*/
+}
+
+export { util, displayDeathHTML, getWOSocketId, Smoothbar }

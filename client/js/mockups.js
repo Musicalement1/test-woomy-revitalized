@@ -1,3 +1,5 @@
+import { socket } from "./socket.js";
+
 let mockups = {
 	// Statistics
 	totalMockups: 0,
@@ -25,7 +27,7 @@ let mockups = {
 				}
 			} else {
 				mockups.pendingMockupRequests.add(entityIndex)
-				_socket.talk("mu", entityIndex)
+				socket.talk("mu", entityIndex)
 			}
 			return mockups.defaults
 		}
@@ -108,10 +110,10 @@ let mockups = {
 };
 
 window.sendMockupEdit = (code) => {
-	if (_socket === null) {
+	if (socket === null) {
 		throw new Error("You need to be in a game to edit mockups!")
 	}
-	_socket.talk("muEdit", code)
+	socket.talk("muEdit", code)
 }
 
 function getEntityImageFromMockup(index, color) {
@@ -170,7 +172,6 @@ function getEntityImageFromMockup(index, color) {
 				});
 				return a;
 			},
-			update: function () { }
 		},
 		turrets: mockup.turrets.map(function (t) {
 			let o = getEntityImageFromMockup(t.index);
