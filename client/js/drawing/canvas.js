@@ -1,6 +1,6 @@
 import { global } from "../global.js";
 import { config } from "../config.js";
-import { util, displayDeathHTML, getWOSocketId } from "../util.js";
+import { util, getWOSocketId } from "../util.js";
 import { socket } from "../socket.js";
 import { color } from "../colors.js"
 import { Smoothbar } from "../util.js";
@@ -29,7 +29,12 @@ global.mobileClickables = [function () { // Toggle menu
 }, function () { // Reset Tank
 	socket.talk("CTB");
 }, function () { // Fullscreen
-	_tryFullScreen()
+	if (document.body.requestFullScreen)
+		document.body.requestFullScreen();
+	else if (document.body.webkitRequestFullScreen)
+		document.body.webkitRequestFullScreen();
+	else if (document.body.mozRequestFullScreen)
+		document.body.mozRequestFullScreen();
 }, function () { // Chat
 	let chatbox = document.getElementById("chatBox")
 	if (!chatbox) {
@@ -182,7 +187,7 @@ global._canvas = new (class Canvas {
 				socket.controls.commands[0] = 1;
 				break;
 			case global.KEY_DOWN_ARROW:
-				socket.controls.commands[1] =1;
+				socket.controls.commands[1] = 1;
 				break;
 			case global.KEY_LEFT_ARROW:
 				socket.controls.commands[2] = 1;
@@ -298,8 +303,7 @@ global._canvas = new (class Canvas {
 				case global.KEY_ENTER:
 					if (global._diedAt - Date.now() > 0 || (global._disconnected && global._gameStart)) return;
 					if (global._died) {
-						displayDeathHTML(false)
-						let socketOut = util._cleanString(global.playerName, 25).split('');
+						let socketOut = global.playerName.split('');
 						for (let i = 0; i < socketOut.length; i++) socketOut[i] = socketOut[i].charCodeAt();
 						socket.talk("s", global.party || 0, socketOut.toString(), 0, getWOSocketId());
 						if (config.autoUpgrade) for (let i = 0; i < 75; i++) setTimeout(() => socket.talk('L'), i * 25);
@@ -508,7 +512,6 @@ global._canvas = new (class Canvas {
 		e.preventDefault();
 		if (global._diedAt - Date.now() > 0 || (global._disconnected && global._gameStart)) return;
 		if (global._died) {
-			displayDeathHTML(false)
 			let socketOut = util._cleanString(global.playerName, 25).split('');
 			for (let i = 0; i < socketOut.length; i++) socketOut[i] = socketOut[i].charCodeAt();
 			socket.talk("s", global.party || 0, socketOut.toString(), 0, getWOSocketId());
@@ -567,10 +570,10 @@ global._canvas = new (class Canvas {
 				y: touch.clientY * global._ratio
 			};
 			let id = touch.identifier;
-			let statIndex = global.clickables.stat.check({x: mpos.x*(global._screenWidth / innerWidth), y: mpos.y*(global._screenHeight / innerHeight)});
-			if (statIndex !== -1){
+			let statIndex = global.clickables.stat.check({ x: mpos.x * (global._screenWidth / innerWidth), y: mpos.y * (global._screenHeight / innerHeight) });
+			if (statIndex !== -1) {
 				socket.talk("x", statIndex)
-			} else if (global.clickables.skipUpgrades.check(mpos) !== -1){
+			} else if (global.clickables.skipUpgrades.check(mpos) !== -1) {
 				global.clearUpgrades();
 			} else if (_this.movementTouch === id) {
 				let x = mpos.x - _this._cv.width * 1 / 6;
@@ -742,7 +745,7 @@ function drawGuiLine(x1, y1, x2, y2) {
 
 function drawBar(x1, x2, y, width, color) {
 	ctx.beginPath();
-	ctx.roundRect(x1, y, (x2-x1)||1, 1, 0)
+	ctx.roundRect(x1, y, (x2 - x1) || 1, 1, 0)
 	ctx.lineWidth = width;
 	ctx.lineJoin = config.barStyle === "Square" ? "miter" : config.barStyle === "Triangle" ? "bevel" : "round"
 	ctx.strokeStyle = color;
@@ -751,154 +754,155 @@ function drawBar(x1, x2, y, width, color) {
 }
 
 const _gui = {
-            _getStatNames: function (num) {
-                switch (num) {
-                    case 1:
-                        return ["Body Damage", "Max Health", "", "", "", "", "Acceleration", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 2:
-                        return ["Body Damage", "Max Health", "Drone Speed", "Drone Health", "Drone Penetration", "Drone Damage", "Respawn Rate", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 3:
-                        return ["Body Damage", "Max Health", "Drone Speed", "Drone Health", "Drone Penetration", "Drone Damage", "Max Drone Count", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 4:
-                        return ["Body Damage", "Max Health", "Swarm Speed", "Swarm Health", "Swarm Penetration", "Swarm Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 5:
-                        return ["Body Damage", "Max Health", "Trap Speed", "Trap Health", "Trap Penetration", "Trap Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 6:
-                        return ["Body Damage", "Max Health", "Weapon Speed", "Weapon Health", "Weapon Penetration", "Weapon Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 7:
-                        return ["Body Damage", "Max Health", "Bullet Speed", "Bullet Health", "Bullet Penetration", "Bullet Damage", "Reload & Acceleration", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 8:
-                        return ["Body Damage", "Max Health", "Minion Speed", "Minion Health", "Minion Penetration", "Minion Damage", "Respawn Rate", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 9:
-                        return ["Body Damage", "Max Health", "", "", "", "", "Jump Rate", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 10:
-                        return ["Body Damage", "Max Health", "Block Speed", "Block Health", "Block Penetration", "Block Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 11:
-                        return ["Body Damage", "Max Health", "Rebound Speed", "Boomerang Health", "Boomerang Penetration", "Boomerang Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 12:
-                        return ["Body Damage", "Max Health", "Lance Range", "Lance Longevity", "Lance Sharpness", "Lance Damage", "Lance Density", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 13:
-                        return ["Body Damage", "Max Health", "Flail Speed", "Flail Resistance", "Flail Penetration", "Flail Damage", "Flail Density", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 14:
-                        return ["Body Damage", "Max Health", "Syringe Range", "Syringe Longevity", "Syringe Sharpness", "Syringe Damage", "Refill Time", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    default:
-                        return ["Body Damage", "Max Health", "Bullet Speed", "Bullet Health", "Bullet Penetration", "Bullet Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                }
-            },
-            _skills: [{
-                amount: 0,
-                color: "purple",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "pink",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "blue",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "lgreen",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "red",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "yellow",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "green",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "teal",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "gold",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "orange",
-                cap: 1,
-                softcap: 1
-            }],
-            _points: 0,
-            _upgrades: [],
-            _realUpgrades: [],
-            _playerid: -1,
-            _skill: function () {
-                let levelScore = 0,
-                    deduction = 0,
-                    level = 0,
-                    score = Smoothbar(0);
-                return {
-                    setScores: function (s) {
-                        if (s) {
-                            score.set(s);
-                            if (deduction > score.get()) {
-                                level = 0;
-                                deduction = 0;
-                            }
-                        } else {
-                            score = Smoothbar(0);
-                            level = 0;
-                        }
-                    },
-                    update: function () {
-                        levelScore = Math.ceil(1.8 * Math.pow(level + 1, 1.8) - 2 * level + 0), score.get() - deduction >= levelScore && (deduction += levelScore, level += 1);
-                    },
-                    getProgress: function () {
-                        return levelScore ? Math.min(1, Math.max(0, (score.get() - deduction) / levelScore)) : 0;
-                    },
-                    getScore: function () {
-                        return score.get();
-                    },
-                    getLevel: function () {
-                        return level;
-                    }
-                };
-            }(),
-            _type: 0,
-            _fps: 0,
-            _color: 0,
-            _accel: 0,
-            _topSpeed: 1,
-            _minimap: {
-                _display: [],
-                _server: []
-            },
-            _leaderboard: {
-                _display: [],
-                _server: [],
-                _publish: (old, entry) => {
-                    let ref = mockups.get(entry.index);
-                    let trueLabel = entry.labelOverride ? entry.labelOverride : entry.label
-                    return {
-                        id: entry.id,
-                        image: getEntityImageFromMockup(entry.index, entry.color),
-                        position: ref.position,
-                        barColor: getColor(entry.barColor),
-                        label: entry.name ? entry.name + " - " + (trueLabel || ref.name) : (trueLabel || ref.name),
-                        score: lerp(old.score, entry.score, 0.03),
-                        nameColor: entry.nameColor,
-                    }
-                }
-            }
-        };
+	_getStatNames: function (num) {
+		switch (num) {
+			case 1:
+				return ["Body Damage", "Max Health", "", "", "", "", "Acceleration", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 2:
+				return ["Body Damage", "Max Health", "Drone Speed", "Drone Health", "Drone Penetration", "Drone Damage", "Respawn Rate", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 3:
+				return ["Body Damage", "Max Health", "Drone Speed", "Drone Health", "Drone Penetration", "Drone Damage", "Max Drone Count", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 4:
+				return ["Body Damage", "Max Health", "Swarm Speed", "Swarm Health", "Swarm Penetration", "Swarm Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 5:
+				return ["Body Damage", "Max Health", "Trap Speed", "Trap Health", "Trap Penetration", "Trap Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 6:
+				return ["Body Damage", "Max Health", "Weapon Speed", "Weapon Health", "Weapon Penetration", "Weapon Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 7:
+				return ["Body Damage", "Max Health", "Bullet Speed", "Bullet Health", "Bullet Penetration", "Bullet Damage", "Reload & Acceleration", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 8:
+				return ["Body Damage", "Max Health", "Minion Speed", "Minion Health", "Minion Penetration", "Minion Damage", "Respawn Rate", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 9:
+				return ["Body Damage", "Max Health", "", "", "", "", "Jump Rate", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 10:
+				return ["Body Damage", "Max Health", "Block Speed", "Block Health", "Block Penetration", "Block Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 11:
+				return ["Body Damage", "Max Health", "Rebound Speed", "Boomerang Health", "Boomerang Penetration", "Boomerang Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 12:
+				return ["Body Damage", "Max Health", "Lance Range", "Lance Longevity", "Lance Sharpness", "Lance Damage", "Lance Density", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 13:
+				return ["Body Damage", "Max Health", "Flail Speed", "Flail Resistance", "Flail Penetration", "Flail Damage", "Flail Density", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 14:
+				return ["Body Damage", "Max Health", "Syringe Range", "Syringe Longevity", "Syringe Sharpness", "Syringe Damage", "Refill Time", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			default:
+				return ["Body Damage", "Max Health", "Bullet Speed", "Bullet Health", "Bullet Penetration", "Bullet Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+		}
+	},
+	_skills: [{
+		amount: 0,
+		color: "purple",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "pink",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "blue",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "lgreen",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "red",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "yellow",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "green",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "teal",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "gold",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "orange",
+		cap: 1,
+		softcap: 1
+	}],
+	_points: 0,
+	_upgrades: [],
+	_realUpgrades: [],
+	_playerid: -1,
+	_skill: function () {
+		let levelScore = 0,
+			deduction = 0,
+			level = 0,
+			score = Smoothbar(0);
+		return {
+			setScores: function (s) {
+				if (s) {
+					score.set(s);
+					if (deduction > score.get()) {
+						level = 0;
+						deduction = 0;
+					}
+				} else {
+					score = Smoothbar(0);
+					level = 0;
+				}
+			},
+			update: function () {
+				levelScore = Math.ceil(1.8 * Math.pow(level + 1, 1.8) - 2 * level + 0), score.get() - deduction >= levelScore && (deduction += levelScore, level += 1);
+			},
+			getProgress: function () {
+				return levelScore ? Math.min(1, Math.max(0, (score.get() - deduction) / levelScore)) : 0;
+			},
+			getScore: function () {
+				return score.get();
+			},
+			getLevel: function () {
+				return level;
+			}
+		};
+	}(),
+	_type: 0,
+	_fps: 0,
+	_color: 0,
+	_accel: 0,
+	_topSpeed: 1,
+	_minimap: {
+		_display: [],
+		_server: []
+	},
+	_leaderboard: {
+		_display: [],
+		_server: [],
+		_publish: (old, entry) => {
+			let ref = mockups.get(entry.index);
+			let trueLabel = entry.labelOverride ? entry.labelOverride : entry.label
+			return {
+				id: entry.id,
+				image: getEntityImageFromMockup(entry.index, entry.color),
+				position: ref.position,
+				barColor: getColor(entry.barColor),
+				label: entry.name ? entry.name + " - " + (trueLabel || ref.name) : (trueLabel || ref.name),
+				score: lerp(old.score, entry.score, 0.03),
+				nameColor: entry.nameColor,
+			}
+		}
+	}
+};
+
 
 
 export { ctx, drawBar, drawGUIPolygon, drawGuiCircle, drawGuiLine, drawGuiRect, drawGuiRoundRect, drawText, measureText, _clearScreen }

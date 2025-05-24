@@ -11,7 +11,7 @@ const rewardManager = new class {
 		this._statistics = [...Array(11)].fill(0); // [player kills, deaths, boss kills, polygon kills, best score, best time, total score, total time] crasher kills, basic deaths, director upgrades
 
 		// Load statistics and achievements, then update the visual menu dom display
-		fetch(window.quickurl + "json/achievements.json").then(async json => {
+		fetch("./json/achievements.json").then(async json => {
 			this._achievements = await json.json();
 			for (let name in this._achievements) this._achievements[name].unlocked = false;
 			this.loadFromLocalStorage();

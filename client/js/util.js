@@ -103,29 +103,6 @@ util._getSpecialNameInfoById = id => [
 	["#EE8833", "#784216", `coffee`, 1]
 ][id];
 
-// HTML display on death
-let displayStatus = true;
-const displayDeathHTML = function (toggle) {
-	try {
-		if (displayStatus === toggle) {
-			return
-		}
-		displayStatus = toggle
-
-		let wrapperWrapper = document.getElementById("wrapperWrapper")
-		wrapperWrapper.style.justifyContent = "flex-start"
-
-		if (toggle === true) {
-			wrapperWrapper.style.zIndex = 100
-			return
-		}
-
-		wrapperWrapper.style.zIndex = -100
-	} catch (e) {
-		console.error(e)
-	}
-}
-
 function getWOSocketId() {
 	if (!localStorage.getItem("socketId")) {
 		localStorage.setItem("socketId", Date.now().toString(16))
@@ -159,4 +136,4 @@ function Smoothbar(value, speed) {
 	};*/
 }
 
-export { util, displayDeathHTML, getWOSocketId, Smoothbar }
+export { util, getWOSocketId, Smoothbar }

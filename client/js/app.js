@@ -1,5 +1,5 @@
 import { global, resizeEvent } from "./global.js";
-import { util, displayDeathHTML, getWOSocketId } from "/js/util.js"
+import { util, getWOSocketId } from "/js/util.js"
 import { ctx, _clearScreen } from "./drawing/canvas.js"
 import { fasttalk } from "/js/fasttalk.js"
 import { rewardManager } from "/js/achievements.js"
@@ -9,58 +9,44 @@ import { socket, makeSocket } from "./socket.js"
 import { gameDrawDead, gameDrawDisconnected, gameDrawError, gameDrawServerStatusText, gameDrawLoadingMockups } from "./drawing/scenes.js"
 import { gameDraw } from "./drawing/gameDraw.js"
 
-document.getElementById("specialRoomToken").value = localStorage.getItem("specialRoomToken") || ""
+
+
 
 // App.js
 function RememberScriptingIsBannable() {
-    window.didMainLoad = true
+    initSettingsMenu();
 
-    window.onload = function () {
-        if (window.didWindowLoad) return
-        window.didWindowLoad = true
-
-        initSettingsMenu();
-
-        util._retrieveFromLocalStorage("playerNameInput");
-        document.getElementById("startButton").onclick = function () {
-            if (global._disconnected && global._gameStart) return;
-            _startGame();
-        };
-        document.onkeydown = function (e) {
-            if (global._disconnected && global._gameStart) return;
-            let key = e.which || e.keyCode;
-            if (!global._disableEnter && key === global.KEY_ENTER && !global._gameStart) document.getElementById("startButton").click();
-        };
-        window.addEventListener("resize", resizeEvent);
-        resizeEvent();
+    // MAIN MENUS //
+    window.addEventListener("resize", resizeEvent);
+    resizeEvent();
+    
+    util._retrieveFromLocalStorage("playerNameInput");
+    
+    document.getElementById("startButton").onclick = function () {
+        if (global._disconnected && global._gameStart) return;
+        _startGame();
+    };
+    
+    document.onkeydown = function (e) {
+        if (global._disconnected && global._gameStart) return;
+        let key = e.which || e.keyCode;
+        if (!global._disableEnter && key === global.KEY_ENTER && !global._gameStart) document.getElementById("startButton").click();
     };
 
-    async function _tryFullScreen() {
-        if (document.body.requestFullScreen)
-            document.body.requestFullScreen();
-        else if (document.body.webkitRequestFullScreen)
-            document.body.webkitRequestFullScreen();
-        else if (document.body.mozRequestFullScreen)
-            document.body.mozRequestFullScreen();
-    }
-
     async function _startGame() {
-        if (!window.connectedToWRM) return;
-        const specialRoomToken = document.getElementById("specialRoomToken").value
-        document.getElementById("specialRoomToken").remove()
-        if (window.creatingRoom === true) {
+        document.getElementById("mainWrapper").style.zIndex = -100;
+        //util._submitToLocalStorage("playerNameInput");
+        let playerNameInput = document.getElementById("playerNameInput");
+        global.playerName = util._cleanString(/*playerNameInput.value.trim()*/"Placeholder", 25)
+        let socketOut = global.playerName.split('');
+        for (let i = 0; i < socketOut.length; i++) socketOut[i] = socketOut[i].charCodeAt();
+
+        if (window.creatingRoom === true) { // Create game
             window.loadingTextStatus = "Downloading server..."
             window.loadingTextTooltip = ""
-            let playerNameInput = document.getElementById("playerNameInput");
-            util._submitToLocalStorage("playerNameInput");
-            global.playerName = global.player._name = playerNameInput.value.trim();
-            global.cleanPlayerName = util._cleanString(global.playerName, 25)
-            let socketOut = util._cleanString(global.playerName, 25).split('');
-            for (let i = 0; i < socketOut.length; i++) socketOut[i] = socketOut[i].charCodeAt();
             window.connectSocketToServer = async function () {
                 // WRM, roomCreate
-                window.roomManager.send(window.addMetaData(1, 3, fasttalk.encode([/*TODO: reimplement selection*/"", specialRoomToken])))
-                localStorage.setItem("specialRoomToken", specialRoomToken)
+                window.roomManager.send(window.addMetaData(1, 3, fasttalk.encode([/*TODO: reimplement selection*/"", ""])))
                 await makeSocket(true)
                 socket.talk("s", global.party || 0, socketOut.toString(), 1, getWOSocketId());
                 console.log(socket)
@@ -68,7 +54,8 @@ function RememberScriptingIsBannable() {
             window.serverWorker = new Worker("./server.js");
             window.serverWorkerSetup()
             document.getElementById("entityEditor").style.display = "block" // enable editor for host
-        } else {
+
+        } else { // Join game
             window.loadingTextStatus = "Joining server..."
             window.loadingTextTooltip = ""
             window.onRoomJoined = async () => {
@@ -78,50 +65,18 @@ function RememberScriptingIsBannable() {
             }
             window.roomManager.send(window.addMetaData(1, 4, fasttalk.encode([window.selectedRoomId])))
         }
-        document.getElementsByClassName("background")[0].remove();
-        setTimeout(() => {
-            if (global.playerName === "") rewardManager.unlockAchievement("anonymous");
-        }, 5000);
+
+        if (global.playerName === "") rewardManager.unlockAchievement("anonymous");
         if (document.getElementById("mainMenu")) {
             document.getElementById("mainMenu").remove();
         } else {
             document.getElementById("startMenuWrapper").remove();
         };
-        if (document.getElementById("signInDiv")) document.getElementById("signInDiv").remove()
-        displayDeathHTML(false)
         if (!global.animLoopHandle) _animloop();
         //clearInterval(global.screenScale);
         //global.functionSociety.push([`${socket}`, canvas, "socket"]);
         document.getElementById("gameCanvas").focus();
-        if (global.mobile) {
-            _tryFullScreen()
-            if (navigator.b || window.matchMedia && window.matchMedia("(display-mode: fullscreen), (display-mode: standalone), (display-mode: minimal-ui)").matches) {
-                global.messages.push({
-                    text: "Thank you for adding the Woomy-Arras.io app!",
-                    status: 2,
-                    alpha: 0,
-                    time: Date.now() + 3000
-                });
-            } else {
-                global.messages.push({
-                    text: "Add the Woomy-Arras.io app by bookmarking the site to the homescreen!",
-                    status: 2,
-                    alpha: 0,
-                    time: Date.now() + 3000
-                });
-            }
-        }
-        window.onbeforeunload = function () {
-            return 1;
-        };
     }
-
-    window.requestAnimFrame = function () {
-        return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.msRequestAnimationFrame
-    }();
-    window.cancelAnimFrame = function () {
-        return window.cancelAnimationFrame || window.mozCancelAnimationFrame;
-    }();
 
     global.gameLoopSecond = function () {
         let time = 0;
@@ -175,9 +130,6 @@ function RememberScriptingIsBannable() {
                     break;
             }
 
-            global._fps = global._fpsc;
-            global._fpsc = 0;
-
             if (time % 3 === 0) {
                 if (_gui._skills[0].cap !== 0 && _gui._skills[0].amount === _gui._skills[0].cap) rewardManager.unlockAchievement("shielded_from_your_bs");
                 if (_gui._skills[1].cap !== 0 && _gui._skills[1].amount === _gui._skills[1].cap) rewardManager.unlockAchievement("selfrepairing");
@@ -204,7 +156,7 @@ function RememberScriptingIsBannable() {
 
     let nextTime = 0;
     function _animloop() {
-        global.animLoopHandle = window.requestAnimFrame(_animloop);
+        global.animLoopHandle = (window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.msRequestAnimationFrame)(_animloop);
         if (nextTime < performance.now()) {
             global._fpsc++;
             try {
@@ -248,12 +200,6 @@ function RememberScriptingIsBannable() {
             nextTime += global._fpscap;
         }
     };
-    document.getElementById("wrapperWrapper").onclick = () => {
-        if (document.getElementById("startMenuWrapper")) {
-            //return
-        }
-        document.getElementById("gameCanvas").focus()
-    }
 }
 
 let startInterval = setInterval(() => {
@@ -261,6 +207,5 @@ let startInterval = setInterval(() => {
         return
     }
     clearInterval(startInterval)
-    if (!window.didMainLoad) RememberScriptingIsBannable()
-    window.onload()
+    RememberScriptingIsBannable()
 })

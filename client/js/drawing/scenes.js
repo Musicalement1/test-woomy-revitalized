@@ -5,7 +5,7 @@ import { color, mixColors } from "../colors.js"
 import { drawEntity } from "./drawEntity.js";
 import { socket } from "../socket.js";
 import { bounceyLerp, expLerp } from "../lerp.js";
-import { util, displayDeathHTML } from "../util.js";
+import { util } from "../util.js";
 
 const gameDrawDead = function () {
 	let getKillIcon = function () {
@@ -42,7 +42,6 @@ const gameDrawDead = function () {
 			_clearScreen(color.black, .5 * alphaEquation);
 		} else if (global._deathScreenState === 1) {// FADE OUT
 			if (Date.now() - global._diedAt > glideDuration) {
-				displayDeathHTML(false)
 				return;
 			}
 			glide = (Date.now() - (global._diedAt)) / glideDuration
@@ -58,7 +57,6 @@ const gameDrawDead = function () {
 			_clearScreen(color.black, .5 * alphaEquation);
 		}
 
-		displayDeathHTML(true)
 		socket.controls.reset()
 		let x = global._screenWidth / 2,
 			y = global._screenHeight / 2 - 50,

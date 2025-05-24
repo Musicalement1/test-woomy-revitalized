@@ -162,20 +162,6 @@ wss.on('connection', function connection(ws, req) {
             
             let room = new Room(ws, gamemode)
             
-            switch(specialRoomToken){
-              case process.env.OFFICIAL_ROOM_TOKEN:
-                room.type = "offical"
-                room.id = "OFFICAL:"+room.id.substring(room.id.length-3)
-                rooms.forEach((room)=>{
-                  room.broadcast(metaData.set(3, 0, fasttalk.encode(["m", `An offical ${gamemode} room just opened up! Reload the page to check it out!`, "#2400ab"])))
-                })
-              break;
-              case process.env.TOURNEY_ROOM_TOKEN:
-                room.type = "tourney"
-                room.id = "TOURNEY:"+room.id.substring(room.id.length-3)
-              break;
-            }
-            
             room.addPlayer(ws)
             ws.room = room
             

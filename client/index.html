@@ -2,523 +2,295 @@
 <html lang="en" id="mainBody">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nabla&family=Rubik+80s+Fade&family=Alfa+Slab+One&family=Bebas+Neue&family=Bungee&family=Cutive+Mono&family=Dancing+Script:wght@500&family=Fredoka+One&family=Indie+Flower&family=Merienda&family=Nanum+Brush+Script&family=Neonderthaw&family=Pacifico&family=Passion+One&family=Permanent+Marker&family=Rampart+One&family=Roboto+Mono:wght@500&family=Share+Tech+Mono&family=Syne+Mono&family=Ubuntu:wght@400;700&family=Zen+Dots&display=swap" rel="stylesheet">
-<style type="text/css">
-    body {
-        overflow: hidden;
-    }
-</style>
+<link
+	href="https://fonts.googleapis.com/css2?family=Nabla&family=Rubik+80s+Fade&family=Alfa+Slab+One&family=Bebas+Neue&family=Bungee&family=Cutive+Mono&family=Dancing+Script:wght@500&family=Fredoka+One&family=Indie+Flower&family=Merienda&family=Nanum+Brush+Script&family=Neonderthaw&family=Pacifico&family=Passion+One&family=Permanent+Marker&family=Rampart+One&family=Roboto+Mono:wght@500&family=Share+Tech+Mono&family=Syne+Mono&family=Ubuntu:wght@400;700&family=Zen+Dots&display=swap"
+	rel="stylesheet">
+
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
-    <meta http-equiv="Pragma" content="no-cache"/>
-    <meta http-equiv="Expires" content="0"/>
-    <title>Woomy-Arras.io</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
-    <meta name="description"  content="Woomy Arras.io: A fan-made clone of diep.io, and an unofficial sequel to arras.io! Along with over 1.7k tanks, this server contains some very interesting additions...">
-    <meta name="robots" content="index, follow">
-    <meta name="keywords" content=".io, arras, arras.io, arrasio, fun game, game, io game, online game, oxyrex, private server, tank game, woomy, woomy arras, woomy arras io, woomy io, woomy-arras, woomy-arras io, woomy-arras.io, woomy.arras.io, woomy.io, woomyio">
-    <meta property="og:image" content="./resources/favicon-66x66-k.png" />
-    <meta property="og:image:width" content="52" />
-    <meta property="og:image:height" content="52" />
-    <!-- Favicons -->
-    <link rel="icon" type="image/png" sizes="192x192" href="./resources/favicon-66x66-k.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="./resources/favicon-66x66-k.png">
-    <link rel="icon" type="image/png" sizes="96x96" href="./resources/favicon-66x66-k.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="./resources/favicon-66x66-k.png">
-    <meta name="theme-color" content="#8ABC3F">
-    
-    <script src="/js/multiplayer.js" type="module""></script>
-    <script>
-        const isLocal = true//window.location.hostname === "localhost";
-        const isBeta = window.location.hostname === "beta.woomy.app";
-        const isEvent = window.location.hostname === "event.woomy.app";
-    </script>
-    <script src="/js/app.js" type="module" defer></script>
-    <link rel="stylesheet" href="./menu.css">
-    <!-- Eval packet thing-->
-    <script>
-        const $a = (Math.random() * 9000000 | 0) + 1000000;
-        const $b = (Math.random() * 9000000 | 0) + 1000000;
-        const $c = (Math.random() * 9000000 | 0) + 1000000;
-        const $d = (Math.random() * 9000000 | 0) + 1000000;
-        const $e = (Math.random() * 9000000 | 0) + 1000000;
-        Object.defineProperty(window, "_$a", {
-            get() {
-                return $a;
-            },
-            set() {
-                return $a;
-            }
-        });
-        Object.defineProperty(window, "_$b", {
-            get() {
-                return $b;
-            },
-            set() {
-                return $b;
-            }
-        });
-        Object.defineProperty(window, "_$c", {
-            get() {
-                return $c;
-            },
-            set() {
-                return $c;
-            }
-        });
-        Object.defineProperty(window, "_$d", {
-            get() {
-                return $d;
-            },
-            set() {
-                return $d;
-            }
-        });
-        Object.defineProperty(window, "_$e", {
-            get() {
-                return $e;
-            },
-            set() {
-                return $e;
-            }
-        });
-    </script>
+	<meta charset="UTF-8">
+	<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+	<meta http-equiv="Pragma" content="no-cache" />
+	<meta http-equiv="Expires" content="0" />
+	<title>Woomy-Arras.io</title>
+	<meta name="viewport"
+		content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+	<meta name="description"
+		content="Woomy Arras.io: A fan-made clone of diep.io, and an unofficial sequel to arras.io! Along with over 1.7k tanks, this server contains some very interesting additions...">
+	<meta name="robots" content="index, follow">
+	<meta name="keywords"
+		content=".io, arras, arras.io, arrasio, fun game, game, io game, online game, oxyrex, private server, tank game, woomy, woomy arras, woomy arras io, woomy io, woomy-arras, woomy-arras io, woomy-arras.io, woomy.arras.io, woomy.io, woomyio">
+	<meta property="og:image" content="./resources/favicon-66x66-k.png" />
+	<meta property="og:image:width" content="52" />
+	<meta property="og:image:height" content="52" />
+	<!-- Favicons -->
+	<link rel="icon" type="image/png" sizes="192x192" href="./resources/favicon-66x66-k.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="./resources/favicon-66x66-k.png">
+	<link rel="icon" type="image/png" sizes="96x96" href="./resources/favicon-66x66-k.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="./resources/favicon-66x66-k.png">
+	<meta name="theme-color" content="#8ABC3F">
+
+	<script src="/js/multiplayer.js" type="module""></script>
+    <script src=" /js/mainmenu.js" type="module" defer></script>
+	<script src="/js/app.js" type="module" defer></script>
+	<link rel="stylesheet" href="./menu.css">
 </head>
 
 <body oncontextmenu="return false;" id="mainBody">
-    <div id="loadingScreen" style="display:flex;position: absolute;z-index: 100000;background: black;color: white;width: 100%;height: 100%;justify-content: center;flex-direction: column;">
-      <h1 id="loadingText"  style="color:white;font-size:xxx-large;">
-        Loading Files...
-      </h1>
-      <h5 style="color:white;font-size:xx-small;">
-        Made with love by Drako Hyena
-      </h5>
-    </div>
-    <script>
-      
-      let loadingMenu = document.getElementById("loadingScreen")
-      let loadingText = document.getElementById("loadingText")
-      let dotCounter = 0
-      let loadingMenuInterval = setInterval(()=>{
-        dotCounter++
-        
-        let str = ""
-        
-        let text = "";
-        if(window.connectedToWRM !== true){
-          text = "Connecting..."
-        }
-        
-        if(dotCounter === text.length) dotCounter = 0
-        for(let i = 0; i < text.length; i++){
-          if(dotCounter === i){
-            str += `<i style="color:white;font-size:xxx-large;">${text[i]}</i>`
-            continue;
-          }
-          str += text[i]
-        }
-        loadingText.innerHTML = str
-        if(window.connectedToWRM){
-          loadingMenu.remove()
-          clearInterval(loadingMenuInterval)
-        }
-      }, 100)
-    </script>
-    <div class="background"></div>
-    <div id="gameAreaWrapper">
-        <canvas id="gameCanvas" tabindex="1"></canvas>
-    </div>
-    <div id="wrapperWrapper">
-        <div id="mainWrapper">
-            <div id="startMenuWrapper">
-                <div id="startMenu">
-                    <div class="startMenuHolder" style="padding-right: 18px;">
-                        <iframe onclick="window.open('https://discord.gg/qEskQTnDqS');"
-                            src="https://discord.com/widget?id=1107334936094064750&theme=dark"
-                            style="width: 100%; height: 90%;" allowtransparency="true" frameborder="0"></iframe>
-                        <div class="bottomHolder">
-                            <a style="background: #2bab2f; width: 25%" href="javascript:void(0)"
-                                onclick="displayAchievements()">Achievements</a>
-                            <a style="background: #3e5f85; width: 25%" href="https://woomy-site.glitch.me" target="_blank">Single Player</a>
-                            <a class="patreon" href="/itiswhatitis.html" target="_blank">What is this?</a>
-                            <!--<a style="background: #5571d7; width: 105px" href="javascript:void(0)" onclick="displayMission()">Mission</a>-->
-                            <!--<a style="background: #c53333; width: 105px" href="javascript:void(0)" onclick="displayDisclaimer()">Disclaimer</a>-->
-                        </div>
-                    </div>
-                    <div class="startMenuHolder">
-                        <div class="sliderHolder">
-                            <div class="slider" id="startMenuSlidingContent">
-                                <center><a href="//woomy-site.glitch.me/" tabindex="-1"><img class="icon"
-                                            src="./resources/woomy-arras.io.png" alt="woomy" /></a></center>
-                                <h1>Woomy-Arras.io</h1>
-                                <div id="serverFilterHolder" class="serverSelectorFilters">
-                                    <button class="selectedButton" id="serverfilter_auto">Create Room</button>
-                                    <button id="serverfilter_manual">Join Room</button>
-                                </div>
-                                <div class="serverSelectorSearch">
-                                  <input placeholder="Search" id="serverSearch" autocomplete="off">
-                                </div>
-                                <div class="serverSelector shadowScroll">
-                                    <table>
-                                        <tbody id="serverSelector"></tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <div class="slider" id="startMenuSlidingContent"><br>
-                                <div class="keybindHolder shadowScroll" style="scroll-margin: 200px;">
-                                    <table class="optionstable">
-                                        <tr>
-                                            <td>
-                                                <div class="bottomHolder" style="display: flex; justify-content: center;"><a
-                                                        style="background: #9377a9; width: 120px; margin: 0px;"
-                                                        href="javascript:void(0)" onclick="displayHowToPlay()">How to
-                                                        play</a>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div class="bottomHolder" style="display: flex; justify-content: center;"><a
-                                                        style="background: #4f7851; width: 120px; margin: 0px;"
-                                                        href="javascript:void(0)" onclick="displayAbout()">About Woomy</a>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </table>
-                                    <hr>
-                                    <optionsheader>Miscellaneous Controls:</optionsheader>
-                                    <table class="optionsTable">
-                                        <tr>
-                                            <td><b>E</b>: Autofire</td>
-                                            <td><b>C</b>: Autospin</td>
-                                        </tr>
-                                        <tr>
-                                            <td><b>Q</b>: Transform</td>
-                                            <td><b>M</b>: Max Stat</td>
-                                        </tr>
-                                        <tr>
-                                            <td><b>←&→</b>: Pan Tree</td>
-                                            <td><b>U</b>: Upgrade Tree</td>
-                                        </tr>
-                                        <tr>
-                                            <td><b>N</b>: Level Up</td>
-                                            <td><b>R</b>: Override</td>
-                                        </tr>
-                                    </table>
-                                    <br>
-                                    <hr>
-                                    <optionsheader>Beta Tester Controls:</optionsheader>
-                                    <table class="optionsTable">
-                                        <tr>
-                                            <td><b>+</b>: Rainbow</td>
-                                            <td><b>X</b>: Passive</td>
-                                        </tr>
-                                        <tr>
-                                            <td><b>`</b>: Testbed</td>
-                                            <td><b>Y</b>: Reset Color</td>
-                                        </tr>
-                                        <tr>
-                                            <td><b>K</b>: Suicide</td>
-                                            <td><b>L</b>: Debug Info</td>
-                                        </tr>
-                                    </table>
-                                    <br>
-                                    <hr>
-                                    <optionsheader>Developer Controls:</optionsheader>
-                                    <table class="optionsTable">
-                                        <tr>
-                                            <td><b>Z</b>: Drag</td>
-                                            <td><b>F</b>: Spawn</td>
-                                        </tr>
-                                        <tr>
-                                            <td><b>T</b>: Teleport</td>
-                                            <td><b>B</b>: Ran Color</td>
-                                        </tr>
-                                        <tr>
-                                            <td><b>G</b>: Kill</td>
-                                            <td><b>J</b>: Stealth</td>
-                                        </tr>
-                                        <tr>
-                                            <td><b>;</b>: Godmode</td>
-                                            <td><b>\</b>: Tank</td>
-                                        </tr>
-                                    </table>
-                                    <hr>
-                                </div>
-                                <optionsheader>To change settings, click the gear on the top left</optionsheader>
-                                <hr>
-                                <optionsheader>Miscellaneous Links</optionsheader>
-                                <div class="links">
-                                    <a tabindex="-1" href="https://discord.gg/b6UraK3x6y" target="_blank">Discord</a>
-                                    <a tabindex="-1" href="/gamemodes.html" target="_blank">Gamemode Rotation</a>
-                                    <a tabindex="-1" href="https://status.woomy.app" target="_blank">Status Page</a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="menuInputHolder">
-                            <input type="text" autofocus tabindex="1" spellcheck="false" placeholder="This is the tale of:"
-                                id="playerNameInput" maxlength="24" />
-                            <div>
-                                <button id="startButton" tabindex="2">Play</button>
-                            </div>
-                            <div id="startMenuSlidingTrigger">
-                                <h3 class="nopadding">🡿 Extra Stuff 🡾</h3>
-                            </div>
-                        </div>
-                    </div>
-                    <!--<div class="startMenuHolder" allowtransparency="true">
-                                <iframe id="patchNotesIFrame" seamless="seamless" frameborder="0"
-                                    onload="if(!this.src)this.src='./changelog.html?a='+Date.now()">Patch notes should go here. If you see this message, then something went wrong!</iframe>
-                            </div>-->
-                    <div class="startMenuHolder shadowScroll" id="patchHolder" style="padding-left: 18px;">
-                    </div>
-                    <script>
-                        void async function () {
-                            document.getElementById("patchHolder").innerHTML = ((await (await fetch("./changelog.html")).text()).replaceAll("." + "/", "./"));
-                        }()
-                    </script>
-                </div>
-            </div>
-    
-            <div class="popup" style="display: none;">
-                <h1>Title</h1>
-                <span>Message</span><br />
-                <div>
-                    <button onclick="document.querySelector('.popup').style.display = 'none';">Close</button>
-                </div>
-            </div>
-            <div class="achievementsHolder" id="achievementsHolder">
-                <div id="achievementsClose"
-                    onclick="document.getElementsByClassName('achievementsHolder')[0].style.display = 'none'"></div>
-                <h1 id="achievementsHeader">Achievements</h1>
-                <hr>
-                <div id="achievementsDisplay" class="shadowScroll"></div>
-                <h1>Player Stats</h1>
-                <hr>
-                <table id="achievementsStatsTable"></table>
-            </div>
-        </div>
-        <div class="signInDiv" id="signInDiv">
-            <button class="signInDiscord signInButton" id="signInButton"><span id="signInButtonText">Controls</span></button>
-            <button class="signInOut signInButton" id="signInOut" style="display: none;">Log out</button>
-        </div>
-    </div>
-    
-    <input type="password" id="specialRoomToken" placeholder="Special Room Token">
 
-    <script>
-        window.quickurl = "./";
-    </script>
-    <!-- Preloads.js -->
-    <script defer>
-        {
-            (function () {
-                try {
-                    if (!["localhost", "", "woomy-arras.netlify.app", "woomy-arras.xyz", "www.woomy-arras.xyz", "development.woomy-arras.xyz", ".rivet.gg"].includes(location.hostname)) {
-                        //    location.href = "https://woomy-arras.xyz/";
-                    }
+	<div id="loadingScreen"
+		style="display:flex;position: absolute;z-index: 100000;background: black;color: white;width: 100%;height: 100%;justify-content: center;flex-direction: column;">
+		<h1 id="loadingText" style="color:white;font-size:xxx-large;">
+			Loading Files...
+		</h1>
+		<h5 style="color:white;font-size:xx-small;">
+			Made with love by Drako Hyena
+		</h5>
+	</div>
+	<script>
+		let loadingMenu = document.getElementById("loadingScreen")
+		let loadingText = document.getElementById("loadingText")
+		let dotCounter = 0
+		let loadingMenuInterval = setInterval(() => {
+			dotCounter++
+			let str = ""
+			let text = "";
+			if (window.connectedToWRM !== true) {
+				text = "Connecting..."
+			}
+			if (dotCounter === text.length) dotCounter = 0
+			for (let i = 0; i < text.length; i++) {
+				if (dotCounter === i) {
+					str += `<i style="color:white;font-size:xxx-large;">${text[i]}</i>`
+					continue;
+				}
+				str += text[i]
+			}
+			loadingText.innerHTML = str
+			if (window.connectedToWRM) {
+				loadingMenu.remove()
+				clearInterval(loadingMenuInterval)
+			}
+		}, 100)
+	</script>
 
-                    function loadFromStorage() {
-                        return (localStorage.getItem("popups") || "").split(",");
-                    }
+	<div id="gameAreaWrapper">
+		<canvas id="gameCanvas" tabindex="1"></canvas>
+	</div>
 
-                    window.markAsRead = function markAsRead(item) {
-                        localStorage.setItem("popups", [...loadFromStorage(), item].join(","));
-                    }
+	<div class="popup" style="display: none;">
+		<h1>Title</h1>
+		<span>Message</span><br />
+		<div>
+			<button onclick="document.querySelector('.popup').style.display = 'none';">Close</button>
+		</div>
+	</div>
 
-                    window.closePopup = function closePopup(item) {
-                        document.getElementById("mainWrapper").removeChild(document.getElementById(item));
-                    }
+	<div class="achievementsHolder" id="achievementsHolder">
+		<div id="achievementsClose"
+			onclick="document.getElementsByClassName('achievementsHolder')[0].style.display = 'none'"></div>
+		<h1 id="achievementsHeader">Achievements</h1>
+		<hr>
+		<div id="achievementsDisplay" class="shadowScroll"></div>
+		<h1>Player Stats</h1>
+		<hr>
+		<table id="achievementsStatsTable"></table>
+	</div>
 
-                    function postAlert(alert) {
-                        if (loadFromStorage().includes(alert.name)) {
-                            return;
-                        }
-                        console.log(alert);
-                        const popup = document.createElement("div");
-                        popup.classList.add("popup");
-                        popup.id = alert.name;
-                        popup.innerHTML += `<span>${alert.title}</span><br/>${alert.text}<br/><button onclick="closePopup('${alert.name}');">Close</button><button onclick="markAsRead('${alert.name}');closePopup('${alert.name}');">Mark As Read</button><br/><span class="small">${new Date(alert.timeStamp)}</span>`;
-                        document.getElementById("mainWrapper").appendChild(popup);
-                    }
-                    //fetch("//pine-mint-smartphone.glitch.me/announcements.json").then(r => r.json()).then(json => json.announcements.forEach(postAlert));
+	<div id="modBrowser">
+		<div class="modTab">
+				<button class="modTabButtonSelected">Featured</button>
+				<button class="modTabButtonUnselected">All</button>
+		</div>
+		<div class="modMenu">
+			<div class="modInfo">
+				<h1>Mod Name</h1>
+				<img class="modImage" id="modImage">
+				<h2>By: Author</h2>
+				<p>This mod does stuff</p>
+				<button>Add to mods</button>
+				<button id="modBrowserClose">Close Menu</button>
+			</div>
+			<div class="modList">
+				<input id="modSearch" placeholder="Search for mods...">
+				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>
+				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>				<div class="modEntry">
+					<div class="modEntryText">
+						<h1>Mod Name</h1>
+						<p>Description</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 
-                    // Do screen size adjustment
-                    let element = document.getElementById("mainWrapper");
-                    let scalval = 130; ///Android|webOS|iPhone|iPad|iPod|BlackBerry|android|mobi/i.test(navigator.userAgent) ? 150 : 120;
-                    function adjust() {
-                        if (navigator.userAgent.search("Firefox") === -1) element.style.zoom = `${Math.round(Math.min(window.innerWidth / 1920, window.innerHeight / 1080) * scalval)}%`;
-                    }
-                    setInterval(adjust, 25);
-                    adjust();
-
-                } catch (e) {
-                    console.log("Error with preloads!");
-                    console.error(e)
-                }
-
-                /// Discord sign in ///
-                // Register token
-                let code = new URLSearchParams(window.location.search).get("code")
-                if (code) {
-                    localStorage.setItem("discordCode", code);
-                    window.location.replace(isLocal ? "http://localhost:3001" : isBeta ? "https://beta.woomy.app" : isEvent ? "https://event.woomy.app" : "https://woomy.app/")
-                    return;
-                }
-
-                // Button onclicks
-                document.getElementById("signInButton").onclick = () => {alert("(Host & Power lv1+) Use Powers: `\n(As host) Give someone powers: \" (As host) Ban player: .\n(Everyone) Change to Basic: u")}//window.location.href = ("https://discord.com/api/oauth2/authorize?client_id=1116884853967814676&redirect_uri=https%3A%2F%2Fwoomy-api.glitch.me%2FdiscordOauth&response_type=code&scope=identify")
-                document.getElementById("signInOut").onclick = () => {
-                    localStorage.removeItem("discordCode")
-                    window.location.reload()
-                }
-
-                // Do the sign in if its saved
-                let savedCode = localStorage.getItem("discordCode")
-                if (savedCode) {
-                    fetch("https://discord.com/api/v10/users/@me", {
-                        headers: {
-                            Authorization: "Bearer " + savedCode,
-                        },
-                    }).then((res) => res.json()).then((userData) => {
-                        if (userData.code != undefined) {
-                            localStorage.removeItem("discordCode")
-                            window.location.reload()
-                            return
-                        };
-                        document.getElementById("signInButton").onclick = () => { }
-                        document.getElementById("signInButtonImage").src = `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}`
-                        document.getElementById("signInButtonText").innerHTML = userData.global_name
-                        document.getElementById("signInOut").style.display = "initial"
-                    }).catch(err => console.error(err))
-                }
-
-
-                window.servers = [
-                    { rivetGamemode: "2dom.js", serverGamemode: "2 TDM Domination" },
-                    { rivetGamemode: "2mot.json", serverGamemode: "2 TDM Mothership" },
-                    { rivetGamemode: "2tag.json", serverGamemode: "2 TDM Tag" },
-                    { rivetGamemode: "2tdmhell.json", serverGamemode: "2 TDM Heck" },
-                    { rivetGamemode: "4dom.json", serverGamemode: "4 TDM Domination" },
-                    { rivetGamemode: "4mot.json", serverGamemode: "4 TDM Mothership" },
-                    { rivetGamemode: "4tag.json", serverGamemode: "4 TDM Tag" },
-                    { rivetGamemode: "4tdm.json", serverGamemode: "4 TDM" },
-                    { rivetGamemode: "blackout4tdm.json", serverGamemode: "Blackout 4 TDM" },
-                    { rivetGamemode: "boss.json", serverGamemode: "Boss Rush" },
-                    { rivetGamemode: "cave.json", serverGamemode: "Cave" },
-                    { rivetGamemode: "cavetdm.js", serverGamemode: "Cave TDM" },
-                    { rivetGamemode: "blackoutcavetdm.js", serverGamemode: "Blackout Cave TDM" },
-                    { rivetGamemode: "crptTanks.json", serverGamemode: "Corrupted Tanks" },
-                    { rivetGamemode: "ffa.json", serverGamemode: "FFA" },
-                    { rivetGamemode: "growth.json", serverGamemode: "Growth" },
-                    { rivetGamemode: "hangout.js", serverGamemode: "Hangout" },
-                    { rivetGamemode: "maze.js", serverGamemode: "Maze" },
-                    { rivetGamemode: "mazetdm.js", serverGamemode: "Maze TDM" },
-                    { rivetGamemode: "blackoutmazetdm.js", serverGamemode: "Blackout Maze 2 TDM" },
-                    { rivetGamemode: "murica.json", serverGamemode: "Murica" },
-                    { rivetGamemode: "p2mot.json", serverGamemode: "2 TDM Portal Mothership" },
-                    { rivetGamemode: "pffa.json", serverGamemode: "Portal FFA" },
-                    { rivetGamemode: "sbx.json", serverGamemode: "Sandbox" },
-                    { rivetGamemode: "siege.js", serverGamemode: "Siege" },
-                    { rivetGamemode: "soccer.json", serverGamemode: "Soccer" },
-                    { rivetGamemode: "space.json", serverGamemode: "Space" },
-                    { rivetGamemode: "srvivl.json", serverGamemode: "Survival" },
-                    { rivetGamemode: "tdm.js", serverGamemode: "TDM" },
-                    { rivetGamemode: "testbed.json", serverGamemode: "Testbed Event" },
-                    { rivetGamemode: "tiki.json", serverGamemode: "Squidwards Tiki Island" },
-                    { rivetGamemode: "vwalk.js", serverGamemode: "Void Walkers" },
-                    { rivetGamemode: "blackoutvwalk.js", serverGamemode: "Blackout Void Walkers" },
-                    { rivetGamemode: "custom.js", serverGamemode: "Modded" }
-                ]
-                window.preloadsDoneCooking = true
-                /*(() => {
-                    fetch("https://woomy-api.glitch.me/allServers").then(res => res.json()).then((data) => {
-                        data = data.data
-                        window.servers = data
-                        fetch("https://matchmaker.api.rivet.gg/v1/lobbies/list", {}).then(res => res.json()).then((data) => {
-                            window.lobbies = data.lobbies
-                            window.preloadsDoneCooking = true
-                        }).catch((err) => {
-                            console.error(err)
-                            alert("Failed to load servers, an update might have just released, you are getting rate limitted, or the rivet API is down. Please wait a bit and try reloading.")
-                        })
-                    }).catch((err) => {
-                        console.error(err)
-                        alert("Failed to find the servers, the woomy API might be down (let a developer know). But first, please try reloading the page!")
-                    })
-                })()*/
-
-                // I like rivet, lets not ping the api for the offline ver, thx
-                /*let interval = setInterval(async function () {
-                    if (window.gameStarted) {
-                        clearInterval(interval)
-                        return
-                    }
-                    try {
-                        await fetch("https://matchmaker.api.rivet.gg/v1/lobbies/list", {}).then(res => res.json()).then((data) => {
-                            window.lobbies = data.lobbies
-                        })
-                    } catch (err) {}
-                }, 15000)*/
-            })();
-        }
-    </script>
-    <!-- Menu.js -->
-    <script defer>
-        {
-            const popup = document.querySelector(".popup");
-            const popupTitle = popup.querySelector("h1");
-            const popupMessage = popup.querySelector("span");
-
-            function displayFirefoxSwitch() {
-                popup.style.display = "block";
-                popupTitle.textContent = "Dear Firefox User:";
-                popupMessage.textContent = "We highly recommend that you do not play this game with the firefox browser. The game functions and performs much better on a Chromium based browser, such as Google Chrome, Opera GX or Microsoft Edge. You may play using Firefox, just be aware that multiple issues may manifest themselves.";
-            }
-
-            function displayCanvasNotSupported() {
-                popup.style.display = "block";
-                popupTitle.textContent = "Warning:";
-                popupMessage.textContent = "Your browser does not support canvas. Please switch to a Chromium based browser, such as Google Chrome, Opera GX or Microsoft Edge.";
-            }
-            if (navigator.userAgent.search("Firefox") !== -1) displayFirefoxSwitch();
-
-
-            function displayHowToPlay() {
-                popup.style.display = "block";
-                popupTitle.textContent = "How to play:";
-                popupMessage.textContent = "Woomy has a wide range of different features and mechanics. The basics of movement involve using the WASD keys, which make your tank move around. You use your mouse to control where your target location is, which your tank will face torwards. To fire your tank, you can press down on the left button of your mouse. You can use E and C keys for AutoFire and AutoSpin. Your goal is to kill other players and AIs, while trying to keep your own tank alive. Killing entities in Woomy gives you score. People with the most score are shown on the leaderboard. Polygons (or Food) give score aswell. Most tanks that branch from the director branch work differently, as they have drones instead of bullets. Drones are controlled by holding down your mouse and using your cursor to controll where they go to on your screen. You can also not hold down on the mouse button, to allow them to roam freely around you and protect you. Not all drones are controllable. There is alot more to this game, but I am running out of screenspace. Go ahead and play the game yourself and lets see what you discover.";
-            }
-
-            function displayAbout() {
-                popup.style.display = "block";
-                popupTitle.textContent = "About Woomy";
-                popupMessage.textContent = "Woomy is A fan-made clone of diep.io, and an unofficial sequel to arras.io! Along with over 1.7k tanks, this server contains some very interesting additions...";
-            }
-
-            function displayAchievements() {
-                document.getElementsByClassName('achievementsHolder')[0].style.display = 'block';
-            };
-
-            let canvas = document.createElement("canvas");
-            if (!canvas || !canvas.getContext) displayCanvasNotSupported();
-            if (canvas) canvas.remove();
-
-            let clicked = 0;
-            let div = document.getElementById("startMenuSlidingTrigger");
-            let slide = document.getElementsByClassName("slider");
-            div.addEventListener('click', function () {
-                clicked = !clicked;
-                for (let i = 0; i < slide.length; i++) slide[i].style.top = `${-280 * clicked}px`;
-                if (clicked === 3) {
-                    div.innerHTML = '<h3 class="nopadding">🡿 Extra Stuff 🡾</h3>';
-                } else if (!clicked) {
-                    div.innerHTML = '<h3 class="nopadding">🡿 Extra Stuff 🡾</h3>';
-                } else {
-                    div.innerHTML = '<h3 class="nopadding">🢄 Extra Stuff 🡽</h3>';
-                };
-            });
-
-        }
-    </script>
+	<div id="mainWrapper">
+		<div id="startMenuWrapper">
+			<div id="startMenu">
+				<div class="startMenuHolder" style="padding-right: 18px;">
+					<iframe onclick="window.open('https://discord.gg/qEskQTnDqS');"
+						src="https://discord.com/widget?id=1107334936094064750&theme=dark"
+						style="width: 100%; height: 100%;" allowtransparency="true" frameborder="0"></iframe>
+				</div>
+				<div class="startMenuHolder">
+					<center>
+						<a href="//woomy-site.glitch.me/" tabindex="-1"><img class="icon"
+								src="./resources/woomy-arras.io.png" alt="woomy" /></a>
+					</center>
+					<h1>Woomy-Arras.io</h1>
+					<button id="startButton" tabindex="2">Play</button>
+					<div class="miniButtonList">
+						<button id="controlsButton">Controls</button>
+						<button id="achievementsButton">Achievements</button>
+						<button id="wikiButton">Fan-made Wiki</button>
+					</div>
+				</div>
+				<div class="startMenuHolder shadowScroll" id="patchHolder" style="padding-left: 18px;">
+					<h3><b>Sit tight!</b></h3>
+					<li>Loading changelogs...</li>
+					<script>
+						void async function () {
+							document.getElementById("patchHolder").innerHTML = await (await fetch("./changelog.html")).text();
+						}()
+					</script>
+				</div>
+			</div>
+		</div>
+	</div>
 </body>
+
 </html>

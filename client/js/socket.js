@@ -1,5 +1,5 @@
 import { global } from "./global.js";
-import { util, displayDeathHTML, getWOSocketId } from "./util.js"
+import { util } from "./util.js"
 import { logger } from "./debug.js"
 import { config } from "./config.js";
 import { rewardManager } from "./achievements.js"
@@ -442,7 +442,7 @@ function convertSlowGui(data) {
 // SOCKET // 
 let socketInit = function () {
 	return async function ag(roomHost) {
-		let url = "ws://localhost:3001/?" + `a=${_$a}&b=${_$b}&c=${_$c}&d=${_$d}&e=${_$e}`
+		let url = "ws://localhost:3001/"
 		socket = WebSocket(url, roomHost);
 		socket.binaryType = "arraybuffer";
 		socket.open = 0;
@@ -739,7 +739,7 @@ let socketInit = function () {
 		socket.onopen = function () {
 			socket.open = 1;
 			global.message = "Please wait while a connection attempt is being made.";
-			socket.talk("k", localStorage.getItem("discordCode") || "", 0, isLocal ? "its local" : window.rivetPlayerToken, false);
+			socket.talk("k", localStorage.getItem("discordCode") || "", 0, "its local", false);
 			logger.info("Token submitted to the server for validation.");
 			socket.ping = function () {
 				socket.talk("p");

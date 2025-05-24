@@ -8,7 +8,7 @@
     --backgroundBorderColor: #c1cfd8;
     --menuTextColor: #000000;
     --backgroundBrightness: 0.85;
-    --backgroundLink: url(/resources/background_light.svg)
+    --backgroundLink: url(./resources/background_light.png)
 }
 
 ::-webkit-scrollbar {
@@ -32,20 +32,6 @@
 
 .conceal {
     -webkit-text-security: disc;
-}
-
-.background {
-    background: var(--backgroundLink) no-repeat center center fixed;
-    -webkit-background-size: cover;
-    -moz-background-size: cover;
-    -o-background-size: cover;
-    background-size: cover;
-    filter: brightness(var(--backgroundBrightness)) blur(0px);
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    z-index: -10000;
-    /* box-shadow: 0 0 0.25vw 0.25vw rgba(0, 0, 0, 0.65) inset; */
 }
 
 html,
@@ -92,15 +78,6 @@ h2 {
     color: var(--menuTextColor);
 }
 
-optionsHeader {
-    display: block;
-    margin: 12px 0 5px;
-    font-size: 13px;
-    font-weight: bold;
-    text-align: center;
-    color: var(--menuTextColor);
-}
-
 h3 {
     font: small Ubuntu;
     /*color: #484848;
@@ -113,6 +90,11 @@ h4 {
     color: #8abc3f;
     text-align: center;
     color: var(--menuTextColor);
+}
+
+hr.cl {
+    border-style: dashed;
+    border-color: #a6b4bc;
 }
 
 h5 {
@@ -161,6 +143,11 @@ input.checkbox {
     overflow: hidden;
 }
 
+input:focus, input.focus {
+    border: solid 1px #cccccc;
+    box-shadow: 0 0 3px 1px #dddddd;
+}
+
 select {
     -webkit-appearance: none;
     -moz-appearance: none;
@@ -185,62 +172,23 @@ select:active {
     border: 1px solid #eee;
 }
 
-#specialRoomToken {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    padding: 0.25%;
-    width: 25%;
-    margin: 0;
-    z-index: 110;
-    font-size: xx-small;
-    background: var(--backgroundColor);
-    border-top-style: solid;
-    border-right-style: solid;
-    border-radius: 0px 5px;
-    border-color: var(--backgroundBorderColor);
-    color: var(--menuTextColor);
+td {
+    width: 50%;
 }
 
-.signInDiv {
-    display: flex;
-    flex-direction: column;
-    position: absolute;
-    top: 0;
-    right: 0;
-    margin: 5px;
-}
-.signInButton {
-    padding: 2%;
-    border-style: solid;
-    border-radius: 2.5px;
-    color: #FFFFFF;    
-    height: 1.6vmax;
-    font-size: 0.8vmax;
-    margin-bottom: 5px;
-}
-.signInButton > span {
-    font-size: 0.8vmax;
-}
-.signInButton:hover {
-    filter: brightness(0.85);
-    cursor: pointer;
-}
-.signInDiscord{
-    background: #99ada9;
-    border-color: #667874;
-}
-.signInOut{
-    background: #ff0040;
-    border-color: #c50031;
+table {
+    width: 100%;
 }
 
-#signInButtonImage {
-    max-width: auto;
-    min-width: auto;
-    min-height: 100%;
-    max-height: 100%;
-    vertical-align: middle;
+
+a:link,
+a:visited {
+    color: #9d9dd1;
+}
+
+a:link:hover,
+a:visited:hover {
+    color: #c0c0ee;
 }
 
 #playerNameInput {
@@ -248,18 +196,7 @@ select:active {
     font-size: larger;
 }
 
-.menuInputHolder {
-    top: -5%;
-    position: relative;
-}
-
-input:focus,
-input.focus {
-    border: solid 1px #cccccc;
-    box-shadow: 0 0 3px 1px #dddddd;
-}
-
-#wrapperWrapper {
+#mainWrapper {
     display: flex;
     height: 100%;
     width: 100%;
@@ -269,7 +206,138 @@ input.focus {
     justify-content: center;
     z-index: 100;
     position: relative;
+    background: var(--backgroundLink) no-repeat center center fixed;
 }
+
+#modBrowser{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    left: 0;
+    top: -100%;
+    width: 100%;
+    height: 100%;
+    background: var(--backgroundBorderColor);
+    z-index: 150;
+    transition: .2s;
+}
+.modTab{
+    height: 5%;
+    width: 80%;
+}
+.modTab > button {
+    width: 12.25%;
+    height: 100%;
+    color: white;
+    text-align: center;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.2);
+    background: #a6d469;
+    border: 0;
+    border: 2px solid #749f34;
+    cursor: pointer;
+    border-radius: 5px 5px 0px 0px;
+    font: 1.25vw Ubuntu;
+    transition: .2s;
+}
+.modTabButtonSelected{
+    filter: saturate(1) blur(0px); 
+}
+.modTabButtonUnselected{
+    filter: saturate(0) blur(.5px); 
+}
+
+.modMenu {
+    display: flex;
+    background: white;
+    width: 80%;
+    height: 80%;
+    box-sizing: border-box;
+    border-radius: 0px 5px 5px 5px;
+    border: 2px solid #749f34;
+}
+
+.modInfo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 25%;
+    height: 100%;
+    background: #a6d469;
+    border-right: 2px solid #749f34;
+}
+.modInfo > h1 {
+    font-size: 2vw;
+}
+.modInfo > h2 {
+    font-size: 1.75vw;
+}
+.modInfo > p {
+    font-size: 1.5vw;
+}
+
+
+.modList {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    width: 75%;
+    max-height: 100%;
+    overflow-y: scroll;
+    background: var(--backgroundColor);
+    padding: 10px;
+    padding-top: 0px;
+    padding-bottom: 10px;
+}
+
+.modEntry {
+    background: var(--backgroundLink);
+    width: 32.6%;
+    height: 32.6%;
+    border-radius: 5px 5px 5px 5px;
+    text-align: center;
+    padding: 0;
+    margin: .33%;
+    background-position: center;
+    background-size: cover;
+    transition: .35s;
+}
+.modEntry:hover {
+    scale: 1.01;
+}
+.modEntryText{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    backdrop-filter: blur(2px) brightness(.75);
+    border-radius: 5px 5px 5px 5px;
+    transition: .75s;
+}
+.modEntryText:hover{
+    backdrop-filter: blur(1px) brightness(.85);
+}
+.modEntryText > * {
+    color: white;
+    margin: 0;
+}
+.modEntryText > h1 {
+    font-size: 2vw;
+}
+.modEntryText > h2 {
+    font-size: 1.75vw;
+}
+.modEntryText > p {
+    font-size: 1.5vw;
+}
+
+#modSearch{
+    position: sticky;
+}
+
 
 #startMenu {
     display: flex;
@@ -287,27 +355,6 @@ input.focus {
     border-color: var(--backgroundBorderColor);
 }
 
-#bottomPageAd {
-    z-index: 2;
-    cursor: pointer;
-    opacity: 1 !important;
-    display: inline-block !important;
-    width: 970px !important;
-    height: 90px !important;
-    margin: 20px;
-}
-
-#startMenuHeader {
-    text-align: left;
-    width: 100%;
-    height: 100%;
-}
-
-hr.cl {
-    border-style: dashed;
-    border-color: #a6b4bc;
-}
-
 .startMenuHolder {
     width: 350px;
     height: 380px;
@@ -315,118 +362,6 @@ hr.cl {
     overflow: hidden;
     display: inline-block;
     vertical-align: text-top;
-}
-
-.sliderHolder {
-    width: 350px;
-    height: 285px;
-    overflow: hidden;
-}
-
-td {
-    width: 50%;
-}
-
-table {
-    width: 100%;
-}
-
-.slider {
-    position: relative;
-    top: 0;
-    width: 100%;
-    -webkit-transition: top 500ms;
-    -moz-transition: top 500ms;
-    -o-transition: top 500ms;
-    transition: top 500ms;
-}
-
-#startMenuSlidingContent {
-    height: 100%;
-}
-
-#startMenuSlidingTrigger {
-    margin-top: -2px;
-    width: 100%;
-    height: 22px;
-    box-sizing: border-box;
-    color: white;
-    text-align: center;
-    text-shadow: 0 0 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.2);
-    background: #5BA5DE;
-    border: 0;
-    border-bottom: 2px solid #428DC6;
-    cursor: pointer;
-    box-shadow: inset 0 -2px #428DC6;
-    border-radius: 5px;
-    font: 16px Ubuntu;
-}
-
-#startMenuSlidingTrigger:hover {
-    margin-top: -1px;
-    height: 21px;
-    border-bottom: 1px solid #428DC6;
-}
-
-#startMenuSlidingTrigger:active {
-    margin: 0;
-    height: 20px;
-    background: #428DC6;
-    border-bottom: 0;
-    outline: none;
-    box-shadow: none;
-}
-
-.serverSelector {
-    height: 80px;
-    text-align: center;
-    font-size: 14px;
-    font-weight: bold;
-    vertical-align: center;
-}
-.serverSelector p{
-  height: 14px;
-  margin-top: 0;
-  margin-bottom: 7px;
-}
-
-.serverSelectorFilters {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.serverSelectorFilters>button {
-    font-family: Ubuntu;
-    font-weight: bolder;
-    color: #747474;
-    background-color: #ffffff00;
-    border: 0px;
-    border-radius: 20px;
-    text-align: center;
-    margin: 2.5px;
-    padding: 5px;
-    transition: 0.35s;
-    cursor: pointer;
-}
-
-.serverSelectorFilters>.selectedButton {
-    color: #FFFFFF;
-    background-color: #8ABB44;
-}
-
-.serverSelectorSearch{
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 30px;
-  margin: 5px;
-}
-.serverSelectorSearch > input{
-  height: 100%;
-  width: 80%;
-  padding: 0px;
-  border-color: #8ABB44;
 }
 
 .shadowScroll {
@@ -446,39 +381,6 @@ table {
 
 .keybindHolder {
     height: 135px;
-}
-
-a:link,
-a:visited {
-    color: #9d9dd1;
-}
-
-a:link:hover,
-a:visited:hover {
-    color: #c0c0ee;
-}
-
-notice {
-    color: #d83848;
-    /*8cbd41*/
-    font-size: small;
-    text-align: center;
-    font-weight: bold;
-}
-
-#patchNotesIFrame {
-    width: 350px;
-    height: 335px;
-    background-color: rgba(176, 185, 190, 0.5);
-    border: 8px solid var(--backgroundBorderColor);
-    border-radius: 4px;
-    margin-left: 14px
-}
-
-#changelogHolder {
-    border-radius: 10px;
-    height: 100%;
-    width: 100%;
 }
 
 #startButton {
@@ -514,6 +416,35 @@ notice {
     outline: none;
     box-shadow: none;
 }
+
+.miniButtonList{
+    display: flex;
+    width: 95%;
+    margin: auto;
+}
+.miniButtonList > button {
+    height: 20px;
+    width: 50%;
+    margin: 1%;
+    box-sizing: border-box;
+    color: white;
+    text-align: center;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.2);
+    background: #85aa54;
+    border: 0;
+    border-bottom: 2px solid #63862e;
+    cursor: pointer;
+    box-shadow: inset 0 -2px #63862e;
+    border-radius: 5px;
+    font: 10px Ubuntu;
+    transition: .5s;
+}
+.miniButtonList > button:hover {
+    margin-top: 1px;
+    height: 25px;
+    border-bottom: 1px solid #749f34;
+}
+
 
 form {
     display: inline-block;
@@ -564,30 +495,6 @@ form {
     box-shadow: inset 0 -25px rgba(0, 0, 0, .15)
 }
 
-@keyframes patreonAnimation {
-    0% {
-        background: rgb(228, 122, 184, 1);
-        scale: 1;
-    }
-
-    50% {
-        background: rgba(228, 122, 184, 0.75);
-        scale: 1.03;
-    }
-
-    100% {
-        background: rgba(228, 122, 184, 1);
-        scale: 1;
-    }
-}
-
-.patreon {
-    width: 45% !important;
-    animation-name: patreonAnimation;
-    animation-iteration-count: infinite;
-    animation-duration: 3s;
-}
-
 #startMenuWrapper {
     -webkit-transition: max-height 1s;
     -moz-transition: max-height 1s;
@@ -595,11 +502,6 @@ form {
     -o-transition: max-height 1s;
     transition: max-height 1s;
     overflow: hidden;
-}
-
-.nopadding {
-    padding: 0;
-    margin: 0;
 }
 
 #startMenu ul {
@@ -649,7 +551,7 @@ input [type="image"]:focus {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    z-index: 3;
+    z-index: 200;
     border-radius: 10px;
     background: var(--backgroundColor);
     padding: 10px;
@@ -779,7 +681,7 @@ input [type="image"]:focus {
     top: 47.5%;
     left: 50%;
     transform: translate(-50%, -50%);
-    z-index: 3;
+    z-index: 200;
     border-radius: 10px;
     background: var(--backgroundColor);
     padding: 10px;

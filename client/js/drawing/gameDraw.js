@@ -583,7 +583,7 @@ let gameDraw = function (ratio) {
 						x3 = x * 2 + 105;
 						x *= glide
 						y *= glide
-						global.clickables.upgrade.place(i++, y * ratio, x, len, height);
+						global.clickables.upgrade.place(i++, y, x, len, height);
 						ctx.globalAlpha = .5;
 						ctx.fillStyle = getColor(colorIndex > 185 ? colorIndex - 85 : colorIndex);
 						config.roundUpgrades ? drawGuiRoundRect(y, x, len, height, 10) : drawGuiRect(y, x, len, height);
@@ -595,9 +595,9 @@ let gameDraw = function (ratio) {
 						if (!global._died && !global._disconnected) {
 							let tx = Math.pow((global.guiMouse.x) - (y + height / 2), 2),
 								ty = Math.pow((global.guiMouse.y) - (x + len / 2), 2);
-							if (Math.sqrt(tx + ty) < height * .55) {
+							if (Math.sqrt(tx + ty) < height*.55) {
+								ctx.globalAlpha = .6;
 								config.roundUpgrades ? drawGuiRoundRect(y, x, len, height, 10) : drawGuiRect(y, x, len, height);
-								ctx.globalAlpha = .5;
 							}
 						}
 						ctx.globalAlpha = 1;
@@ -683,7 +683,7 @@ let gameDraw = function (ratio) {
 							}
 							// Upgrade name
 							if (skillAmount !== skillMax && _gui._points && (skillCap === skillMax || skillAmount !== skillCap)) {
-								global.clickables.stat.place(9 - ticker, x * ratio, y * ratio, width * ratio, height * ratio);
+								global.clickables.stat.place(9 - ticker, x, y, width, height);
 							}
 							if (skillNameBottom) {
 								drawText(skillNameBottom, x + width / 2, y + height * 0.55, height / 6, color.guiwhite, "center");
@@ -815,7 +815,7 @@ function drawMobileButton(i, x, y, w, h, text) {
 	ctx.strokeRect(0, 0, w, h);
 	ctx.globalAlpha = 1;
 	drawText(text, w / 2, h / 2, 14, color.guiwhite, "center", true);
-	clickables.mobileClicks.place(i, x, y, w, h);
+	global.clickables.mobileClicks.place(i, x, y, w, h);
 	ctx.restore();
 }
 
