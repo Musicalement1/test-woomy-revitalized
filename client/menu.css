@@ -479,7 +479,7 @@ a:visited:hover {
 }
 .joinRoomInfo > * {
     padding: 0;
-    margin: 0;
+    margin: 5px;
 }
 .joinRoomModList{
     background: var(--backgroundColor);
@@ -661,11 +661,15 @@ a:visited:hover {
     border-radius: 5px;
     width: 17vw;
     height: 17vw;
-    transition: .35s;
+    transition: all .35s, filter 1s;
     margin: 5px;
 }
 .gameEntryGallery:hover {
     scale: 1.01;
+}
+.gameEntryGallery:active {
+    filter: brightness(1.2);
+    transition: filter .1s;
 }
 .gameEntryGalleryText {
     display: flex;

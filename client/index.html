@@ -29,8 +29,6 @@
 	<link rel="icon" type="image/png" sizes="16x16" href="./resources/favicon-66x66-k.png">
 	<meta name="theme-color" content="#8ABC3F">
 
-	<script src="/js/multiplayer.js" type="module""></script>
-    <script src=" /js/mainmenu.js" type="module" defer></script>
 	<script src="/js/app.js" type="module" defer></script>
 	<link rel="stylesheet" href="./menu.css">
 </head>
@@ -96,7 +94,7 @@
 		<table id="achievementsStatsTable"></table>
 	</div>
 
-	<div id="modBrowser">
+	<div id="modBrowser" style="top: -100%;">
 		<div class="modTab">
 			<div class="modTabMenuButtonHolder">
 				<button class="modTabMenuButton modTabButtonSelected">Featured</button>
@@ -125,7 +123,7 @@
 		</div>
 	</div>
 
-	<div id="gameJoinScreen">
+	<div id="gameJoinScreen" style="top: 0%;">
 		<div class="gameJoinCloseHolder">
 			<button class="gameJoinClose" id="gameJoinClose">Close</button>
 		</div>
@@ -159,12 +157,12 @@
 				<input id="joinSearch" class="joinSearch" placeholder="Search...">
 				<div class="joinSearchButtons">
 					<div class="joinSearchButtonGroup">
-						<button class="joinSearchButtonSelected">Join</button>
-						<button class="joinSearchButtonUnselected">Host</button>
+						<button id="joinFilter" class="joinSearchButtonSelected">Join</button>
+						<button id="hostFilter" class="joinSearchButtonUnselected">Host</button>
 					</div>
 					<div class="joinSearchButtonGroup">
-						<button class="joinSearchButtonSelected">Gallery</button>
-						<button class="joinSearchButtonUnselected">List</button>
+						<button id="galleryFilter" class="joinSearchButtonSelected">Gallery</button>
+						<button id="listFilter" class="joinSearchButtonUnselected">List</button>
 					</div>
 				</div>
 				<div class="joinEntryHolder">
@@ -172,7 +170,7 @@
 						<div class="gameEntryGalleryText">
 							<h2>Gamemode</h2>
 							<p>0 Players</p>
-							<p><span id="roomInfoServerCode">######</span></p>
+							<p>######</p>
 						</div>
 					</div>
 

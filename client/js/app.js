@@ -9,6 +9,9 @@ import { socket, makeSocket } from "./socket.js"
 import { gameDrawDead, gameDrawDisconnected, gameDrawError, gameDrawServerStatusText, gameDrawLoadingMockups } from "./drawing/scenes.js"
 import { gameDraw } from "./drawing/gameDraw.js"
 
+import "./multiplayer.js";
+import "./mainmenu.js";
+import "./joinMenu.js";
 
 
 
