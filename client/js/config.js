@@ -14,6 +14,7 @@ let config = {
 	resolutionScale: 1,
 	fontSizeBoost: 10,
 	fontStrokeRatio: 4.5,
+	uiScale: 1.1,
 	neon: 0,
 	disableMessages: 0,
 	roundUpgrades: 0,

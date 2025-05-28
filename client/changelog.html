@@ -6,38 +6,32 @@
         A large part of that is making sure the game can handle some crazy things (namely mega bosses).</li>
         <li>This first part is a massive overhaul of the client which has been the main bottleneck.</li>
         <li>You might notice some things no longer in the game and things appearing different than you're used to. In most of these cases it's unavoidable and marginal compared to the performance and organizational improvements.</li>
-        <h3><b>Changes</b></h3>
-        <li>Went through all of the code and refactored almost everything</li>
-        <li>Split up the client into different files</li>
-        <li>Entities are now sent 33% faster</li>
-        <li>Shield Bar is now darker for better visibility</li>
-        <li>Guns are bouncier</li>
-        <li>Adjusted default settings</li>
+
         <h3><b>Removals</b></h3>
-        <li>Remaints of the ad system</li>
+        <li>Remnants of the ad system</li>
         <li>Main menu background animations</li>
         <li>Game menu animations setting (related to main menu background animations)</li>
         <li>Tint Nests option</li>
         <li>Name gradients</li>
         <li>Name badges</li>
         <li>Minimap debug graphs (pressing L a few times)</li>
-        <li>Remaints of the branch tree</li>
+        <li>Remnants of the branch tree</li>
         <ul>
             <li>This does not mean that there wont be some equivalent in the future but its not a priority</li>
         </ul>
-        <li>Remaints of the 1v1/Ranked system</li>
+        <li>Remnants of the 1v1/Ranked system</li>
         <ul>
             <li>Same case as the branch tree</li>
         </ul>
         <li>Clock syncing</li>
-        <li>Remaints of squadrons</li>
+        <li>Remnants of squadrons</li>
         <ul>
             <li>V packet type</li>
         </ul>
         <li>cr packet type</li>
         <li>tg packet type</li>
         <li>K packet type</li>
-        <li>Remaints of the eval packet code (anti-botting)</li>
+        <li>Remnants of the eval packet code (anti-botting)</li>
         <ul>
             <li>I_solemnly_swear_I_wont_exploit packet type</li>
         </ul>
@@ -93,6 +87,12 @@
         <li>Treatment tanks' prop outline no longer stays green after using it</li>
 
         <h3><b>Changes</b></h3>
+        <li>Went through all of the code and refactored almost everything</li>
+        <li>Split up the client into different files</li>
+        <li>Entities are now sent 33% faster</li>
+        <li>Shield Bar is now darker for better visibility</li>
+        <li>Guns are bouncier</li>
+        <li>Adjusted default settings</li>
         <li>Lerp Entity Sizes is now on by default</li>
         <li>Things now shrink instead of expand on death</li>
         <li>Changed how transparency works</li>
@@ -108,13 +108,19 @@
             <li>Lights are now cached</li>
             <li>Scoping light is now half as bright as your tank light</li>
             <li>Depending on size lights will be dimmer</li>
+            <li>Made lights mix in a better way, courtesy of <a src="https://github.com/xskutsu/global-composite-lighting">xskutsu/jekyll</a></li>
+            <li>Light color is now based off body color</li>
         </ul>
+        <li>Death Screen is now more transparent</li>
+        <li>The achievements pop-out now scales better</li>
 
         <h3><b>Additions</b></h3>
         <li>Mobile players can now swipe on skill upgrades to quickly invest points</li>
         <li>Added a "Hide Mini-Renders" setting which will disable tank rendering for upgrades and the leaderboard</li>
         <li>Added a Bar Style setting</li>
         <li>The mobile Rest Tank button now uses the 8 second one rather than the dev one</li>
+        <li>Added a room join/creation screen</li>
+        <li>Added a mod browser</li>
     </ul>
 </div>
 <div class="patchnoteSection">

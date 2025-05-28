@@ -206,9 +206,10 @@ a:visited:hover {
     justify-content: center;
     z-index: 100;
     position: relative;
-    background: var(--backgroundLink) no-repeat center center fixed;
+    background: var(--backgroundLink) repeat center center;
 }
 
+/* Mod Menu */
 #modBrowser{
     display: flex;
     flex-direction: column;
@@ -219,17 +220,22 @@ a:visited:hover {
     top: -100%;
     width: 100%;
     height: 100%;
-    background: var(--backgroundBorderColor);
+    background: var(--backgroundLink) repeat center center;
     z-index: 150;
     transition: .2s;
 }
 .modTab{
     height: 5%;
     width: 80%;
+    display: flex;
+    justify-content: space-between;
 }
-.modTab > button {
+.modTabMenuButtonHolder{
+    width: 100%;
+}
+.modTabMenuButton {
     width: 12.25%;
-    height: 100%;
+    height: 90%;
     color: white;
     text-align: center;
     text-shadow: 0 0 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.2);
@@ -237,24 +243,58 @@ a:visited:hover {
     border: 0;
     border: 2px solid #749f34;
     cursor: pointer;
-    border-radius: 5px 5px 0px 0px;
+    border-radius: 5px 5px 5px 5px;
     font: 1.25vw Ubuntu;
     transition: .2s;
 }
 .modTabButtonSelected{
-    filter: saturate(1) blur(0px); 
+    filter: saturate(1);
+}
+.modTabButtonSelected:hover{
+    scale: .98;
+    filter: brightness(.98);
 }
 .modTabButtonUnselected{
-    filter: saturate(0) blur(.5px); 
+    filter: saturate(0); 
 }
-
+.modTabButtonUnselected:hover{
+    scale: .98;
+    filter: saturate(0) brightness(.98);
+}
+.modTabMenuButton:active{
+    background: #749f34;
+    scale: .9;
+}
+.modTabExitButton{
+    width: 12.25%;
+    height: 90%;
+    color: white;
+    text-align: center;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.2);
+    background: #ff6060;
+    border: 0;
+    border: 2px solid #ff0000;
+    cursor: pointer;
+    border-radius: 5px 5px 5px 5px;
+    font: 1.5vw Ubuntu;
+    transition: .2s;
+    cursor: pointer;
+}
+.modTabExitButton:hover{
+    scale: .98;
+    filter: brightness(.98);
+}
+.modTabExitButton:active{
+    background: #ff0000;
+    scale: .9;
+}
 .modMenu {
     display: flex;
     background: white;
     width: 80%;
     height: 80%;
     box-sizing: border-box;
-    border-radius: 0px 5px 5px 5px;
+    border-radius: 5px 5px 5px 5px;
     border: 2px solid #749f34;
 }
 
@@ -276,8 +316,6 @@ a:visited:hover {
 .modInfo > p {
     font-size: 1.5vw;
 }
-
-
 .modList {
     display: flex;
     flex-direction: row;
@@ -313,7 +351,7 @@ a:visited:hover {
     justify-content: center;
     width: 100%;
     height: 100%;
-    backdrop-filter: blur(2px) brightness(.75);
+    backdrop-filter: blur(1.5px) brightness(.75);
     border-radius: 5px 5px 5px 5px;
     transition: .75s;
 }
@@ -336,6 +374,368 @@ a:visited:hover {
 
 #modSearch{
     position: sticky;
+}
+
+/* Play Screen */
+#gameJoinScreen{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    left: 0;
+    top: 0%;
+    width: 100%;
+    height: 100%;
+    background: var(--backgroundLink) repeat center center;
+    z-index: 150;
+    transition: .2s;
+}
+.gameJoinCloseHolder{
+    height: 2.5vw;
+    width: 80%;
+    margin-bottom: 5px;
+    display: flex;
+    justify-content: space-between;
+    justify-content: flex-end;
+}
+.gameJoinClose{
+    width: 12.25%;
+    height: 100%;
+    color: white;
+    text-align: center;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.2);
+    background: #ff6060;
+    border: 0;
+    border: 2px solid #ff0000;
+    cursor: pointer;
+    border-radius: 5px 5px 5px 5px;
+    font: 1.5vw Ubuntu;
+    transition: .2s;
+    cursor: pointer;
+}
+.gameJoinClose:hover{
+    scale: .98;
+    filter: brightness(.98);
+}
+.gameJoinClose:active{
+    background: #ff0000;
+    scale: .9;
+}
+.gameJoinBox {
+    display: flex;
+    background: white;
+    width: 80%;
+    height: 80%;
+    box-sizing: border-box;
+    border-radius: 5px 5px 5px 5px;
+    border: 2px solid #749f34;
+}
+.joinSidebar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    width: 25%;
+    height: 100%;
+    background: #a6d469;
+    border-right: 2px solid #749f34;
+}
+.joinInfo{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 18vw;
+    width: 100%;
+}
+.joinInfo > * {
+    margin: 2px;
+}
+.joinInfo > h1{
+    font-size: 1.75vw;
+    margin: 5px;
+}
+#nameInput{
+    width: 70%;
+    height: 2vw;
+    padding: 0px;
+    font-size: 1.2vw;
+}
+#tokenInput{
+    width: 60%;
+    height: 1vw;;
+    padding: 5px;
+    font-size: .5vw;
+}
+.joinRoomInfo{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: inherit;
+    width: 100%;
+    border-top: 2px solid #749f34;
+    border-bottom: 2px solid #749f34;
+}
+.joinRoomInfo > * {
+    padding: 0;
+    margin: 0;
+}
+.joinRoomModList{
+    background: var(--backgroundColor);
+    border: 2px solid #749f34;
+    border-radius: 5px;
+    width: 90%;
+    height: 100%;
+    margin-bottom: 5px;
+    padding: 5px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+.modListEntry{
+    width: 100%;
+    border-radius: 5px;
+    border-style: solid;
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, .5);
+}
+.modListHeader{
+    height: 2vw;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 5px;
+}
+.modListHeader > img{
+    height: 1.5vw;
+    width: 1.5vw;
+    padding: 0;
+    border-style: solid;
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, .5);
+}
+.modListHeader > h2{
+    height: 1vw;
+    font-size: 1vw;
+}
+.modListHeader > button{
+    font-size: .6vw;
+    height: 1.5vw;
+    width: 1.5vw;
+    border-style: solid;
+    border-radius: 5px;
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, .5);
+    color: white;
+    transition: .1s;
+}
+.modListHeader > button:hover{
+    scale: .95;
+}
+.modListHeader > button:active{
+    scale: .7;
+}
+.modListHeaderAdd{
+    background: green;
+    cursor: pointer;
+}
+.modListHeaderRemove{
+    background: red;
+    cursor: pointer;
+}
+.modListEntry > p{
+    width: auto;
+    font-size: .75vw;
+    padding: 5px;
+    border-top-style: solid;
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, .5);
+}
+.joinActionButton{
+    height: 10vw;
+    width: 100%;
+    color: white;
+    text-align: center;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.2);
+    background: #a6d469;
+    border-style: none;
+    cursor: pointer;
+    font: 1.5vw Ubuntu;
+    transition: .2s;
+}
+.joinActionButton:hover{
+    filter: brightness(.95);
+}
+.joinActionButton:active{
+    background: #749f34;
+    font-size: 1.45vw;
+}
+.joinBrowser {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    width: 75vw;
+    max-height: 100%;
+    background: var(--backgroundColor);
+    padding: 10px;
+    padding-top: 0px;
+    padding-bottom: 10px;
+}
+.joinSearch{
+    position: sticky;
+    top: 5px;
+    left: 0;
+    height: 3vw;
+    font-size: 1.5vw;
+}
+.joinSearchButtons{
+    position: sticky;
+    top: calc(3vw + 10px);
+    left: 0;
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    height: 2.5vw;
+}
+.joinSearchButtonGroup{
+    width: 100%;
+}
+.joinSearchButtonGroup:first-of-type > button{
+    float: left;
+    margin-right: 0px;
+    margin-left: 5px;
+}
+.joinSearchButtonGroup > button{
+    float: right;
+    width: 40%;
+    height: 100%;
+    color: white;
+    text-align: center;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.2);
+    background: #a6d469;
+    border: 0;
+    border: 2px solid #749f34;
+    cursor: pointer;
+    border-radius: 5px 5px 5px 5px;
+    font: 1.5vw Ubuntu;
+    transition: .2s;
+    margin-right: 5px;
+}
+.joinSearchButtonGroup > button:active{
+    background: #749f34;
+    scale: .9;
+}
+.joinSearchButtonSelected{
+    filter: saturate(1); 
+}
+.joinSearchButtonSelected:hover{
+    scale: .98;
+    filter: brightness(.98);
+}
+.joinSearchButtonUnselected{
+    filter: saturate(0); 
+}
+.joinSearchButtonUnselected:hover{
+    scale: .98;
+    filter: saturate(0) brightness(.98);
+}
+.joinEntryHolder{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: flex-start;
+    width: 100%;
+    height: calc(100% - 5.5vw - 15px);
+    overflow: scroll;
+    margin-top: 5px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    padding: 5px;
+}
+.gameEntryGallery{
+    background: var(--backgroundLink);
+    background-size: cover;
+    background-position: center;
+    border-radius: 5px;
+    width: 17vw;
+    height: 17vw;
+    transition: .35s;
+    margin: 5px;
+}
+.gameEntryGallery:hover {
+    scale: 1.01;
+}
+.gameEntryGalleryText {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    backdrop-filter: blur(1.5px) brightness(.75);
+    border-radius: 5px;
+    transition: .75s;
+}
+.gameEntryGalleryText > h2{
+    color: white;
+    font-size: 2vw;
+    margin: 0;
+}
+.gameEntryGalleryText > p {
+    color: white;
+    font-size: 1vw;
+    margin: 0;
+}
+.gameEntryGalleryText > p > span{
+    font-size: .75vw;
+}
+.gameEntryGalleryText:hover{
+    backdrop-filter: blur(1px) brightness(.85);
+}
+
+
+.modEntry {
+    background: var(--backgroundLink);
+    width: 32.6%;
+    height: 32.6%;
+    border-radius: 5px 5px 5px 5px;
+    text-align: center;
+    padding: 0;
+    margin: .33%;
+    background-position: center;
+    background-size: cover;
+    transition: .35s;
+}
+.modEntry:hover {
+    scale: 1.01;
+}
+.modEntryText{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    backdrop-filter: blur(1.5px) brightness(.75);
+    border-radius: 5px 5px 5px 5px;
+    transition: .75s;
+}
+.modEntryText:hover{
+    backdrop-filter: blur(1px) brightness(.85);
+}
+.modEntryText > * {
+    color: white;
+    margin: 0;
+}
+.modEntryText > h1 {
+    font-size: 2vw;
+}
+.modEntryText > h2 {
+    font-size: 1.75vw;
+}
+.modEntryText > p {
+    font-size: 1.5vw;
 }
 
 
@@ -676,8 +1076,7 @@ input [type="image"]:focus {
 .achievementsHolder {
     position: absolute;
     display: block;
-    width: 650px;
-    height: 670px;
+    width: 40%;
     top: 47.5%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -693,21 +1092,10 @@ input [type="image"]:focus {
     display: none;
 }
 
-.achievementsHolder span.small {
-    font-size: xx-large;
-    font-weight: bold;
-    color: var(--menuTextColor);
-}
-
-.achievementsHolder span {
-    font-size: x-large;
-    font-weight: light;
-    color: var(--menuTextColor);
-}
 
 #achievementsClose {
-    height: 20px;
-    width: 20px;
+    height: 2vw;
+    width: 2vw;
     float: right;
     opacity: .8;
     background-image: url('data:image/svg+xml,%3Csvg xmlns%3D"http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg" fill%3D"%23DD0000" viewBox%3D"0 0 16 16" width%3D"20" height%3D"20"%3E%3Cpath d%3D"M3 0 0 3 6 8 0 13 3 16 8 10 13 16 16 13 10 8 16 3 13 0 8 6 3 0Z"%3E%3C%2Fpath%3E%3C%2Fsvg%3E');
@@ -721,7 +1109,7 @@ input [type="image"]:focus {
 }
 
 #achievementsDisplay {
-    height: 448px;
+    height: 50vh;
     width: auto;
     background-color: rgba(0, 0, 0, 0.2);
     border-radius: 10px;
@@ -739,24 +1127,24 @@ input [type="image"]:focus {
     border: 3.5px solid rgba(0, 0, 0, 0.35);
 }
 
-.achievementsItem h1 {
-    font-size: 22px;
+.achievementsHolder h1 {
+    font-size: 1.5vw;
     font-weight: light;
     color: #22160b;
 }
 
 .achievementsItem span {
-    font-size: 17px;
+    font-size: 1.3vw;
     font-weight: bold;
     color: #22160b;
 }
 
 #achievementsStatsTable td {
-    font-size: 18px;
+    font-size: 1.4vh;
 }
 
 #achievementsStatsTable tr b {
-    font-size: 22px;
+    font-size: 1.4vh;
 }
 
 #patchHolder {

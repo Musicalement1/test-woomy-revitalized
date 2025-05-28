@@ -1,6 +1,6 @@
 import { util, Smoothbar } from "../util.js";
 import { global } from "../global.js";
-import { ctx, drawBar, drawGUIPolygon, drawGuiCircle, drawGuiLine, drawGuiRect, drawGuiRoundRect, drawText, measureText, _clearScreen } from "./canvas.js"
+import { ctx, drawBar, drawGUIPolygon, drawGuiCircle, drawGuiLine, drawGuiRect, drawGuiRoundRect, drawText, measureText, _clearScreen, getGradient } from "./canvas.js"
 import { color, mixColors, getColor, getZoneColor, hslToColor } from "../colors.js"
 import { config } from "../config.js";
 import { lerp, lerpAngle } from "../lerp.js";
@@ -152,43 +152,43 @@ let gameDraw = function (ratio) {
 		ctx.globalAlpha = 1;
 	};
 
+
 	// BLACKOUT
 	if (global._blackout) {
+		const divisor = 1;
 		//overlay
-		if (!window.darknessCanvas) window.darknessCanvas = document.createElement('canvas');
-		darknessCanvas.width = global._screenWidth;
-		darknessCanvas.height = global._screenWidth;
-		if (!window.darknessCtx) window.darknessCtx = darknessCanvas.getContext('2d');
+		if (!window.darknessCanvas) window.darknessCanvas = new OffscreenCanvas(1, 1);
+		darknessCanvas.width = global._screenWidth / divisor;
+		darknessCanvas.height = global._screenHeight / divisor;
+		if (!window.darknessCtx) window.darknessCtx = darknessCanvas.getContext("2d", { alpha: true, desynchronized: true, willReadFrequently: false });
+		darknessCtx.clearRect(0, 0, darknessCanvas.width, darknessCanvas.height);
 		if (global.player._canSeeInvisible) {
 			darknessCtx.globalAlpha = .9
 		}
-		if (!window.darknessGrad) {
-			window.darknessGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
-			darknessGrad.addColorStop(0, "#FFFFFFFF");
-			darknessGrad.addColorStop(1, `#FFFFFF00`);
-		}
-		darknessCtx.fillStyle = "black";
+		darknessCtx.globalCompositeOperation = "source-over";
+		darknessCtx.fillStyle = "#000000";
 		darknessCtx.fillRect(0, 0, darknessCanvas.width, darknessCanvas.height);
 		darknessCtx.globalAlpha = 1;
-		darknessCtx.globalCompositeOperation = "destination-out";
-		darknessCtx.translate(global._screenWidth / 2, global._screenHeight / 2);
+		darknessCtx.globalCompositeOperation = "lighter";
+		darknessCtx.translate(global._screenWidth / 2 / divisor, global._screenHeight / 2 / divisor);
 		for (let i = 0; i < entityArr.length; i++) {
 			let instance = entityArr[i],
 				x = ratio * instance.render.x - px,
 				y = ratio * instance.render.y - py,
 				fade = instance.render.status.getFade(),
-                size = ((Math.min(15 + instance.size * 10, instance.size + 180)) * fade) * ratio;
+				size = ((Math.min(120 + instance.size * 5, instance.size + 280)) * fade) * ratio / divisor,
+				darknessGrad = getGradient(getColor(entityArr[i].color))
 
 			// auras
 			let mockup = mockups.get(instance.index)
 			for (let prop of mockup.props) {
 				if (prop.isAura) {
-					let size = Math.round(instance.size / mockup.size * mockup.realSize * prop.size)
+					let size = Math.round(instance.size * prop.size * ratio) / divisor
 					let xx = prop.x + x;
 					let yy = prop.y + y;
 					darknessCtx.save()
-					darknessCtx.translate(xx, yy)
-					darknessCtx.scale(size*fade, size*fade)
+					darknessCtx.translate(xx / divisor, yy / divisor);
+					darknessCtx.scale(size * fade, size * fade)
 					darknessCtx.fillStyle = darknessGrad;
 					darknessCtx.beginPath()
 					darknessCtx.arc(0, 0, 1, 0, 2 * Math.PI)
@@ -201,7 +201,7 @@ let gameDraw = function (ratio) {
 			// entities
 			if (instance.team !== global.player.team) continue;
 			darknessCtx.save()
-			darknessCtx.translate(x, y)
+			darknessCtx.translate(x / divisor, y / divisor);
 			darknessCtx.scale(size, size)
 			darknessCtx.globalAlpha = (instance.size / 50) * fade
 			darknessCtx.fillStyle = darknessGrad;
@@ -216,7 +216,7 @@ let gameDraw = function (ratio) {
 				x = 0
 				y = 0
 				darknessCtx.save()
-				darknessCtx.translate(x, y)
+				darknessCtx.translate(x / divisor, y / divisor)
 				darknessCtx.scale(size, size)
 				darknessCtx.globalAlpha = (instance.size / 100) * fade
 				darknessCtx.fillStyle = darknessGrad;
@@ -227,16 +227,20 @@ let gameDraw = function (ratio) {
 				darknessCtx.restore()
 			}
 		}
-		ctx.save()
-		ctx.translate(global._screenWidth / -2, global._screenHeight / -2);
+
+		ctx.save();
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.globalAlpha = 1;
-		ctx.drawImage(darknessCanvas, 0, 0);
-		ctx.restore()
+		ctx.imageSmoothingEnabled = false;
+		ctx.globalCompositeOperation = "multiply";
+		ctx.drawImage(darknessCanvas, 0, 0, window.innerWidth, window.innerHeight);
+		ctx.globalCompositeOperation = "source-over";
+		ctx.restore();
 	}
 
 	// SKILL BARS
 	ctx.translate(global._screenWidth / -2, global._screenHeight / -2);
-	ratio = util._getScreenRatio();
+	ratio = util._getScreenRatio() * config.uiScale;
 	let scaleScreenRatio = (by, unset) => {
 		global._screenWidth /= by;
 		global._screenHeight /= by;
@@ -248,7 +252,7 @@ let gameDraw = function (ratio) {
 	let alcoveSize = 200 / ratio; // / drawRatio * global.screenWidth;
 	let spacing = 20;
 	if (!config.screenshotMode) {
-		scaleScreenRatio(ratio * 1.1, true);
+		scaleScreenRatio(ratio * 1, true);
 		_gui._skill.update();
 		{
 			if (!global.mobile) {
@@ -595,7 +599,7 @@ let gameDraw = function (ratio) {
 						if (!global._died && !global._disconnected) {
 							let tx = Math.pow((global.guiMouse.x) - (y + height / 2), 2),
 								ty = Math.pow((global.guiMouse.y) - (x + len / 2), 2);
-							if (Math.sqrt(tx + ty) < height*.55) {
+							if (Math.sqrt(tx + ty) < height * .55) {
 								ctx.globalAlpha = .6;
 								config.roundUpgrades ? drawGuiRoundRect(y, x, len, height, 10) : drawGuiRect(y, x, len, height);
 							}

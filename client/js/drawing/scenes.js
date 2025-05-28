@@ -39,7 +39,7 @@ const gameDrawDead = function () {
 			getAlpha = function () {
 				return alphaEquation
 			}
-			_clearScreen(color.black, .5 * alphaEquation);
+			_clearScreen(color.black, 0.3 * alphaEquation);
 		} else if (global._deathScreenState === 1) {// FADE OUT
 			if (Date.now() - global._diedAt > glideDuration) {
 				return;
@@ -54,7 +54,7 @@ const gameDrawDead = function () {
 			getAlpha = function () {
 				return alphaEquation
 			}
-			_clearScreen(color.black, .5 * alphaEquation);
+			_clearScreen(color.black, .3 * alphaEquation);
 		}
 
 		socket.controls.reset()

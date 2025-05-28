@@ -73,10 +73,10 @@ global.clickables = function () {
 				active = 0;
 			return {
 				set: function (x, y, w, h) {
-					region._x = x * global._ratio;
-					region._y = y * global._ratio;
-					region._w = w * global._ratio;
-					region._h = h * global._ratio;
+					region._x = x;
+					region._y = y;
+					region._w = w;
+					region._h = h;
 					active = 1;
 				},
 				check: function (target) {
@@ -137,21 +137,19 @@ global._canvas = new (class Canvas {
 		this._cv.width = global._screenWidth;
 		this._cv.height = global._screenHeight;
 		if (mobile) {
-			this.controlTouch = null;
-			this.movementTouch = null;
-			this.movementTop = false;
-			this.movementBottom = false;
-			this.movementLeft = false;
-			this.movementRight = false;
-			this.lastTap = 0;
-			this._cv.addEventListener('touchstart', this._touchStart, false);
-			this._cv.addEventListener('touchmove', this._touchMove, false);
-			this._cv.addEventListener('touchend', this._touchEnd, false);
-			this._cv.addEventListener('touchcancel', this._touchEnd, false);
+			this._initMobile();
 		} else {
 			this._cv.addEventListener('mousedown', this._mouseDown, false);
 			this._cv.addEventListener('mousemove', this._gameInput, false);
 			this._cv.addEventListener('mouseup', this._mouseUp, false);
+			this._cv.addEventListener("touchstart", window._internalmobiletouchinit = () => {
+				global.mobile = true;
+				this._cv.removeEventListener("mousedown", this._mouseDown);
+				this._cv.removeEventListener("mousemove", this._gameInput);
+				this._cv.removeEventListener("mouseup", this._mouseUp);
+				this._cv.removeEventListener("touchstart", window._internalmobiletouchinit);
+				this._initMobile();
+			});
 		}
 		this._cv.addEventListener('keydown', this._keyboardDown, false);
 		this._cv.addEventListener('keyup', this._keyboardUp, false);
@@ -161,6 +159,19 @@ global._canvas = new (class Canvas {
 			y: 0,
 			down: false
 		};
+	}
+	_initMobile() {
+		this.controlTouch = null;
+		this.movementTouch = null;
+		this.movementTop = false;
+		this.movementBottom = false;
+		this.movementLeft = false;
+		this.movementRight = false;
+		this.lastTap = 0;
+		this._cv.addEventListener('touchstart', this._touchStart, false);
+		this._cv.addEventListener('touchmove', this._touchMove, false);
+		this._cv.addEventListener('touchend', this._touchEnd, false);
+		this._cv.addEventListener('touchcancel', this._touchEnd, false);
 	}
 	_keyboardDown(event) {
 		if (!global._gameStart) return;
@@ -445,11 +456,11 @@ global._canvas = new (class Canvas {
 		if (!global._gameStart) return;
 		switch (mouse.button) {
 			case 0:
-				const ratio = util._getScreenRatio();
+
 				let width = global._screenWidth / innerWidth;
 				let height = global._screenHeight / innerHeight;
-				this.mouse.x = mouse.clientX * global._ratio * width; //global.ratio / ratio;// / ratio;//(global.ratio * ratio);// / ratio;
-				this.mouse.y = mouse.clientY * global._ratio * height; //global.ratio / ratio;// / ratio;//(global.ratio * ratio);// / ratio;
+				this.mouse.x = mouse.clientX * width; //global.ratio / ratio;// / ratio;//(global.ratio * ratio);// / ratio;
+				this.mouse.y = mouse.clientY * height; //global.ratio / ratio;// / ratio;//(global.ratio * ratio);// / ratio;
 				this.mouse.down = true;
 				let statIndex = global.clickables.stat.check(this.mouse);
 				if (statIndex !== -1) socket.talk("x", statIndex);
@@ -500,15 +511,16 @@ global._canvas = new (class Canvas {
 			global._target._y = (this.mouse.y - innerHeight / 2) * height; //this.parent.cv.height / 2;
 		}
 		global.statHover = global.clickables.hover.check({
-			x: mouse.clientX * global._ratio,
-			y: mouse.clientY * global._ratio
+			x: mouse.clientX * width,
+			y: mouse.clientY * height
 		}) === 0;
 		global.guiMouse = {
-			x: mouse.clientX * height, // * global.ratio / ratio,//(global.ratio * ratio),
-			y: mouse.clientY * width // * global.ratio / ratio//(global.ratio * ratio)
+			x: mouse.clientX * width, // * global.ratio / ratio,//(global.ratio * ratio),
+			y: mouse.clientY * height // * global.ratio / ratio//(global.ratio * ratio)
 		};
 	}
 	_touchStart(e) {
+		global.mobile = true;
 		e.preventDefault();
 		if (global._diedAt - Date.now() > 0 || (global._disconnected && global._gameStart)) return;
 		if (global._died) {
@@ -528,13 +540,13 @@ global._canvas = new (class Canvas {
 		let height = global._screenHeight / innerHeight;
 		for (let touch of e.changedTouches) {
 			let mpos = {
-				x: touch.clientX * global._ratio * width,
-				y: touch.clientY * global._ratio * height
-			};
-			let guiMpos = { // exactally where the mouse is, dk how the other ones manage to work but
 				x: touch.clientX * width,
 				y: touch.clientY * height
-			}
+			};
+			global.guiMouse = {
+				x: touch.clientX * width,
+				y: touch.clientY * height
+			};
 			let id = touch.identifier;
 			let statIndex = global.clickables.stat.check(mpos);
 			let mobileClickIndex = global.clickables.mobileClicks.check(mpos);
@@ -546,8 +558,8 @@ global._canvas = new (class Canvas {
 				if (index !== -1) {
 					socket.talk("U", index);
 				} else {
-					mpos.x /= width;
-					mpos.y /= height;
+					mpos.x;
+					mpos.y;
 					let onLeft = mpos.x < this.parent._cv.width / 2;
 					if (this.parent.movementTouch === null && onLeft) {
 						this.parent.movementTouch = id;
@@ -559,18 +571,20 @@ global._canvas = new (class Canvas {
 				}
 			}
 		}
-		this.parent._touchMove(e, false);
+		//this.parent._touchMove(e, false);
 	}
 	_touchMove(e, useParent = true) {
 		const _this = useParent ? this.parent : this;
 		e.preventDefault();
+		let width = global._screenWidth / innerWidth;
+		let height = global._screenHeight / innerHeight;
 		for (let touch of e.changedTouches) {
 			let mpos = {
-				x: touch.clientX * global._ratio,
-				y: touch.clientY * global._ratio
+				x: touch.clientX * width,
+				y: touch.clientY * height
 			};
 			let id = touch.identifier;
-			let statIndex = global.clickables.stat.check({ x: mpos.x * (global._screenWidth / innerWidth), y: mpos.y * (global._screenHeight / innerHeight) });
+			let statIndex = global.clickables.stat.check({ x: mpos.x, y: mpos.y });
 			if (statIndex !== -1) {
 				socket.talk("x", statIndex)
 			} else if (global.clickables.skipUpgrades.check(mpos) !== -1) {
@@ -596,8 +610,8 @@ global._canvas = new (class Canvas {
 		e.preventDefault();
 		for (let touch of e.changedTouches) {
 			let mpos = {
-				x: touch.clientX * window.devicePixelRatio,
-				y: touch.clientY * window.devicePixelRatio
+				x: touch.clientX * global._ratio,
+				y: touch.clientY * global._ratio
 			};
 			let id = touch.identifier;
 			if (this.parent.movementTouch === id) {
@@ -903,6 +917,23 @@ const _gui = {
 	}
 };
 
+const gradientCache = new Map()
+function getGradient(color, colorStop = 0) {
+	let key = `${color}|${colorStop}`
+	let grad = gradientCache.get(key)
+	if (grad === undefined) {
+		grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+		grad.addColorStop(colorStop, `${color}FF`);
+		grad.addColorStop(1, global._blackout ? "#00000000" : `${color}00`);
+		gradientCache.set(key, grad)
+	}
+	return grad
+}
+
+setInterval(() => {
+	console.log("Gradient Cache Cleared", gradientCache.size)
+	gradientCache.clear()
+}, 60000)
 
 
-export { ctx, drawBar, drawGUIPolygon, drawGuiCircle, drawGuiLine, drawGuiRect, drawGuiRoundRect, drawText, measureText, _clearScreen }
+export { ctx, drawBar, drawGUIPolygon, drawGuiCircle, drawGuiLine, drawGuiRect, drawGuiRoundRect, drawText, measureText, _clearScreen, getGradient }

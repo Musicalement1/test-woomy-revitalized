@@ -6,7 +6,7 @@ import { Smoothbar } from "./util.js";
 
 const global = {
 	_selectedServer: 0,
-	mobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|android|mobi/i.test(navigator.userAgent),
+	mobile: navigator.userAgentData?.mobile ?? /Mobi/i.test(navigator.userAgent),
 	guiMouse: {
 		x: 0,
 		y: 0
@@ -315,156 +315,156 @@ global.player = { // Why var?
 // TODO: Remove
 window._anims = []
 window._gui = {
-            _getStatNames: function (num) {
-                switch (num) {
-                    case 1:
-                        return ["Body Damage", "Max Health", "", "", "", "", "Acceleration", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 2:
-                        return ["Body Damage", "Max Health", "Drone Speed", "Drone Health", "Drone Penetration", "Drone Damage", "Respawn Rate", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 3:
-                        return ["Body Damage", "Max Health", "Drone Speed", "Drone Health", "Drone Penetration", "Drone Damage", "Max Drone Count", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 4:
-                        return ["Body Damage", "Max Health", "Swarm Speed", "Swarm Health", "Swarm Penetration", "Swarm Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 5:
-                        return ["Body Damage", "Max Health", "Trap Speed", "Trap Health", "Trap Penetration", "Trap Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 6:
-                        return ["Body Damage", "Max Health", "Weapon Speed", "Weapon Health", "Weapon Penetration", "Weapon Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 7:
-                        return ["Body Damage", "Max Health", "Bullet Speed", "Bullet Health", "Bullet Penetration", "Bullet Damage", "Reload & Acceleration", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 8:
-                        return ["Body Damage", "Max Health", "Minion Speed", "Minion Health", "Minion Penetration", "Minion Damage", "Respawn Rate", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 9:
-                        return ["Body Damage", "Max Health", "", "", "", "", "Jump Rate", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 10:
-                        return ["Body Damage", "Max Health", "Block Speed", "Block Health", "Block Penetration", "Block Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 11:
-                        return ["Body Damage", "Max Health", "Rebound Speed", "Boomerang Health", "Boomerang Penetration", "Boomerang Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 12:
-                        return ["Body Damage", "Max Health", "Lance Range", "Lance Longevity", "Lance Sharpness", "Lance Damage", "Lance Density", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 13:
-                        return ["Body Damage", "Max Health", "Flail Speed", "Flail Resistance", "Flail Penetration", "Flail Damage", "Flail Density", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    case 14:
-                        return ["Body Damage", "Max Health", "Syringe Range", "Syringe Longevity", "Syringe Sharpness", "Syringe Damage", "Refill Time", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                    default:
-                        return ["Body Damage", "Max Health", "Bullet Speed", "Bullet Health", "Bullet Penetration", "Bullet Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
-                }
-            },
-            _skills: [{
-                amount: 0,
-                color: "purple",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "pink",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "blue",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "lgreen",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "red",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "yellow",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "green",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "teal",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "gold",
-                cap: 1,
-                softcap: 1
-            }, {
-                amount: 0,
-                color: "orange",
-                cap: 1,
-                softcap: 1
-            }],
-            _points: 0,
-            _upgrades: [],
-            _realUpgrades: [],
-            _playerid: -1,
-            _skill: function () {
-                let levelScore = 0,
-                    deduction = 0,
-                    level = 0,
-                    score = Smoothbar(0);
-                return {
-                    setScores: function (s) {
-                        if (s) {
-                            score.set(s);
-                            if (deduction > score.get()) {
-                                level = 0;
-                                deduction = 0;
-                            }
-                        } else {
-                            score = Smoothbar(0);
-                            level = 0;
-                        }
-                    },
-                    update: function () {
-                        levelScore = Math.ceil(1.8 * Math.pow(level + 1, 1.8) - 2 * level + 0), score.get() - deduction >= levelScore && (deduction += levelScore, level += 1);
-                    },
-                    getProgress: function () {
-                        return levelScore ? Math.min(1, Math.max(0, (score.get() - deduction) / levelScore)) : 0;
-                    },
-                    getScore: function () {
-                        return score.get();
-                    },
-                    getLevel: function () {
-                        return level;
-                    }
-                };
-            }(),
-            _type: 0,
-            _fps: 0,
-            _color: 0,
-            _accel: 0,
-            _topSpeed: 1,
-            _minimap: {
-                _display: [],
-                _server: []
-            },
-            _leaderboard: {
-                _display: [],
-                _server: [],
-                _publish: (old, entry) => {
-                    let ref = mockups.get(entry.index);
-                    let trueLabel = entry.labelOverride ? entry.labelOverride : entry.label
-                    return {
-                        id: entry.id,
-                        image: getEntityImageFromMockup(entry.index, entry.color),
-                        position: ref.position,
-                        barColor: getColor(entry.barColor),
-                        label: entry.name ? entry.name + " - " + (trueLabel || ref.name) : (trueLabel || ref.name),
-                        score: lerp(old.score, entry.score, 0.03),
-                        nameColor: entry.nameColor,
-                    }
-                }
-            }
-        };
+	_getStatNames: function (num) {
+		switch (num) {
+			case 1:
+				return ["Body Damage", "Max Health", "", "", "", "", "Acceleration", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 2:
+				return ["Body Damage", "Max Health", "Drone Speed", "Drone Health", "Drone Penetration", "Drone Damage", "Respawn Rate", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 3:
+				return ["Body Damage", "Max Health", "Drone Speed", "Drone Health", "Drone Penetration", "Drone Damage", "Max Drone Count", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 4:
+				return ["Body Damage", "Max Health", "Swarm Speed", "Swarm Health", "Swarm Penetration", "Swarm Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 5:
+				return ["Body Damage", "Max Health", "Trap Speed", "Trap Health", "Trap Penetration", "Trap Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 6:
+				return ["Body Damage", "Max Health", "Weapon Speed", "Weapon Health", "Weapon Penetration", "Weapon Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 7:
+				return ["Body Damage", "Max Health", "Bullet Speed", "Bullet Health", "Bullet Penetration", "Bullet Damage", "Reload & Acceleration", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 8:
+				return ["Body Damage", "Max Health", "Minion Speed", "Minion Health", "Minion Penetration", "Minion Damage", "Respawn Rate", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 9:
+				return ["Body Damage", "Max Health", "", "", "", "", "Jump Rate", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 10:
+				return ["Body Damage", "Max Health", "Block Speed", "Block Health", "Block Penetration", "Block Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 11:
+				return ["Body Damage", "Max Health", "Rebound Speed", "Boomerang Health", "Boomerang Penetration", "Boomerang Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 12:
+				return ["Body Damage", "Max Health", "Lance Range", "Lance Longevity", "Lance Sharpness", "Lance Damage", "Lance Density", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 13:
+				return ["Body Damage", "Max Health", "Flail Speed", "Flail Resistance", "Flail Penetration", "Flail Damage", "Flail Density", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			case 14:
+				return ["Body Damage", "Max Health", "Syringe Range", "Syringe Longevity", "Syringe Sharpness", "Syringe Damage", "Refill Time", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+			default:
+				return ["Body Damage", "Max Health", "Bullet Speed", "Bullet Health", "Bullet Penetration", "Bullet Damage", "Reload", "Movement Speed", "Shield Regeneration", "Shield Capacity"];
+		}
+	},
+	_skills: [{
+		amount: 0,
+		color: "purple",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "pink",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "blue",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "lgreen",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "red",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "yellow",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "green",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "teal",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "gold",
+		cap: 1,
+		softcap: 1
+	}, {
+		amount: 0,
+		color: "orange",
+		cap: 1,
+		softcap: 1
+	}],
+	_points: 0,
+	_upgrades: [],
+	_realUpgrades: [],
+	_playerid: -1,
+	_skill: function () {
+		let levelScore = 0,
+			deduction = 0,
+			level = 0,
+			score = Smoothbar(0);
+		return {
+			setScores: function (s) {
+				if (s) {
+					score.set(s);
+					if (deduction > score.get()) {
+						level = 0;
+						deduction = 0;
+					}
+				} else {
+					score = Smoothbar(0);
+					level = 0;
+				}
+			},
+			update: function () {
+				levelScore = Math.ceil(1.8 * Math.pow(level + 1, 1.8) - 2 * level + 0), score.get() - deduction >= levelScore && (deduction += levelScore, level += 1);
+			},
+			getProgress: function () {
+				return levelScore ? Math.min(1, Math.max(0, (score.get() - deduction) / levelScore)) : 0;
+			},
+			getScore: function () {
+				return score.get();
+			},
+			getLevel: function () {
+				return level;
+			}
+		};
+	}(),
+	_type: 0,
+	_fps: 0,
+	_color: 0,
+	_accel: 0,
+	_topSpeed: 1,
+	_minimap: {
+		_display: [],
+		_server: []
+	},
+	_leaderboard: {
+		_display: [],
+		_server: [],
+		_publish: (old, entry) => {
+			let ref = mockups.get(entry.index);
+			let trueLabel = entry.labelOverride ? entry.labelOverride : entry.label
+			return {
+				id: entry.id,
+				image: getEntityImageFromMockup(entry.index, entry.color),
+				position: ref.position,
+				barColor: getColor(entry.barColor),
+				label: entry.name ? entry.name + " - " + (trueLabel || ref.name) : (trueLabel || ref.name),
+				score: lerp(old.score, entry.score, 0.03),
+				nameColor: entry.nameColor,
+			}
+		}
+	}
+};
 
-function resizeEvent(e) {
+function resizeEvent() {
 	if (!global._canvas) return
 	let scale = window.devicePixelRatio;
 	scale *= [0.15, 0.5, 0.75, 1, 0.08][["Very Low (35%)", "Low (50%)", "Medium (75%)", "High (100%)", "PixelMode (8%)"].indexOf(config.resolutionScale)];
@@ -476,43 +476,43 @@ function resizeEvent(e) {
 }
 
 window.metrics = {
-            _latency: 0,
-            _lag: 0,
-            _rendertime: 0,
-            _updatetime: 0,
-            _lastlag: 0,
-            _lastrender: 0,
-            _rendergap: 0,
-            _lastuplink: 0,
-            _serverCpuUsage: 0,
-            _serverMemUsage: 0
-        };
+	_latency: 0,
+	_lag: 0,
+	_rendertime: 0,
+	_updatetime: 0,
+	_lastlag: 0,
+	_lastrender: 0,
+	_rendergap: 0,
+	_lastuplink: 0,
+	_serverCpuUsage: 0,
+	_serverMemUsage: 0
+};
 window.roomSetup = [
-            ["norm"]
-        ];
+	["norm"]
+];
 window.serverStart = 0;
 window.getNow = function () {
-            return Date.now() - serverStart;
-        };
+	return Date.now() - serverStart;
+};
 window.entityArr = [];
 window.entityMap = new Map()
 window.getRatio = function () {
-        return Math.max(global._screenWidth / global.player._renderv, global._screenHeight / global.player._renderv / 9 * 16);
-    };
+	return Math.max(global._screenWidth / global.player._renderv, global._screenHeight / global.player._renderv / 9 * 16);
+};
 window.upgradeSpin = 0,
-window.lastPing = 0,
-window.lastServerStat = 0,
-window.renderTimes = 0,
-window.updateTimes = 0;
-window.isInView = function(x, y, r) {
-        let mid = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0,
-            ratio = getRatio();
-        r += config.borderChunk;
-        if (mid) {
-            ratio *= 2;
-            return x > -global._screenWidth / ratio - r && x < global._screenWidth / ratio + r && y > -global._screenHeight / ratio - r && y < global._screenHeight / ratio + r;
-        }
-        return x > -r && x < global._screenWidth / ratio + r && y > -r && y < global._screenHeight / ratio + r;
-    }
+	window.lastPing = 0,
+	window.lastServerStat = 0,
+	window.renderTimes = 0,
+	window.updateTimes = 0;
+window.isInView = function (x, y, r) {
+	let mid = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0,
+		ratio = getRatio();
+	r += config.borderChunk;
+	if (mid) {
+		ratio *= 2;
+		return x > -global._screenWidth / ratio - r && x < global._screenWidth / ratio + r && y > -global._screenHeight / ratio - r && y < global._screenHeight / ratio + r;
+	}
+	return x > -r && x < global._screenWidth / ratio + r && y > -r && y < global._screenHeight / ratio + r;
+}
 
 export { global, resizeEvent }

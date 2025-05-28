@@ -97,10 +97,20 @@
 		window.open("https://woomyarrasio.fandom.com/wiki/", "_blank")
 	}
 
-	document.getElementById("wikiButton").onclick = openModBrowser
 	document.getElementById("modBrowserClose").onclick = openModBrowser
 	function openModBrowser(){
 		let mb = document.getElementById("modBrowser")
+		if(mb.style.top === "0%"){
+			mb.style.top = "-100%";
+		}else{
+			mb.style.top = "0%"
+		}
+	}
+
+	document.getElementById("wikiButton").onclick = openModBrowser
+	document.getElementById("gameJoinClose").onclick = openJoinScreen
+	function openJoinScreen(){
+		let mb = document.getElementById("gameJoinScreen")
 		if(mb.style.top === "0%"){
 			mb.style.top = "-100%";
 		}else{

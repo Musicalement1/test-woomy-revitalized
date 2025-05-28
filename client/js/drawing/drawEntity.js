@@ -1,14 +1,13 @@
-import { ctx } from "./canvas.js";
+import { ctx, getGradient } from "./canvas.js";
 import { mockups } from "../mockups.js";
 import { config } from "../config.js";
 import { mixColors, getColor, color, setColors, setColorsUnmixB, setColorsUnmix, specialColors } from "../colors.js"
 import { lerpAngle, lerp } from "../lerp.js"
 import { imageCache } from "../assets.js";
+import { global } from "../global.js";
 
 const gunCache = new Map()
-const gradientCache = new Map()
 const path2dCache = new Map()
-
 let drawEntity = function () {
 	function drawPoly(context, centerX, centerY, radius, sides, widthHeightRatio, ratio, scale) {
 		let angle = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : 0,
@@ -1286,7 +1285,7 @@ let drawEntity = function () {
 							radiusDiv = 1;
 							break;
 					}
-					path2dCache.set(sides, {path, radiusDiv})
+					path2dCache.set(sides, { path, radiusDiv })
 					radius /= radiusDiv;
 					context.save();
 					context.translate(centerX, centerY);
@@ -1671,14 +1670,8 @@ let drawEntity = function () {
 
 					// Aura
 					if (p.isAura) {
-						const key = `${pColor}`
-						let grad = gradientCache.get(key)
-						if (grad === undefined) {
-							grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
-							grad.addColorStop(0, pColor);
-							grad.addColorStop(1, `${pColor}00`);
-							gradientCache.set(key, grad)
-						}
+						if (global._blackout) return;
+						let grad = getGradient(pColor)
 
 						let x = p.x + xx | 0;
 						let y = p.y + yy | 0;
@@ -1734,7 +1727,7 @@ let drawEntity = function () {
 			shadowRelativeColor = false;
 		if (config.hideMiniRenders === true && !render.real) return;
 		if (fade === 0 || alpha === 0) return;
-		if(config.lerpSize) drawSize *= fade;
+		if (config.lerpSize) drawSize *= fade;
 		ctx.globalAlpha = (config.glassMode ? .7 : 1) * alpha * fade
 		context.lineCap = "round";
 		context.lineJoin = config.pointy ? "miter" : "round";
@@ -1817,7 +1810,7 @@ let drawEntity = function () {
 			invulnTicker = instance.invuln && (Date.now() - instance.invuln) % 200 > 110;
 		if (invulnTicker) finalColor = mixColors(finalColor, color.vlgrey, .5);
 		context.lineWidth = ratio * config.borderChunk
-		if(scale < 1){ // big/messy mini-render fix
+		if (scale < 1) { // big/messy mini-render fix
 			context.lineWidth *= scale
 		}
 
@@ -1855,7 +1848,7 @@ let drawEntity = function () {
 				}
 			}
 		} else throw new Error(`Mismatch turret number! Expected: ${m.turrets.length} Reality: ${source.turrets.length}`);
-		
+
 		// PROP RENDERING - LAYER -1
 		if (m.props.length) {
 			for (let i = 0; i < m.props.length; i++) {
@@ -2060,10 +2053,6 @@ let drawEntity = function () {
 		if (gunCache.size > 4000) {
 			console.log("[LOG] Cleared client gunCache")
 			gunCache.clear()
-		}
-		if (gradientCache.size > 2000) {
-			console.log("[LOG] Cleared client gradientCache")
-			gradientCache.clear()
 		}
 		// Path2d cache doesnt need a clear; theres a set amount
 	};

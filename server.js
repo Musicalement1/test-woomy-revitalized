@@ -1992,492 +1992,492 @@ async function startServer(configSuffix, serverGamemode, defExports) {
             }
         }
 
-function newMockups() {
-    // Pre-calculate constants
-    const PI = Math.PI;
-    const PI2 = PI * 2;
-    
-    // Defaults applied to every mockup
-    const defaults = {
-        x: 0,
-        y: 0,
-        color: 16,
-        shape: 0,
-        size: 1,
-        realSize: 1,
-        facing: 0,
-        layer: 0,
-        statnames: 0,
-        defaultArrayLength: 0,
-        aspect: 1,
-        skin: 0,
-        colorUnmix: 0,
-        angle: 0
-    };
+        function newMockups() {
+            // Pre-calculate constants
+            const PI = Math.PI;
+            const PI2 = PI * 2;
 
-    // Pre-calculate real sizes for polygons
-    const lazyRealSizes = (() => {
-        const sizes = [1, 1, 1];
-        for (let i = 3; i < 17; i++) {
-            sizes.push(Math.sqrt((PI2 / i) * (1 / Math.sin(PI2 / i))));
-        }
-        return sizes;
-    })();
+            // Defaults applied to every mockup
+            const defaults = {
+                x: 0,
+                y: 0,
+                color: 16,
+                shape: 0,
+                size: 1,
+                realSize: 1,
+                facing: 0,
+                layer: 0,
+                statnames: 0,
+                defaultArrayLength: 0,
+                aspect: 1,
+                skin: 0,
+                colorUnmix: 0,
+                angle: 0
+            };
 
-    // Priority Queue implementation for efficient sorting
-    class PriorityQueue {
-        constructor() {
-            this.array = [];
-            this.sorted = true;
-        }
-        
-        enqueue(priority, item) {
-            this.array.push([priority, item]);
-            this.sorted = false;
-        }
-        
-        dequeue() {
-            if (!this.sorted) {
-                this.array.sort((a, b) => b[0] - a[0]);
-                this.sorted = true;
-            }
-            if (this.array.length === 0) return null;
-            return this.array.pop()[1];
-        }
-        
-        get length() {
-            return this.array.length;
-        }
-    }
-
-    // Helper function to round values and remove near-zero values
-    function rounder(val) {
-        return Math.abs(val) < 0.001 ? 0 : +val.toPrecision(12);
-    }
-
-    // Apply defaults to mockup objects by removing default values
-    function applyDefaults(mockup) {
-        // Process main mockup properties
-        for (const key in mockup) {
-            if (defaults[key] != null) {
-                if (mockup[key] === defaults[key] || mockup[key] == null) {
-                    delete mockup[key];
+            // Pre-calculate real sizes for polygons
+            const lazyRealSizes = (() => {
+                const sizes = [1, 1, 1];
+                for (let i = 3; i < 17; i++) {
+                    sizes.push(Math.sqrt((PI2 / i) * (1 / Math.sin(PI2 / i))));
                 }
-            } else if (Array.isArray(mockup[key]) && mockup[key].length === defaults.defaultArrayLength) {
-                delete mockup[key];
+                return sizes;
+            })();
+
+            // Priority Queue implementation for efficient sorting
+            class PriorityQueue {
+                constructor() {
+                    this.array = [];
+                    this.sorted = true;
+                }
+
+                enqueue(priority, item) {
+                    this.array.push([priority, item]);
+                    this.sorted = false;
+                }
+
+                dequeue() {
+                    if (!this.sorted) {
+                        this.array.sort((a, b) => b[0] - a[0]);
+                        this.sorted = true;
+                    }
+                    if (this.array.length === 0) return null;
+                    return this.array.pop()[1];
+                }
+
+                get length() {
+                    return this.array.length;
+                }
             }
-        }
-        
-        // Process gun properties
-        const guns = mockup.guns;
-        if (guns) {
-            for (let i = 0; i < guns.length; i++) {
-                const gun = guns[i];
-                for (const key in gun) {
+
+            // Helper function to round values and remove near-zero values
+            function rounder(val) {
+                return Math.abs(val) < 0.001 ? 0 : +val.toPrecision(12);
+            }
+
+            // Apply defaults to mockup objects by removing default values
+            function applyDefaults(mockup) {
+                // Process main mockup properties
+                for (const key in mockup) {
                     if (defaults[key] != null) {
-                        if (gun[key] === defaults[key] || gun[key] == null) {
-                            delete gun[key];
+                        if (mockup[key] === defaults[key] || mockup[key] == null) {
+                            delete mockup[key];
                         }
-                    } else if (Array.isArray(gun[key]) && gun[key].length === defaults.defaultArrayLength) {
-                        delete gun[key];
+                    } else if (Array.isArray(mockup[key]) && mockup[key].length === defaults.defaultArrayLength) {
+                        delete mockup[key];
                     }
                 }
-            }
-        }
-        
-        return mockup;
-    }
 
-    // Parse entity to mockup object
-    function parseMockup(e, p) {
-        const mockup = {
-            index: e.index,
-            name: e.label,
-            x: rounder(e.x),
-            y: rounder(e.y),
-            color: e.color,
-            shape: e.shapeData || 0,
-            size: rounder(e.size),
-            realSize: rounder(e.realSize),
-            facing: rounder(e.facing),
-            layer: e.layer,
-            statnames: e.settings.skillNames,
-            position: p,
-            upgrades: e.upgrades.map(r => ({
-                tier: r.tier,
-                index: r.index
-            })),
-            guns: e.guns.map(g => ({
-                offset: rounder(g.offset),
-                direction: rounder(g.direction),
-                length: rounder(g.length),
-                width: rounder(g.width),
-                aspect: rounder(g.aspect),
-                angle: rounder(g.angle),
-                color: rounder(g.color),
-                skin: rounder(g.skin),
-                color_unmix: rounder(g.color_unmix),
-                alpha: g.alpha
-            })),
-            turrets: e.turrets.map(t => {
-                const out = parseMockup(t, {});
-                out.sizeFactor = rounder(t.bound.size);
-                out.offset = rounder(t.bound.offset);
-                out.direction = rounder(t.bound.direction);
-                out.layer = rounder(t.bound.layer);
-                out.angle = rounder(t.bound.angle);
-                return applyDefaults(out);
-            }),
-            lasers: e.lasers.map(l => ({
-                offset: rounder(l.offset),
-                direction: rounder(l.direction),
-                length: rounder(l.length),
-                width: rounder(l.width),
-                aspect: rounder(l.aspect),
-                angle: rounder(l.angle),
-                color: rounder(l.color),
-                laserWidth: rounder(l.laserWidth)
-            })),
-            props: e.props.map(p => ({
-                size: rounder(p.size),
-                x: rounder(p.x),
-                y: rounder(p.y),
-                angle: rounder(p.angle),
-                layer: rounder(p.layer),
-                color: rounder(p.color),
-                shape: p.shape,
-                fill: p.fill,
-                loop: p.loop,
-                isAura: p.isAura,
-                rpm: p.rpm,
-                specific: p.specific,
-                dip: p.dip,
-                ring: p.ring,
-                arclen: p.arclen
-            }))
-        };
-        
-        return mockup;
-    }
-
-    // Calculate geometric dimensions of an entity
-    function getDimensions(entity) {
-        const endpoints = [];
-        let pointDisplay = [];
-        
-        // Push endpoints for model parts
-        function pushEndpoints(model, scale, focus = { x: 0, y: 0 }, rot = 0) {
-            const s = Math.abs(model.shape);
-            const z = (s >= lazyRealSizes.length) ? 1 : lazyRealSizes[s];
-            
-            // Body shape endpoints
-            if (z === 1) { // Circle/octagon
-                for (let i = 0; i < 2; i += 0.5) {
-                    endpoints.push({
-                        x: focus.x + scale * Math.cos(i * PI),
-                        y: focus.y + scale * Math.sin(i * PI)
-                    });
-                }
-            } else { // Polygon vertices
-                const startAngle = (s % 2) ? 0 : PI / s;
-                for (let i = 0; i < s; i++) {
-                    const theta = startAngle + (i / s) * PI2;
-                    endpoints.push({
-                        x: focus.x + scale * z * Math.cos(theta),
-                        y: focus.y + scale * z * Math.sin(theta)
-                    });
-                }
-            }
-            
-            // Gun endpoints
-            const guns = model.guns || [];
-            for (let i = 0; i < guns.length; i++) {
-                const gun = guns[i];
-                const h = gun.aspect > 0 ? ((scale * gun.width) / 2) * gun.aspect : (scale * gun.width) / 2;
-                const r = Math.atan2(h, scale * gun.length) + rot;
-                const l = Math.sqrt(scale * scale * gun.length * gun.length + h * h);
-                const x = focus.x + scale * gun.offset * Math.cos(gun.direction + gun.angle + rot);
-                const y = focus.y + scale * gun.offset * Math.sin(gun.direction + gun.angle + rot);
-                const angleR = gun.angle + r;
-                const angleNegR = gun.angle - r;
-                
-                const point1 = {
-                    x: x + l * Math.cos(angleR),
-                    y: y + l * Math.sin(angleR)
-                };
-                
-                const point2 = {
-                    x: x + l * Math.cos(angleNegR),
-                    y: y + l * Math.sin(angleNegR)
-                };
-                
-                endpoints.push(point1, point2);
-                pointDisplay.push({
-                    x: rounder(point1.x),
-                    y: rounder(point1.y)
-                }, {
-                    x: rounder(point2.x),
-                    y: rounder(point2.y)
-                });
-            }
-            
-            // Turret endpoints
-            const turrets = model.turrets || [];
-            for (let i = 0; i < turrets.length; i++) {
-                const turret = turrets[i];
-                const bound = turret.bound;
-                const offset = bound.offset*scale*.35
-                pushEndpoints(turret, bound.size, {
-                    x: focus.x + offset * Math.cos(bound.angle + rot),
-                    y: focus.y + offset * Math.sin(bound.angle + rot)
-                }, bound.angle + rot);
-            }
-        }
-        
-        // Push all endpoints for the entity
-        pushEndpoints(entity, 1);
-        
-        // Check if we have too few points to form a proper shape
-        if (endpoints.length < 3) {
-            // Return default dimensions for simple entities
-            return {
-                middle: { x: 0, y: 0 },
-                axis: 1,
-                points: []
-            };
-        }
-        
-        // Find extremes to help with finding initial points
-        let minX = Infinity, maxX = -Infinity;
-        let minY = Infinity, maxY = -Infinity;
-        
-        for (const point of endpoints) {
-            minX = Math.min(minX, point.x);
-            maxX = Math.max(maxX, point.x);
-            minY = Math.min(minY, point.y);
-            maxY = Math.max(maxY, point.y);
-        }
-        
-        // Initial extremal points for building a circle
-        let point1, point2, point3;
-        
-        // Find point with maximum x (rightmost)
-        let maxIndex = 0;
-        for (let i = 0; i < endpoints.length; i++) {
-            if (endpoints[i].x > endpoints[maxIndex].x) {
-                maxIndex = i;
-            }
-        }
-        point1 = endpoints[maxIndex];
-        
-        // Find point with minimum x (leftmost)
-        maxIndex = 0;
-        for (let i = 0; i < endpoints.length; i++) {
-            if (endpoints[i].x < endpoints[maxIndex].x) {
-                maxIndex = i;
-            }
-        }
-        point2 = endpoints[maxIndex];
-        
-        // Find point with maximum absolute y (furthest from x-axis)
-        maxIndex = 0;
-        for (let i = 0; i < endpoints.length; i++) {
-            if (Math.abs(endpoints[i].y) > Math.abs(endpoints[maxIndex].y)) {
-                maxIndex = i;
-            }
-        }
-        point3 = endpoints[maxIndex];
-        
-        // Define circle from three points
-        function circleFromThreePoints(p1, p2, p3) {
-            const x1 = p1.x;
-            const y1 = p1.y;
-            const x2 = p2.x;
-            const y2 = p2.y;
-            const x3 = p3.x;
-            const y3 = p3.y;
-            
-            const denom = x1 * (y2 - y3) - y1 * (x2 - x3) + x2 * y3 - x3 * y2;
-            if (Math.abs(denom) < 1e-10) {
-                // Points are collinear or too close - fallback to bounding circle
-                const centerX = (Math.min(x1, x2, x3) + Math.max(x1, x2, x3)) / 2;
-                const centerY = (Math.min(y1, y2, y3) + Math.max(y1, y2, y3)) / 2;
-                const radius = Math.max(
-                    Math.sqrt((centerX - x1) * (centerX - x1) + (centerY - y1) * (centerY - y1)),
-                    Math.sqrt((centerX - x2) * (centerX - x2) + (centerY - y2) * (centerY - y2)),
-                    Math.sqrt((centerX - x3) * (centerX - x3) + (centerY - y3) * (centerY - y3))
-                );
-                return { x: centerX, y: centerY, radius };
-            }
-            
-            const xy1 = x1 * x1 + y1 * y1;
-            const xy2 = x2 * x2 + y2 * y2;
-            const xy3 = x3 * x3 + y3 * y3;
-            
-            const x = (xy1 * (y2 - y3) + xy2 * (y3 - y1) + xy3 * (y1 - y2)) / (2 * denom);
-            const y = (xy1 * (x3 - x2) + xy2 * (x1 - x3) + xy3 * (x2 - x1)) / (2 * denom);
-            
-            const r = Math.sqrt((x - x1) * (x - x1) + (y - y1) * (y - y1));
-            
-            return {
-                x: isNaN(x) ? 0 : x,
-                y: isNaN(y) ? 0 : y,
-                radius: isNaN(r) ? 1 : r
-            };
-        }
-        
-        // Calculate initial circle
-        let circle = circleFromThreePoints(point1, point2, point3);
-        
-        // Create display points for debug/visualization
-        pointDisplay = [
-            { x: rounder(point1.x), y: rounder(point1.y) },
-            { x: rounder(point2.x), y: rounder(point2.y) },
-            { x: rounder(point3.x), y: rounder(point3.y) }
-        ];
-        
-        // Welzl's algorithm adapted - more efficient way to find minimum enclosing circle
-        // Iteratively expand the circle to include all points
-        for (const point of endpoints) {
-            // Skip the three points we used to create the initial circle
-            if (point === point1 || point === point2 || point === point3) {
-                continue;
-            }
-            
-            // Check if the point is outside the current circle
-            const dx = point.x - circle.x;
-            const dy = point.y - circle.y;
-            const distSq = dx * dx + dy * dy;
-            
-            if (distSq > circle.radius * circle.radius) {
-                // Point is outside, add it to display points
-                pointDisplay.push({ x: rounder(point.x), y: rounder(point.y) });
-                
-                // Find new circle through this point and the farthest point on current circle
-                const dir = Math.atan2(dy, dx);
-                const opposite = {
-                    x: circle.x - circle.radius * Math.cos(dir),
-                    y: circle.y - circle.radius * Math.sin(dir)
-                };
-                
-                // Create a new circle with diameter from point to opposite
-                const newCenterX = (point.x + opposite.x) / 2;
-                const newCenterY = (point.y + opposite.y) / 2;
-                const newRadius = Math.sqrt(
-                    Math.pow(point.x - opposite.x, 2) + 
-                    Math.pow(point.y - opposite.y, 2)
-                ) / 2;
-                
-                // Update circle
-                circle = {
-                    x: newCenterX, 
-                    y: newCenterY, 
-                    radius: newRadius
-                };
-                
-                // Verify all previously checked points are still inside
-                // If not, we need to adjust the circle further
-                let i = 0;
-                while (i < endpoints.indexOf(point)) {
-                    const prevPoint = endpoints[i];
-                    const pDx = prevPoint.x - circle.x;
-                    const pDy = prevPoint.y - circle.y;
-                    const pDistSq = pDx * pDx + pDy * pDy;
-                    
-                    if (pDistSq > circle.radius * circle.radius * 1.01) { // Small epsilon for floating point errors
-                        // This previously checked point is now outside
-                        // Create a new circle that includes both points
-                        const midX = (point.x + prevPoint.x) / 2;
-                        const midY = (point.y + prevPoint.y) / 2;
-                        const dist = Math.sqrt(
-                            Math.pow(point.x - prevPoint.x, 2) + 
-                            Math.pow(point.y - prevPoint.y, 2)
-                        );
-                        
-                        circle = {
-                            x: midX,
-                            y: midY,
-                            radius: dist / 2 * 1.01 // Slight expansion for stability
-                        };
-                        
-                        // Restart the check
-                        i = 0;
-                    } else {
-                        i++;
+                // Process gun properties
+                const guns = mockup.guns;
+                if (guns) {
+                    for (let i = 0; i < guns.length; i++) {
+                        const gun = guns[i];
+                        for (const key in gun) {
+                            if (defaults[key] != null) {
+                                if (gun[key] === defaults[key] || gun[key] == null) {
+                                    delete gun[key];
+                                }
+                            } else if (Array.isArray(gun[key]) && gun[key].length === defaults.defaultArrayLength) {
+                                delete gun[key];
+                            }
+                        }
                     }
                 }
-            }
-        }
-        
-        // Return dimensions with centered x-coordinate (fixing bug)
-        return {
-            middle: {
-                x: rounder(circle.x),
-                y: 0 // Always keep y at 0 for bilaterally symmetrical shapes
-            },
-            axis: rounder(circle.radius * 2),
-            points: pointDisplay
-        };
-    }
 
-    // Cache for generated mockups
-    const cachedMockups = new Map();
-    
-    // Return the API
-    return {
-        getMockup: function(entityIndex, skipCacheCheck) {
-            // Check cache first unless explicitly skipping
-            if (!skipCacheCheck) {
-                const cachedValue = cachedMockups.get(entityIndex);
-                if (cachedValue) {
-                    return cachedValue;
-                }
-            }
-
-            // Generate new mockup
-            const classString = exportNames[entityIndex];
-            if (!classString) {
-                return "";
-            }
-            
-            try {
-                // Create entity instance
-                const entity = new Entity({ x: 0, y: 0 });
-                const entityClass = Class[classString];
-                
-                entity.upgrades = [];
-                entity.settings.skillNames = null;
-                entity.minimalReset();
-                entity.minimalDefine(entityClass);
-                entity.name = entityClass.LABEL;
-                
-                // Get dimensions and camera view
-                const position = getDimensions(entity);
-                const body = entity.camera(true);
-                
-                // Create mockup data
-                entityClass.mockup = {
-                    body: body,
-                    position: position
-                };
-                
-                entityClass.mockup.body.position = position;
-                const mockup = applyDefaults(parseMockup(entity, position));
-                
-                // Cache and return
-                cachedMockups.set(entityIndex, mockup);
-                entity.destroy();
-                purgeEntities();
-                
                 return mockup;
-            } catch (err) {
-                console.error("ERROR WHILE GENERATING MOCKUP: " + (classString || entityIndex));
-                console.error(err);
-                return "";
             }
+
+            // Parse entity to mockup object
+            function parseMockup(e, p) {
+                const mockup = {
+                    index: e.index,
+                    name: e.label,
+                    x: rounder(e.x),
+                    y: rounder(e.y),
+                    color: e.color,
+                    shape: e.shapeData || 0,
+                    size: rounder(e.size),
+                    realSize: rounder(e.realSize),
+                    facing: rounder(e.facing),
+                    layer: e.layer,
+                    statnames: e.settings.skillNames,
+                    position: p,
+                    upgrades: e.upgrades.map(r => ({
+                        tier: r.tier,
+                        index: r.index
+                    })),
+                    guns: e.guns.map(g => ({
+                        offset: rounder(g.offset),
+                        direction: rounder(g.direction),
+                        length: rounder(g.length),
+                        width: rounder(g.width),
+                        aspect: rounder(g.aspect),
+                        angle: rounder(g.angle),
+                        color: rounder(g.color),
+                        skin: rounder(g.skin),
+                        color_unmix: rounder(g.color_unmix),
+                        alpha: g.alpha
+                    })),
+                    turrets: e.turrets.map(t => {
+                        const out = parseMockup(t, {});
+                        out.sizeFactor = rounder(t.bound.size);
+                        out.offset = rounder(t.bound.offset);
+                        out.direction = rounder(t.bound.direction);
+                        out.layer = rounder(t.bound.layer);
+                        out.angle = rounder(t.bound.angle);
+                        return applyDefaults(out);
+                    }),
+                    lasers: e.lasers.map(l => ({
+                        offset: rounder(l.offset),
+                        direction: rounder(l.direction),
+                        length: rounder(l.length),
+                        width: rounder(l.width),
+                        aspect: rounder(l.aspect),
+                        angle: rounder(l.angle),
+                        color: rounder(l.color),
+                        laserWidth: rounder(l.laserWidth)
+                    })),
+                    props: e.props.map(p => ({
+                        size: rounder(p.size),
+                        x: rounder(p.x),
+                        y: rounder(p.y),
+                        angle: rounder(p.angle),
+                        layer: rounder(p.layer),
+                        color: rounder(p.color),
+                        shape: p.shape,
+                        fill: p.fill,
+                        loop: p.loop,
+                        isAura: p.isAura,
+                        rpm: p.rpm,
+                        specific: p.specific,
+                        dip: p.dip,
+                        ring: p.ring,
+                        arclen: p.arclen
+                    }))
+                };
+
+                return mockup;
+            }
+
+            // Calculate geometric dimensions of an entity
+            function getDimensions(entity) {
+                const endpoints = [];
+                let pointDisplay = [];
+
+                // Push endpoints for model parts
+                function pushEndpoints(model, scale, focus = { x: 0, y: 0 }, rot = 0) {
+                    const s = Math.abs(model.shape);
+                    const z = (s >= lazyRealSizes.length) ? 1 : lazyRealSizes[s];
+
+                    // Body shape endpoints
+                    if (z === 1) { // Circle/octagon
+                        for (let i = 0; i < 2; i += 0.5) {
+                            endpoints.push({
+                                x: focus.x + scale * Math.cos(i * PI),
+                                y: focus.y + scale * Math.sin(i * PI)
+                            });
+                        }
+                    } else { // Polygon vertices
+                        const startAngle = (s % 2) ? 0 : PI / s;
+                        for (let i = 0; i < s; i++) {
+                            const theta = startAngle + (i / s) * PI2;
+                            endpoints.push({
+                                x: focus.x + scale * z * Math.cos(theta),
+                                y: focus.y + scale * z * Math.sin(theta)
+                            });
+                        }
+                    }
+
+                    // Gun endpoints
+                    const guns = model.guns || [];
+                    for (let i = 0; i < guns.length; i++) {
+                        const gun = guns[i];
+                        const h = gun.aspect > 0 ? ((scale * gun.width) / 2) * gun.aspect : (scale * gun.width) / 2;
+                        const r = Math.atan2(h, scale * gun.length) + rot;
+                        const l = Math.sqrt(scale * scale * gun.length * gun.length + h * h);
+                        const x = focus.x + scale * gun.offset * Math.cos(gun.direction + gun.angle + rot);
+                        const y = focus.y + scale * gun.offset * Math.sin(gun.direction + gun.angle + rot);
+                        const angleR = gun.angle + r;
+                        const angleNegR = gun.angle - r;
+
+                        const point1 = {
+                            x: x + l * Math.cos(angleR),
+                            y: y + l * Math.sin(angleR)
+                        };
+
+                        const point2 = {
+                            x: x + l * Math.cos(angleNegR),
+                            y: y + l * Math.sin(angleNegR)
+                        };
+
+                        endpoints.push(point1, point2);
+                        pointDisplay.push({
+                            x: rounder(point1.x),
+                            y: rounder(point1.y)
+                        }, {
+                            x: rounder(point2.x),
+                            y: rounder(point2.y)
+                        });
+                    }
+
+                    // Turret endpoints
+                    const turrets = model.turrets || [];
+                    for (let i = 0; i < turrets.length; i++) {
+                        const turret = turrets[i];
+                        const bound = turret.bound;
+                        const offset = bound.offset * scale * .35
+                        pushEndpoints(turret, bound.size, {
+                            x: focus.x + offset * Math.cos(bound.angle + rot),
+                            y: focus.y + offset * Math.sin(bound.angle + rot)
+                        }, bound.angle + rot);
+                    }
+                }
+
+                // Push all endpoints for the entity
+                pushEndpoints(entity, 1);
+
+                // Check if we have too few points to form a proper shape
+                if (endpoints.length < 3) {
+                    // Return default dimensions for simple entities
+                    return {
+                        middle: { x: 0, y: 0 },
+                        axis: 1,
+                        points: []
+                    };
+                }
+
+                // Find extremes to help with finding initial points
+                let minX = Infinity, maxX = -Infinity;
+                let minY = Infinity, maxY = -Infinity;
+
+                for (const point of endpoints) {
+                    minX = Math.min(minX, point.x);
+                    maxX = Math.max(maxX, point.x);
+                    minY = Math.min(minY, point.y);
+                    maxY = Math.max(maxY, point.y);
+                }
+
+                // Initial extremal points for building a circle
+                let point1, point2, point3;
+
+                // Find point with maximum x (rightmost)
+                let maxIndex = 0;
+                for (let i = 0; i < endpoints.length; i++) {
+                    if (endpoints[i].x > endpoints[maxIndex].x) {
+                        maxIndex = i;
+                    }
+                }
+                point1 = endpoints[maxIndex];
+
+                // Find point with minimum x (leftmost)
+                maxIndex = 0;
+                for (let i = 0; i < endpoints.length; i++) {
+                    if (endpoints[i].x < endpoints[maxIndex].x) {
+                        maxIndex = i;
+                    }
+                }
+                point2 = endpoints[maxIndex];
+
+                // Find point with maximum absolute y (furthest from x-axis)
+                maxIndex = 0;
+                for (let i = 0; i < endpoints.length; i++) {
+                    if (Math.abs(endpoints[i].y) > Math.abs(endpoints[maxIndex].y)) {
+                        maxIndex = i;
+                    }
+                }
+                point3 = endpoints[maxIndex];
+
+                // Define circle from three points
+                function circleFromThreePoints(p1, p2, p3) {
+                    const x1 = p1.x;
+                    const y1 = p1.y;
+                    const x2 = p2.x;
+                    const y2 = p2.y;
+                    const x3 = p3.x;
+                    const y3 = p3.y;
+
+                    const denom = x1 * (y2 - y3) - y1 * (x2 - x3) + x2 * y3 - x3 * y2;
+                    if (Math.abs(denom) < 1e-10) {
+                        // Points are collinear or too close - fallback to bounding circle
+                        const centerX = (Math.min(x1, x2, x3) + Math.max(x1, x2, x3)) / 2;
+                        const centerY = (Math.min(y1, y2, y3) + Math.max(y1, y2, y3)) / 2;
+                        const radius = Math.max(
+                            Math.sqrt((centerX - x1) * (centerX - x1) + (centerY - y1) * (centerY - y1)),
+                            Math.sqrt((centerX - x2) * (centerX - x2) + (centerY - y2) * (centerY - y2)),
+                            Math.sqrt((centerX - x3) * (centerX - x3) + (centerY - y3) * (centerY - y3))
+                        );
+                        return { x: centerX, y: centerY, radius };
+                    }
+
+                    const xy1 = x1 * x1 + y1 * y1;
+                    const xy2 = x2 * x2 + y2 * y2;
+                    const xy3 = x3 * x3 + y3 * y3;
+
+                    const x = (xy1 * (y2 - y3) + xy2 * (y3 - y1) + xy3 * (y1 - y2)) / (2 * denom);
+                    const y = (xy1 * (x3 - x2) + xy2 * (x1 - x3) + xy3 * (x2 - x1)) / (2 * denom);
+
+                    const r = Math.sqrt((x - x1) * (x - x1) + (y - y1) * (y - y1));
+
+                    return {
+                        x: isNaN(x) ? 0 : x,
+                        y: isNaN(y) ? 0 : y,
+                        radius: isNaN(r) ? 1 : r
+                    };
+                }
+
+                // Calculate initial circle
+                let circle = circleFromThreePoints(point1, point2, point3);
+
+                // Create display points for debug/visualization
+                pointDisplay = [
+                    { x: rounder(point1.x), y: rounder(point1.y) },
+                    { x: rounder(point2.x), y: rounder(point2.y) },
+                    { x: rounder(point3.x), y: rounder(point3.y) }
+                ];
+
+                // Welzl's algorithm adapted - more efficient way to find minimum enclosing circle
+                // Iteratively expand the circle to include all points
+                for (const point of endpoints) {
+                    // Skip the three points we used to create the initial circle
+                    if (point === point1 || point === point2 || point === point3) {
+                        continue;
+                    }
+
+                    // Check if the point is outside the current circle
+                    const dx = point.x - circle.x;
+                    const dy = point.y - circle.y;
+                    const distSq = dx * dx + dy * dy;
+
+                    if (distSq > circle.radius * circle.radius) {
+                        // Point is outside, add it to display points
+                        pointDisplay.push({ x: rounder(point.x), y: rounder(point.y) });
+
+                        // Find new circle through this point and the farthest point on current circle
+                        const dir = Math.atan2(dy, dx);
+                        const opposite = {
+                            x: circle.x - circle.radius * Math.cos(dir),
+                            y: circle.y - circle.radius * Math.sin(dir)
+                        };
+
+                        // Create a new circle with diameter from point to opposite
+                        const newCenterX = (point.x + opposite.x) / 2;
+                        const newCenterY = (point.y + opposite.y) / 2;
+                        const newRadius = Math.sqrt(
+                            Math.pow(point.x - opposite.x, 2) +
+                            Math.pow(point.y - opposite.y, 2)
+                        ) / 2;
+
+                        // Update circle
+                        circle = {
+                            x: newCenterX,
+                            y: newCenterY,
+                            radius: newRadius
+                        };
+
+                        // Verify all previously checked points are still inside
+                        // If not, we need to adjust the circle further
+                        let i = 0;
+                        while (i < endpoints.indexOf(point)) {
+                            const prevPoint = endpoints[i];
+                            const pDx = prevPoint.x - circle.x;
+                            const pDy = prevPoint.y - circle.y;
+                            const pDistSq = pDx * pDx + pDy * pDy;
+
+                            if (pDistSq > circle.radius * circle.radius * 1.01) { // Small epsilon for floating point errors
+                                // This previously checked point is now outside
+                                // Create a new circle that includes both points
+                                const midX = (point.x + prevPoint.x) / 2;
+                                const midY = (point.y + prevPoint.y) / 2;
+                                const dist = Math.sqrt(
+                                    Math.pow(point.x - prevPoint.x, 2) +
+                                    Math.pow(point.y - prevPoint.y, 2)
+                                );
+
+                                circle = {
+                                    x: midX,
+                                    y: midY,
+                                    radius: dist / 2 * 1.01 // Slight expansion for stability
+                                };
+
+                                // Restart the check
+                                i = 0;
+                            } else {
+                                i++;
+                            }
+                        }
+                    }
+                }
+
+                // Return dimensions with centered x-coordinate (fixing bug)
+                return {
+                    middle: {
+                        x: rounder(circle.x),
+                        y: 0 // Always keep y at 0 for bilaterally symmetrical shapes
+                    },
+                    axis: rounder(circle.radius * 2),
+                    points: pointDisplay
+                };
+            }
+
+            // Cache for generated mockups
+            const cachedMockups = new Map();
+
+            // Return the API
+            return {
+                getMockup: function (entityIndex, skipCacheCheck) {
+                    // Check cache first unless explicitly skipping
+                    if (!skipCacheCheck) {
+                        const cachedValue = cachedMockups.get(entityIndex);
+                        if (cachedValue) {
+                            return cachedValue;
+                        }
+                    }
+
+                    // Generate new mockup
+                    const classString = exportNames[entityIndex];
+                    if (!classString) {
+                        return "";
+                    }
+
+                    try {
+                        // Create entity instance
+                        const entity = new Entity({ x: 0, y: 0 });
+                        const entityClass = Class[classString];
+
+                        entity.upgrades = [];
+                        entity.settings.skillNames = null;
+                        entity.minimalReset();
+                        entity.minimalDefine(entityClass);
+                        entity.name = entityClass.LABEL;
+
+                        // Get dimensions and camera view
+                        const position = getDimensions(entity);
+                        const body = entity.camera(true);
+
+                        // Create mockup data
+                        entityClass.mockup = {
+                            body: body,
+                            position: position
+                        };
+
+                        entityClass.mockup.body.position = position;
+                        const mockup = applyDefaults(parseMockup(entity, position));
+
+                        // Cache and return
+                        cachedMockups.set(entityIndex, mockup);
+                        entity.destroy();
+                        purgeEntities();
+
+                        return mockup;
+                    } catch (err) {
+                        console.error("ERROR WHILE GENERATING MOCKUP: " + (classString || entityIndex));
+                        console.error(err);
+                        return "";
+                    }
+                }
+            };
         }
-    };
-}
         global.mockups = newMockups()
 
         global.exportNames = []
@@ -11016,7 +11016,7 @@ function newMockups() {
                     for (let i = 0; i < message.length; i++) {
                         const item = message[i];
                         if (Array.isArray(item)) {
-                            for(let a = 0; a < item.length; a++){
+                            for (let a = 0; a < item.length; a++) {
                                 finalPayload.push(item[a])
                             }
                         } else {

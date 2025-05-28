@@ -271,11 +271,12 @@ config.Woomy = (() => {
 		}
 		setProperties(document.querySelector(":root").style);
 	});
+	new Setting("uiScale", "UI Scale", "number", 1.1);
 	new Setting("fontStrokeRatio", "Font Stroke Ratio", "number", 7);
 	new Setting("borderChunk", "Border Width", "number", 3.5);
 	new Setting("barChunk", "Bar Stroke Thickness", "number", 3);
 	new Setting("fontSizeBoost", "Font Size", "number", 10);
-	new Setting("fpsCap", "FPS Cap", "number", 45, value => {
+	new Setting("fpsCap", "FPS Cap", "number", 1000, value => {
 		global._fpscap = 1000 / Math.max(value, 1);
 		if (global._fpscap !== global._oldFpsCap) global._sendMessageToClient("Max FPS changed, it may take a few seconds to show any difference.");
 		if (value === 1) rewardManager.unlockAchievement("artificial_lag");

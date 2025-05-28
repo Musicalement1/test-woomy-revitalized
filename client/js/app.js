@@ -19,14 +19,14 @@ function RememberScriptingIsBannable() {
     // MAIN MENUS //
     window.addEventListener("resize", resizeEvent);
     resizeEvent();
-    
+
     util._retrieveFromLocalStorage("playerNameInput");
-    
+
     document.getElementById("startButton").onclick = function () {
         if (global._disconnected && global._gameStart) return;
         _startGame();
     };
-    
+
     document.onkeydown = function (e) {
         if (global._disconnected && global._gameStart) return;
         let key = e.which || e.keyCode;
