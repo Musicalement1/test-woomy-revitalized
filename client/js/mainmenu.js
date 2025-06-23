@@ -88,6 +88,7 @@ function gotoWiki() {
 	window.open("https://woomyarrasio.fandom.com/wiki/", "_blank")
 }
 
+document.getElementById("modBrowserButton").onclick = openModBrowser
 document.getElementById("modBrowserClose").onclick = openModBrowser
 function openModBrowser(close) {
 	let mb = document.getElementById("modBrowser")

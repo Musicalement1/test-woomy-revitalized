@@ -1,5 +1,3 @@
-import { global } from "./global.js";
-
 let config = {
 	expectedMaxSkillLevel: 9,
 	screenshotMode: 0,
@@ -13,6 +11,7 @@ let config = {
 	pointy: false,
 	resolutionScale: 1,
 	fontSizeBoost: 10,
+	movementSmoothing: .625,
 	fontStrokeRatio: 4.5,
 	uiScale: 1.1,
 	neon: 0,

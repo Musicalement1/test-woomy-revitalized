@@ -25,5 +25,6 @@ let map = {
     "OUTSIDE_ROOM_DAMAGE": 0,
     "BOSS_SPAWN_TIMER": Infinity,
     "LEVEL_ZERO_UPGRADES": true,
+    "BLACKOUT": true
 }
 map

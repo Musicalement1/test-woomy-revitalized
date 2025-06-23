@@ -162,13 +162,9 @@ let gameDraw = function (ratio) {
 		darknessCanvas.height = global._screenHeight / divisor;
 		if (!window.darknessCtx) window.darknessCtx = darknessCanvas.getContext("2d", { alpha: true, desynchronized: true, willReadFrequently: false });
 		darknessCtx.clearRect(0, 0, darknessCanvas.width, darknessCanvas.height);
-		if (global.player._canSeeInvisible) {
-			darknessCtx.globalAlpha = .9
-		}
 		darknessCtx.globalCompositeOperation = "source-over";
 		darknessCtx.fillStyle = "#000000";
 		darknessCtx.fillRect(0, 0, darknessCanvas.width, darknessCanvas.height);
-		darknessCtx.globalAlpha = 1;
 		darknessCtx.globalCompositeOperation = "lighter";
 		darknessCtx.translate(global._screenWidth / 2 / divisor, global._screenHeight / 2 / divisor);
 		for (let i = 0; i < entityArr.length; i++) {
@@ -176,7 +172,7 @@ let gameDraw = function (ratio) {
 				x = ratio * instance.render.x - px,
 				y = ratio * instance.render.y - py,
 				fade = instance.render.status.getFade(),
-				size = ((Math.min(120 + instance.size * 5, instance.size + 280)) * fade) * ratio / divisor,
+				size = (((Math.min(120 + instance.size * 5, instance.size + 280)) * fade) * ratio / divisor)*1.25,
 				darknessGrad = getGradient(getColor(entityArr[i].color))
 
 			// auras
@@ -230,7 +226,11 @@ let gameDraw = function (ratio) {
 
 		ctx.save();
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
-		ctx.globalAlpha = 1;
+		if (global.player._canSeeInvisible) {
+			ctx.globalAlpha = .8
+		}else{
+			ctx.globalAlpha = 1;
+		}
 		ctx.imageSmoothingEnabled = false;
 		ctx.globalCompositeOperation = "multiply";
 		ctx.drawImage(darknessCanvas, 0, 0, window.innerWidth, window.innerHeight);
@@ -517,7 +517,7 @@ let gameDraw = function (ratio) {
 						stroke = 0;
 						drawText(entry.label + (': ' + util._handleLargeNumber(Math.round(entry.score))), x + len / 2, y + height / 2, height - 5, fill, 'center', true, 1, stroke, ctx, font);
 					}
-					// Mini-image
+					// Mini render
 					let scale = height / entry.position.axis,
 						xx = x - 1.5 * height - scale * entry.position.middle.x * 0.707,
 						yy = y + 0.5 * height + scale * entry.position.middle.x * 0.707;
@@ -610,6 +610,7 @@ let gameDraw = function (ratio) {
 							scale = .6 * len / position.axis,
 							xx = y + .5 * height - scale * position.middle.x * Math.cos(upgradeSpin),
 							yy = x + .5 * len - scale * position.middle.x * Math.sin(upgradeSpin);
+						// Mini render
 						drawEntity(xx, yy, picture, 1, 1, scale / picture.size, upgradeSpin, 1);
 						drawText(picture.name, y + len / 2, x + height - 6, height / 8 - 3, color.guiwhite, "center");
 						ctx.strokeStyle = color.black;

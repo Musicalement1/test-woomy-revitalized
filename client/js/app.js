@@ -1,7 +1,6 @@
 import { global, resizeEvent } from "./global.js";
 import { util, getWOSocketId } from "/js/util.js"
 import { ctx, _clearScreen } from "./drawing/canvas.js"
-import { fasttalk } from "/js/fasttalk.js"
 import { rewardManager } from "/js/achievements.js"
 import { initSettingsMenu } from "/js/settingsMenu.js"
 import { mockups, } from "./mockups.js"
@@ -9,11 +8,9 @@ import { socket, makeSocket } from "./socket.js"
 import { gameDrawDead, gameDrawDisconnected, gameDrawError, gameDrawServerStatusText, gameDrawLoadingMockups } from "./drawing/scenes.js"
 import { gameDraw } from "./drawing/gameDraw.js"
 
-import "./multiplayer.js";
+import { multiplayer } from "./multiplayer.js";
 import "./mainmenu.js";
 import "./joinMenu.js";
-
-
 
 // App.js
 function RememberScriptingIsBannable() {
@@ -25,61 +22,14 @@ function RememberScriptingIsBannable() {
 
     util._retrieveFromLocalStorage("playerNameInput");
 
-    document.getElementById("startButton").onclick = function () {
-        if (global._disconnected && global._gameStart) return;
-        _startGame();
-    };
-
-    document.onkeydown = function (e) {
+    document.addEventListener("keydown", function eh (e) {
         if (global._disconnected && global._gameStart) return;
         let key = e.which || e.keyCode;
+        if (document.getElementById("gameJoinScreen").style.top !== "-100%") return;
+        this.removeEventListener("keydown", eh)
         if (!global._disableEnter && key === global.KEY_ENTER && !global._gameStart) document.getElementById("startButton").click();
-    };
+    })
 
-    async function _startGame() {
-        document.getElementById("mainWrapper").style.zIndex = -100;
-        //util._submitToLocalStorage("playerNameInput");
-        let playerNameInput = document.getElementById("playerNameInput");
-        global.playerName = util._cleanString(/*playerNameInput.value.trim()*/"Placeholder", 25)
-        let socketOut = global.playerName.split('');
-        for (let i = 0; i < socketOut.length; i++) socketOut[i] = socketOut[i].charCodeAt();
-
-        if (window.creatingRoom === true) { // Create game
-            window.loadingTextStatus = "Downloading server..."
-            window.loadingTextTooltip = ""
-            window.connectSocketToServer = async function () {
-                // WRM, roomCreate
-                window.roomManager.send(window.addMetaData(1, 3, fasttalk.encode([/*TODO: reimplement selection*/"", ""])))
-                await makeSocket(true)
-                socket.talk("s", global.party || 0, socketOut.toString(), 1, getWOSocketId());
-                console.log(socket)
-            }
-            window.serverWorker = new Worker("./server.js");
-            window.serverWorkerSetup()
-            document.getElementById("entityEditor").style.display = "block" // enable editor for host
-
-        } else { // Join game
-            window.loadingTextStatus = "Joining server..."
-            window.loadingTextTooltip = ""
-            window.onRoomJoined = async () => {
-                await makeSocket()
-                console.log(socket)
-                socket.talk("s", global.party || 0, socketOut.toString(), 1, getWOSocketId());
-            }
-            window.roomManager.send(window.addMetaData(1, 4, fasttalk.encode([window.selectedRoomId])))
-        }
-
-        if (global.playerName === "") rewardManager.unlockAchievement("anonymous");
-        if (document.getElementById("mainMenu")) {
-            document.getElementById("mainMenu").remove();
-        } else {
-            document.getElementById("startMenuWrapper").remove();
-        };
-        if (!global.animLoopHandle) _animloop();
-        //clearInterval(global.screenScale);
-        //global.functionSociety.push([`${socket}`, canvas, "socket"]);
-        document.getElementById("gameCanvas").focus();
-    }
 
     global.gameLoopSecond = function () {
         let time = 0;
@@ -156,54 +106,98 @@ function RememberScriptingIsBannable() {
         }
         setInterval(func, 1000);
     }();
-
-    let nextTime = 0;
-    function _animloop() {
-        global.animLoopHandle = (window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.msRequestAnimationFrame)(_animloop);
-        if (nextTime < performance.now()) {
-            global._fpsc++;
-            try {
-                if (global._tankMenuColorReal >= 185) global._tankMenuColorReal = 100;
-                global._tankMenuColorReal += 0.16;
-                global._tankMenuColor = global._tankMenuColorReal | 0;
-                global.player._renderv += (global.player._view - global.player._renderv) / 30;
-                let ratio = getRatio();
-                ctx.lineCap = "round";
-                ctx.lineJoin = "round";
-                if (global._gameStart && !global._disconnected) {
-                    global.time = Date.now(); //getNow();
-                    if (global.time - lastPing > 1000) {
-                        socket.ping();
-                        lastPing = global.time;
-                        metrics._rendertime = renderTimes;
-                        renderTimes = 0;
-                        metrics._updatetime = updateTimes;
-                        updateTimes = 0;
-                    }
-                    if (global._debug > 3 && global.time - lastServerStat > 1000 + 150) {// make sure to update this on the server if you change the time
-                        socket.talk("da")
-                        lastServerStat = global.time
-                    }
-                    metrics._lag = global.time - global.player._time;
-                }
-                if (global._gameStart) {
-                    if (mockups.length === 0) {
-                        gameDrawLoadingMockups();
-                    } else {
-                        gameDraw(ratio);
-                    };
-                } else if (!global._disconnected) {
-                    gameDrawServerStatusText();
-                }
-                gameDrawDead();
-                if (global._disconnected) gameDrawDisconnected();
-            } catch (error) {
-                gameDrawError(error)
-            }
-            nextTime += global._fpscap;
-        }
-    };
 }
+
+util._retrieveFromLocalStorage("nameInput")
+util._retrieveFromLocalStorage("tokenInput")
+async function _startGame(gamemodeCode, gamemodeName, joinRoomId) {
+    if (!global.animLoopHandle) _animloop();
+    document.getElementById("mainWrapper").style.zIndex = -100;
+    global.playerName = util._cleanString(document.getElementById("nameInput").value || "", 25)
+    let socketOut = global.playerName.split('');
+    for (let i = 0; i < socketOut.length; i++) socketOut[i] = socketOut[i].charCodeAt();
+
+    if (window.creatingRoom === true) { // Create game
+        window.loadingTextStatus = "Downloading server..."
+        window.loadingTextTooltip = ""
+        window.serverWorker = new Worker("./server.js");
+        window.loadingTextStatus = "Starting server..."
+        window.loadingTextTooltip = ""
+        console.log("Starting server...")
+        await multiplayer.startServerWorker(gamemodeCode, gamemodeName)
+        console.log("...Server started!")
+        await multiplayer.wrmHost()
+        joinRoomId = await multiplayer.getHostRoomId();
+        document.getElementById("entityEditor").style.display = "block" // enable editor for host
+    }
+    window.loadingTextStatus = "Joining server..."
+    window.loadingTextTooltip = ""
+    await makeSocket(joinRoomId)
+    window.loadingTextStatus = "Loading room..."
+    window.loadingTextTooltip = ""
+    console.log(socket)
+    socket.talk("s", global.party || 0, socketOut.toString(), 1, getWOSocketId());
+    window.selectedRoomId = joinRoomId;
+    //window.roomManager.send(window.addMetaData(1, 4, fasttalk.encode([window.selectedRoomId])))
+
+    if (global.playerName === "") rewardManager.unlockAchievement("anonymous");
+    if (document.getElementById("mainMenu")) {
+        document.getElementById("mainMenu").remove();
+    } else {
+        document.getElementById("startMenuWrapper").remove();
+    };
+    //clearInterval(global.screenScale);
+    //global.functionSociety.push([`${socket}`, canvas, "socket"]);
+    document.getElementById("gameCanvas").focus();
+}
+
+
+let nextTime = 0;
+function _animloop() {
+    global.animLoopHandle = (window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.msRequestAnimationFrame)(_animloop);
+    if (nextTime < performance.now()) {
+        global._fpsc++;
+        try {
+            if (global._tankMenuColorReal >= 185) global._tankMenuColorReal = 100;
+            global._tankMenuColorReal += 0.16;
+            global._tankMenuColor = global._tankMenuColorReal | 0;
+            global.player._renderv += (global.player._view - global.player._renderv) / 30;
+            let ratio = getRatio();
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            if (global._gameStart && !global._disconnected) {
+                global.time = Date.now(); //getNow();
+                if (global.time - lastPing > 1000) {
+                    socket.ping();
+                    lastPing = global.time;
+                    metrics._rendertime = renderTimes;
+                    renderTimes = 0;
+                    metrics._updatetime = updateTimes;
+                    updateTimes = 0;
+                }
+                if (global._debug > 3 && global.time - lastServerStat > 1000 + 150) {// make sure to update this on the server if you change the time
+                    socket.talk("da")
+                    lastServerStat = global.time
+                }
+                metrics._lag = global.time - global.player._time;
+            }
+            if (global._gameStart) {
+                if (mockups.length === 0) {
+                    gameDrawLoadingMockups();
+                } else {
+                    gameDraw(ratio);
+                };
+            } else if (!global._disconnected) {
+                gameDrawServerStatusText();
+            }
+            gameDrawDead();
+            if (global._disconnected) gameDrawDisconnected();
+        } catch (error) {
+            gameDrawError(error)
+        }
+        nextTime += global._fpscap;
+    }
+};
 
 let startInterval = setInterval(() => {
     if (!window.preloadsDoneCooking) {
@@ -212,3 +206,5 @@ let startInterval = setInterval(() => {
     clearInterval(startInterval)
     RememberScriptingIsBannable()
 })
+
+export { _startGame, _animloop }

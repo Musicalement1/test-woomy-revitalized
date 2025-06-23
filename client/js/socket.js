@@ -6,24 +6,27 @@ import { rewardManager } from "./achievements.js"
 import { color, mixColors } from "./colors.js";
 import { mockups } from "./mockups.js";
 import { Smoothbar } from "./util.js";
+import { multiplayer } from "./multiplayer.js";
+import { fasttalk } from "./fasttalk.js";
+import { lerp } from "./lerp.js";
 import "./consoleCommands.js"
 
 let socket;
 
-// TODO: rework
 let lag = function () {
-	let lags = [];
+	let sum = 0;
+	let entries = 0;
 	return {
 		get: function () {
-			if (!lags.length) return 0;
-			let sum = lags.reduce(function (a, b) {
-				return a + b;
-			});
-			return sum / lags.length;
+			return sum / entries;
 		},
 		add: function (l) {
-			lags.push(l);
-			if (lags.length > config.memory) lags.splice(0, 1);
+			sum += l;
+			entries++;
+			if (entries > config.memory){
+				sum -= sum/entries;
+				entries--;
+			}
 		}
 	};
 }();
@@ -67,7 +70,7 @@ const GunContainer = function () {
 			if (g.position < 0) {
 				g.position = 0;
 				g.motion = -g.motion;
-			}else if(g.position > .5){
+			} else if (g.position > .5) {
 				g.position = .5
 			}
 			if (g.motion > 0) g.motion *= .7;
@@ -121,9 +124,10 @@ function Status() {
 			return config.tintedDamage ? mixColors(color.red, color.guiblack, 0.2) : "#FFFFFF";
 		},
 		getBlend: function () {
-			let o = (state === "normal" || state === "killed") ? 0 : 1 - Math.min(1, (getNow() - time) / 80);
+			const val = 80 * 6
+			let o = (state === "normal") ? 0 : .8 - Math.min(.8, (getNow() - time) / val);
 			// Injured state wears off after some time and reverts to normal
-			if (getNow() - time > 500 && state === "injured") {
+			if (getNow() - time > val && state === "injured") {
 				state = "normal";
 			}
 			return o;
@@ -156,12 +160,11 @@ const process = function () {
 					entity.render.lasty = entity.y;
 					entity.render.lastvx = entity.vx;
 					entity.render.lastvy = entity.vy;
-					entity.render.lastRender = global.player._time;
 				}
 				const flags = convert.reader.next();
 				entity.index = convert.reader.next();
-				entity.x = convert.reader.next();
-				entity.y = convert.reader.next();
+				entity.x = isNew?convert.reader.next():lerp(entity.render.lastx, convert.reader.next(), config.movementSmoothing);
+				entity.y = isNew?convert.reader.next():lerp(entity.render.lasty, convert.reader.next(), config.movementSmoothing);
 				entity.vx = 0;//convert.reader.next();
 				entity.vy = 0;//convert.reader.next();
 				entity.size = convert.reader.next();
@@ -202,7 +205,6 @@ const process = function () {
 						real: true,
 						draws: false,
 						expandsWithDeath: entity.drawsHealth,
-						lastRender: global.player._time,
 						x: entity.x,
 						y: entity.y,
 						lastx: entity.x - metrics._rendergap * config.roomSpeed * (1000 / 30) * entity.vx,
@@ -215,8 +217,8 @@ const process = function () {
 						interval: metrics._rendergap,
 						slip: 0,
 						status: Status(),
-						health: Smoothbar(entity.health),
-						shield: Smoothbar(entity.shield),
+						health: Smoothbar(entity.health, .06, true),
+						shield: Smoothbar(entity.shield, .06, true),
 						size: 1,
 						extra: [1, 0], // for props
 					};
@@ -441,9 +443,25 @@ function convertSlowGui(data) {
 
 // SOCKET // 
 let socketInit = function () {
-	return async function ag(roomHost) {
+	return async function ag(roomId) {
 		let url = "ws://localhost:3001/"
-		socket = WebSocket(url, roomHost);
+		await multiplayer.joinRoom(roomId);
+
+		let fakeWebsocket = (url, roomHost) => {
+			return {
+				set onmessage(v) {
+					window.clientMessage = v
+				},
+				set onopen(v) {
+					v()
+				},
+				send: (e) => {
+					multiplayer.playerPeer.send(fasttalk.encode(e))
+				}
+			}
+		}
+
+		socket = fakeWebsocket(url);
 		socket.binaryType = "arraybuffer";
 		socket.open = 0;
 		socket.controls = {
@@ -479,7 +497,7 @@ let socketInit = function () {
 		};
 		socket.onmessage = function (message, parent) {
 			global._bandwidth._inbound += 1;
-			let m = (message);
+			let m = fasttalk.decode(message);
 			if (m === -1) throw new Error("Malformed packet!");
 			global._receivedPackets++
 			let packet = m.shift();
@@ -627,7 +645,8 @@ let socketInit = function () {
 				}
 					break;
 				case "closeSocket":
-					window.roomManager.close()
+					multiplayer.playerPeer.destroy();
+					console.log("Closed socket via packet")
 					break;
 				case "p": {
 					metrics._latency = global.time - lastPing;
@@ -739,7 +758,7 @@ let socketInit = function () {
 		socket.onopen = function () {
 			socket.open = 1;
 			global.message = "Please wait while a connection attempt is being made.";
-			socket.talk("k", localStorage.getItem("discordCode") || "", 0, "its local", false);
+			socket.talk("k", document.getElementById("tokenInput").value || "", 0, "its local", false);
 			logger.info("Token submitted to the server for validation.");
 			socket.ping = function () {
 				socket.talk("p");
@@ -764,6 +783,6 @@ let socketInit = function () {
 	};
 }();
 
-const makeSocket = async (arg)=>{ return socket = await socketInit(arg) }
+const makeSocket = async (arg) => { return socket = await socketInit(arg) }
 
 export { socket, makeSocket }

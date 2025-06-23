@@ -312,7 +312,6 @@ global.player = { // Why var?
 	lsd: false
 }
 
-// TODO: Remove
 window._anims = []
 window._gui = {
 	_getStatNames: function (num) {

@@ -29,6 +29,7 @@
 	<link rel="icon" type="image/png" sizes="16x16" href="./resources/favicon-66x66-k.png">
 	<meta name="theme-color" content="#8ABC3F">
 
+	<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 	<script src="/js/app.js" type="module" defer></script>
 	<link rel="stylesheet" href="./menu.css">
 </head>
@@ -64,7 +65,7 @@
 				str += text[i]
 			}
 			loadingText.innerHTML = str
-			if (window.connectedToWRM) {
+			if (!window.connectedToWRM) {
 				loadingMenu.remove()
 				clearInterval(loadingMenuInterval)
 			}
@@ -99,7 +100,8 @@
 			<div class="modTabMenuButtonHolder">
 				<button class="modTabMenuButton modTabButtonSelected">Featured</button>
 				<button class="modTabMenuButton modTabButtonUnselected">All</button>
-				<button class="modTabMenuButton modTabButtonUnselected">Custom</button>
+				<button class="modTabMenuButton modTabButtonUnselected">Library</button>
+				<button class="modTabMenuButton modTabButtonUnselected" style="width: auto;">+</button>
 			</div>
 			<button class="modTabExitButton" id="modBrowserClose">Close</button>
 		</div>
@@ -123,7 +125,7 @@
 		</div>
 	</div>
 
-	<div id="gameJoinScreen" style="top: 0%;">
+	<div id="gameJoinScreen" style="top: -100%;">
 		<div class="gameJoinCloseHolder">
 			<button class="gameJoinClose" id="gameJoinClose">Close</button>
 		</div>
@@ -141,7 +143,7 @@
 					<p id="roomInfoGamemodeDescription">Gamemode Description</p>
 					<h2>Mods:</h2>
 					<div class="joinRoomModList">
-						<div id="modListTemplate" class="modListEntry">
+						<div id="modListTemplate" class="modListEntry" style="display: none;">
 							<div class="modListHeader">
 								<img alt="Mod Image">
 								<h2>Mod Name</h2>
@@ -166,7 +168,7 @@
 					</div>
 				</div>
 				<div class="joinEntryHolder">
-					<div id="joinEntryGalleryTemplate" class="gameEntryGallery">
+					<div id="joinEntryGalleryTemplate" class="gameEntryGallery" style="display: none;">
 						<div class="gameEntryGalleryText">
 							<h2>Gamemode</h2>
 							<p>0 Players</p>
@@ -174,7 +176,13 @@
 						</div>
 					</div>
 
-					<div id="joinEntryListTemplate"></div>
+					<div id="joinEntryListTemplate" class="gameEntryList" style="display: none;">
+						<div class="gameEntryListText">
+							<h2>Gamemode</h2>
+							<p>0 Players</p>
+							<p>######</p>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -198,6 +206,7 @@
 					<div class="miniButtonList">
 						<button id="controlsButton">Controls</button>
 						<button id="achievementsButton">Achievements</button>
+						<button id="modBrowserButton">Mod Browser</button>
 						<button id="wikiButton">Fan-made Wiki</button>
 					</div>
 				</div>

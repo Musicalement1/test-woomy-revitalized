@@ -110,10 +110,13 @@ function getWOSocketId() {
 	return localStorage.getItem("socketId");
 }
 
-function Smoothbar(value, speed) {
+function Smoothbar(value, speed, skipLerpOn0) {
 	let render = value;
 	return {
-		set: val => value = val,
+		set: (val) => {
+			value = val
+			if(skipLerpOn0 && val === 0) render = val;
+		},
 		get: () => render = lerp(render, value, speed ? speed : 0.12 ) // speed / 6
 	};
 	/*let sharpness = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 3,

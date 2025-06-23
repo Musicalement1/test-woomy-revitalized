@@ -174,6 +174,9 @@ global._canvas = new (class Canvas {
 		this._cv.addEventListener('touchcancel', this._touchEnd, false);
 	}
 	_keyboardDown(event) {
+		if(!this.lastKeyRepeat === undefined) this.lastKeyRepeat = Date.now();
+		if(event.repeat && Date.now()-this.lastKeyRepeat < 100) return;
+		this.lastKeyRepeat = Date.now();
 		if (!global._gameStart) return;
 		if (event.location === 3) {
 			let number = event.code.substring(6)
@@ -207,7 +210,7 @@ global._canvas = new (class Canvas {
 				socket.controls.commands[3] = 1;
 				break;
 			case global.KEY_LEVEL_UP:
-				socket.talk("L");
+				for(let i = 0; i < 10; i++) socket.talk("L");
 				break;
 			// Beta-tester keys
 			case global.KEY_COLOR_CHANGE:

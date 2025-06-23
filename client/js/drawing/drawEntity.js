@@ -1670,7 +1670,6 @@ let drawEntity = function () {
 
 					// Aura
 					if (p.isAura) {
-						if (global._blackout) return;
 						let grad = getGradient(pColor)
 
 						let x = p.x + xx | 0;
@@ -1685,8 +1684,7 @@ let drawEntity = function () {
 						ctx.closePath()
 						ctx.fill()
 						ctx.restore()
-						return; // The gradient will double fill if the latter fill is called
-						// Props really shouldnt double up like this anyways
+						return; 
 					}
 				}
 			}

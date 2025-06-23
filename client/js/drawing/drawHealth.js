@@ -20,7 +20,7 @@ import { config } from "../config.js";
 
 function drawHealth(x, y, instance, ratio, alpha) {
 	let fade = instance.render.status.getFade();
-	ctx.globalAlpha = fade * fade;
+	ctx.globalAlpha = 1 * fade;
 	let size = instance.render.size * ratio,
 		m = mockups.get(instance.index),
 		realSize = size / m.size * m.realSize;
@@ -28,7 +28,7 @@ function drawHealth(x, y, instance, ratio, alpha) {
 		shield = instance.render.shield.get();
 	if (health < 1 || shield < 1) {
 		let yy = y + 1.1 * realSize + 22;
-		ctx.globalAlpha = alpha * fade;
+		ctx.globalAlpha = fade*(health === 0?0:1);
 		size *= 1.1;
 		let mixc = config.coloredHealthBars ? mixColors(getColor(instance.color), color.guiwhite, .5) : config.tintedHealth ? mixColors(color.lgreen, color.red, 1 - health) : color.lgreen;
 		if (config.shieldbars) {
@@ -44,7 +44,7 @@ function drawHealth(x, y, instance, ratio, alpha) {
 			drawBar(x - size, x + size, yy, 3 + config.barChunk, color.black);
 			if (health > 0.01) drawBar(x - size, x - size + 2 * size * health, yy, 3, mixc);
 			if (shield) {
-				ctx.globalAlpha = (0.3 + shield * .3) * alpha * alpha * fade;
+				ctx.globalAlpha *= 0.7;
 				if (shield > 0.01) drawBar(x - size, x - size + 2 * size * shield, yy, 3, config.coloredHealthBars ? mixColors(getColor(instance.color), color.dgrey, .8) : color.dgrey);
 				ctx.globalAlpha = 1;
 			}

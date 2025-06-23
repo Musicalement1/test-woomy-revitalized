@@ -276,6 +276,13 @@ config.Woomy = (() => {
 	new Setting("borderChunk", "Border Width", "number", 3.5);
 	new Setting("barChunk", "Bar Stroke Thickness", "number", 3);
 	new Setting("fontSizeBoost", "Font Size", "number", 10);
+	new Setting("movementSmoothing", "Movement Smoothing", "number", .625, function(v){
+		this.value = Math.min(1, Math.max(0, v))
+		this.update()
+		if(document.getElementById("Woomy_movementSmoothing")){
+			document.getElementById("Woomy_movementSmoothing").value = this.value;
+		}
+	});
 	new Setting("fpsCap", "FPS Cap", "number", 1000, value => {
 		global._fpscap = 1000 / Math.max(value, 1);
 		if (global._fpscap !== global._oldFpsCap) global._sendMessageToClient("Max FPS changed, it may take a few seconds to show any difference.");

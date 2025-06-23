@@ -69,6 +69,7 @@ const gameDrawDead = function () {
 			delay = Math.ceil((global._diedAt - Date.now()) / 1000);
 		global.player.pepperspray.apply = false;
 		global.player.lsd = false;
+		// Mini render - death
 		drawEntity(xx - 190 - len / 2, (yy - 10) * getGlide(), picture, 1.5, getAlpha(), .5 * scale / picture.realSize, -Math.PI / 4);
 		ctx.globalAlpha = getAlpha()
 		drawText(global._deathSplashOverride || global._deathSplash[global._deathSplashChoice], x, (y - 80) * getGlide(), 10, color.guiwhite, "center");

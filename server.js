@@ -17,14 +17,15 @@ workerWindow.process = {
 const userSockets = new Map()
 const bannedPlayers = [];
 
-worker.onmessage = function (msgEvent) {
-    const data = msgEvent.data
+worker.onmessage = function (msg) {
+    const data = msg.data
 
     switch (data.type) {
         case "startServer":
             import("./definitions.js").then((res) => {
-                worker.postMessage({ type: "serverStartText", text: "Starting server...", tip: "The game will start shortly" })
+                worker.postMessage({ type: "serverStartText", text: "Loading definitions..." })
                 global.initExportCode = res.initExportCode
+                console.log(data.server)
                 startServer(data.server.suffix, data.server.gamemode, res.defExports)
             }).catch((err) => {
                 console.error(err)
@@ -32,7 +33,7 @@ worker.onmessage = function (msgEvent) {
             })
             break;
         case "serverMessage":
-            userSockets.get(data.data.shift()).onmessage(data.data[0])
+            userSockets.get(data.data[0]).onmessage(data.data[1])
             break;
         case "playerJoin":
             workerWindow.sockets.connect(data.playerId)
@@ -881,7 +882,7 @@ workerWindow.require = function (thing) {
 // THE SERVER //
 
 async function startServer(configSuffix, serverGamemode, defExports) {
-    configSuffix = "blackout4tdm.json" // TODO: make not always 4tdm
+    //configSuffix = "blackout4tdm.json" 
     /*jslint node: true */
     /*jshint -W061 */
     /*global Map*/
@@ -1353,6 +1354,7 @@ async function startServer(configSuffix, serverGamemode, defExports) {
             try {
                 console.log("Server is supposed to be online. Loading profile", configSuffix);
                 serverPrefix = `-${configSuffix}`;
+
             } catch (e) {
                 console.error(e)
                 console.log("Couldn't load from API. Terminating.");
@@ -1500,7 +1502,7 @@ async function startServer(configSuffix, serverGamemode, defExports) {
         } else if (configSuffix.includes(".js")) {
             gamemodeConfig = eval(await res.text())
         } else {
-            alert("Invalid gamemode file type " + configSuffix)
+            console.error("Invalid gamemode file type " + configSuffix)
         }
         if (gamemodeConfig.selectable === false) {
             worker.postMessage({ type: "serverStartText", text: "This gamemode is not selectable", tip: "Only modded versions of the game can start a Modded server. Please select a different mode." })
@@ -4116,7 +4118,11 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                     }
                     this.body.kill();
                     let gun = this.body.master.guns[this.body.gunIndex];
-                    if (gun.countsOwnKids) gun.children = gun.children.filter(instance => instance == this);
+                    if (gun.countsOwnKids){
+                        for(let [k, v] of gun.childrenMap){
+                            if(v === this) gun.childrenMap.delete(k)
+                        }
+                    }
                 }
             }
         }
@@ -5259,7 +5265,7 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                 this.label = "";
                 this.labelOverride = "";
                 this.controllers = [];
-                this.children = [];
+                this.childrenMap = new Map();
                 this.control = {
                     target: new Vector(0, 0),
                     _target: new Vector(0, 0),
@@ -5370,20 +5376,20 @@ async function startServer(configSuffix, serverGamemode, defExports) {
             }
             liveButBetter() {
                 if (this.canShoot) {
-                    if (this.countsOwnKids + this.destroyOldestChild - 1 <= this.children.length) {
-                        for (let i = 0, l = this.children.length; i < l; i++) {
-                            if (this.children[i] == null || this.children[i].isGhost || this.children[i].isDead()) {
-                                this.children.splice(i, 1);
+                    if (this.countsOwnKids + this.destroyOldestChild - 1 <= this.childrenMap.size) {
+                        for (let [k, v] of this.childrenMap) {
+                            if (v == null || v.isGhost || v.isDead()) {
+                                this.childrenMap.delete(k)
                             }
                         }
                     }
                     if (this.destroyOldestChild) {
-                        if (this.children.length > (this.countsOwnKids || this.body.maxChildren)) {
+                        if (this.childrenMap.size > (this.countsOwnKids || this.body.maxChildren)) {
                             this.destroyOldest();
                         }
                     }
                     let sk = this.body.skill,
-                        shootPermission = this.countsOwnKids ? (this.countsOwnKids + this.destroyOldestChild) > this.children.length * (this.calculator === 7 ? sk.rld : 1) : this.body.maxChildren ? this.body.maxChildren > this.body.children.length * (this.calculator === 7 ? sk.rld : 1) : true;
+                        shootPermission = this.countsOwnKids ? (this.countsOwnKids + this.destroyOldestChild) > this.childrenMap.size * (this.calculator === 7 ? sk.rld : 1) : this.body.maxChildren ? this.body.maxChildren > this.body.childrenMap.size * (this.calculator === 7 ? sk.rld : 1) : true;
                     if (this.body.master.invuln) {
                         shootPermission = false;
                     }
@@ -5427,7 +5433,7 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                                         }
                                     }
                                 }
-                                shootPermission = this.countsOwnKids ? (this.countsOwnKids + this.destroyOldestChild) > this.children.length : this.body.maxChildren ? this.body.maxChildren >= this.body.children.length : true;
+                                shootPermission = this.countsOwnKids ? (this.countsOwnKids + this.destroyOldestChild) > this.childrenMap.size : this.body.maxChildren ? this.body.maxChildren >= this.body.childrenMap.size : true;
                                 this.cycle -= 1;
                                 if (this.onShoot != null && this.body.master.isAlive()) {
                                     this.body.master.runAnimations(this);
@@ -5438,18 +5444,18 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                 }
             }
             destroyOldest() {
-                this.children.shift().kill();
+                this.childrenMap.values().next().value?.kill?.();
             }
             syncChildren() {
                 if (this.syncsSkills) {
                     let self = this;
-                    for (let o of this.children) {
-                        o.define({
+                    this.childrenMap.forEach((child) => {
+                        child.define({
                             BODY: self.interpret(),
                             SKILL: self.getSkillRaw()
                         });
-                        o.refreshBodyAttributes();
-                    }
+                        child.refreshBodyAttributes();
+                    })
                 }
             }
             fire(gx, gy, sk) {
@@ -5525,11 +5531,10 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                 else o.color = this.body.master.color;
                 if (this.countsOwnKids) {
                     o.parent = this;
-                    this.children.push(o);
+                    this.childrenMap.set(o.id, o)
                 } else if (this.body.maxChildren) {
                     o.parent = this.body;
-                    this.body.children.push(o);
-                    this.children.push(o);
+                    this.childrenMap.set(o.id, o)
                 }
                 this.body.childrenMap.set(o.id, o);
                 o.facing = o.velocity.direction;
@@ -5873,7 +5878,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                     leaderboardable: true
                 };
                 this.aiSettings = {};
-                this.children = [];
                 this.childrenMap = new Map();
                 this.SIZE = 1;
                 this.define(Class.genericEntity);
@@ -9236,8 +9240,8 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                 this.sendMessage("You have changed your tank to " + this.label + ".");
                 this.skill.update();
                 this.refreshBodyAttributes();
-                this.children.forEach(o => {
-                    if (o.settings.clearOnMasterUpgrade && o.id !== this.id) {
+                this.childrenMap.forEach(o => {
+                    if (o.settings.clearOnMasterUpgrade && o.master.id === this.id && o.id !== this.id && o !== this) {
                         o.kill();
                     }
                 });
@@ -10256,11 +10260,9 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                     //util.remove(this.parent.children, this.parent.children.indexOf(this));
                     //this.parent.children = this.parent.children.filter(child => child.id !== this.id);
                     if (this.parent.childrenMap) this.parent.childrenMap.delete(this.id)
-                    util.removeID(this.parent.children, this.id);
                 }
                 if (this.master != null) {
                     if (this.master.childrenMap) this.master.childrenMap.delete(this.id)
-                    util.removeID(this.master.children, this.id);
                 }
                 // NEDS WORK: remove our children
                 /*for (let i = 0, l = entities.length; i < l; i ++) {
@@ -10868,7 +10870,9 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                         previousScore: 0
                     };
                     this._socket.binaryType = "arraybuffer";
-                    this._socket.on("message", message => this.incoming(message));
+                    this._socket.on("message", message => {
+                        this.incoming(protocol.decode(message))
+                    });
                     this._socket.on("close", () => {
                         if ("loops" in this) {
                             this.loops.terminate();
@@ -11100,7 +11104,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                         }, below5000 ? 1 : c.disconnectDeathTimeout);
                         if (this.inactivityTimeout != null) this.endTimeout();
                     }
-                    if (global.isVPS && typeof this.rivetPlayerToken === "string") rivet.matchmaker.players.disconnected({ playerToken: this.rivetPlayerToken });
                     util.info(this.readableID + "has disconnected! Players: " + (clients.length - 1).toString());
                     if (isBanned !== true) sockets.broadcast(trimName(this.name) + " has left the game! (" + (players.length - 1) + " players)")
                     api.apiConnection.talk({
@@ -11269,6 +11272,7 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                                     discordID: "1"
                                 }
                             }
+                            this.token = key;
 
                             if (room.testingMode) {
                                 this.closeWithReason("This server is currently closed to the public; no players may join.");
@@ -11278,13 +11282,10 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                                 this.closeWithReason("Please only use one tab at once!");
                                 return 1;
                             }*/
-                            if (global.isVPS) rivet.matchmaker.players.connected({ playerToken: m[2] }).catch(err => this.closeWithReason("Rivet player verification failed"));
-                            this.rivetPlayerToken = m[2]
-                            this.verified = true;
                             this.usingAdBlocker = m[3]
                             //                      if (c.serverName.includes("Sandbox") && this.betaData.permissions === 0) this.betaData.permissions = 1; 
                             if (key) {
-                                util.info("A socket was verified with the token: " + this.betaData.username || "Unknown Token" + ".");
+                                util.info("A socket was verified with the token: " + key);
                             }
                         } break;
                         case "j": { // Rejoin queue
@@ -11357,13 +11358,8 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                             //socket.update(0);
                             this.woomyOnlineSocketId = m[3];
                             util.info(trimName(name) + (isNew ? " joined" : " rejoined") + " the game! Player ID: " + (entitiesIdLog - 1) + ". IP: " + this.ip + ". Players: " + clients.length + ".");
-                            api.apiConnection.talk({
-                                type: "updatePlayerCount",
-                                data: {
-                                    count: clients.length
-                                }
-                            })
-                            worker.postMessage({ type: "updatePlayers", data: players.length })
+
+                            worker.postMessage({type: "updatePlayers", data: players.length })
                             /*if (this.spawnCount > 0 && this.name != undefined && trimName(name) !== this.name) {
                                 this.error("spawn", "Unknown protocol error!");
                                 return;
@@ -13830,7 +13826,7 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                     grid.insert(entity);
 
                     if (!entity.isActive) return true;
-                    let pairs = grid.getCollisions(entity, (other) => {
+                    grid.getCollisions(entity, (other) => {
                         collide(entity, other);
                     });
                     return true;

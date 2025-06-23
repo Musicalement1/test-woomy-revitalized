@@ -1,131 +1,161 @@
-import { global } from "/js/global.js"
 import { fasttalk } from "./fasttalk.js";
+import { PeerWrapper } from "./peer.js";
 
-window.addMetaData = function (type = 0, subtype = 0, data) {
-	let arr = [];
-	if (typeof (subtype) === "string") {
-		arr = [type, 255]
-		let i = 0;
-		for (let i = 0; i < subtype.length; i++) {
-			arr.push(subtype.charCodeAt(i));
-		}
-		arr.push(0);
-	} else {
-		arr.push(type, subtype)
-	}
-	let u8arr = new Uint8Array(data.length + arr.length);
-	u8arr.set(arr);
-	u8arr.set(data, arr.length)
-	return u8arr
-}
-window.getMetaData = function (u8arr) {
-	u8arr = new Uint8Array(u8arr);
-	if (u8arr[1] === 255) {
-		let str = "";
-		let i = 2;
-		while (u8arr[i] !== 0) {
-			str += String.fromCharCode(u8arr[i++]);
-		}
-		return [u8arr[0], str, u8arr.slice(i + 1)]
-	}
-	return [u8arr[0], u8arr[1], u8arr.slice(2)]
-},
-
-window.creatingRoom = true;
 window.connectedToWRM = false
-window.roomManager = new WebSocket("ws://127.0.0.1:3001")
-window.roomManager.onopen = () => {
-	window.roomManager.binaryType = "arraybuffer"
-	window.connectedToWRM = true
-	console.log("Connected to WRM")
-	setInterval(() => {
-		let data = new Uint8Array(2);
-		data[0] = 0;
-		data[1] = 1;
-		window.roomManager.send(data);//ping
-	}, 60000)
-}
 
-window.roomManager.onclose = () => {
-	alert("Disconnected from the room manager most likely due to inactivity, please reload to reconnect!")
-}
+const WRM = "dev.localhost:3002"
+const wsUrl = window.location.protocol === "http:" ? "ws://" : "wss://"
+const httpUrl = window.location.protocol === "http:" ? "http://" : "https://"
+const WRM_WS = `${wsUrl}${WRM}`
+const WRM_HTTP = `${httpUrl}${WRM}`
 
-window.serverWorkerSetup = function () {
+const multiplayer = {
+	roomWs: undefined,
+	roomPeers: new Map(),
+	hostRoomId: undefined,
+	playerPeer: undefined,
+	playerWs: undefined,
+}
+multiplayer.wrmHost = async function () {
+	this.roomWs = new WebSocket(`${WRM_WS}/host`)
+	let openPromise = new Promise((res, rej) => {
+		this.roomWs.onopen = () => {
+			console.log("Room socket opened with room manager")
+			res()
+		}
+		this.roomWs.onerror = (err) => {
+			console.log("Error opening room socket to room manager")
+			rej(err)
+		}
+	})
+	this.roomWs.onmessage = async (msg) => {
+		try {
+			const { type, data } = JSON.parse(msg.data)
+			switch (type) {
+				// Add timeout if its a fake request
+				case "playerJoin":
+					console.log("Accepting new peer connection")
+					let peer = new PeerWrapper()
+					console.log("Initializing new peer connection")
+					await peer.initialized;
+					console.log("New peer connection initialized")
+					peer.connectTo(data);
+					console.log("Connecting to new peer")
+					await peer.ready
+					console.log("Connected to new peer")
+					this.roomPeers.set(peer.id, peer)
+					window.serverWorker.postMessage({ type: "playerJoin", playerId: peer.id })
+					peer.onclose = () => {
+						window.serverWorker.postMessage({ type: "playerDc", playerId: peer.id })
+						this.roomPeers.delete(peer.id)
+					}
+					peer.onmessage = (msg) => {
+						window.serverWorker.postMessage({ type: "serverMessage", data: [peer.id, msg] })
+					}
+					break;
+				case "hostRoomId":
+					this.hostRoomId = data
+					break;
+			}
+		} catch (err) {
+			console.error(err)
+		}
+	}
+	this.roomWs.onclose = () => {
+		console.log("Room socket closed with room manager")
+		alert("Lost connection with the room manager. You can still play, however more people cannot join.")
+	}
+	return openPromise
+}
+multiplayer.getHostRoomId = async function(){
+	console.log("Waiting for host room id...")
+	return new Promise((res, rej)=>{
+		// I know it sucks
+		// but its easier this way
+		let interval = setInterval(()=>{
+			if(!this.hostRoomId) return;
+			res(this.hostRoomId)
+			clearInterval(interval)
+			console.log("...Got host room id")
+		})
+	})
+}
+multiplayer.joinRoom = async function (roomId) {
+	this.playerPeer = new PeerWrapper()
+	window.loadingTextStatus = "Initalizing connection..."
+    window.loadingTextTooltip = ""
+	console.log("Initialzing player peer")
+	await this.playerPeer.initialized;
+	console.log("Player peer initalized")
+    window.loadingTextStatus = "Establishing connection..."
+    window.loadingTextTooltip = ""
+	console.log("Sending join request...")
+	let res = await fetch(`${WRM_HTTP}/join`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			roomId: roomId,
+			peerId: this.playerPeer.id
+		})
+	})
+	let resText = await res.text();
+	if(!res.ok){
+    	window.loadingTextStatus = "Connection Failed"
+    	window.loadingTextTooltip = "Please reload your tab"
+		alert(`${resText}\nYour tab will now reload`)
+		//window.location.href = window.location.href;
+		return;
+	}
+	console.log("...Join request sent", res)
+	await this.playerPeer.ready
+	this.playerPeer.onmessage = (msg) => { 
+		if(window.clientMessage) window.clientMessage(msg)
+	}
+}
+multiplayer.getRooms = async function (){
+	let res = await fetch(`${WRM_HTTP}/list`)
+	res = await res.json()
+	return res;
+}
+multiplayer.startServerWorker = async function (gamemodeCode, gamemodeName) {
 	window.serverWorker.postMessage({
 		type: "startServer",
 		server: {
-			suffix: window.servers[global._selectedServer].rivetGamemode,
-			gamemode: window.servers[global._selectedServer].serverGamemode,
+			suffix: gamemodeCode,
+			gamemode: gamemodeName,
 		}
 	});
-	window.serverWorker.onmessage = function (msgEvent) {
-		const data = msgEvent.data;
-		switch (data.type) {
-			case "clientMessage":
-				// clientMessage, string
-				window.roomManager.send(window.addMetaData(3, data.playerId, fasttalk.encode(data.data)));
-				break;
-			case "serverStarted":
-				window.connectSocketToServer()
-				break;
-			case "updatePlayers":
-				// WRM, RoomUpdatePlayers
-				window.roomManager.send(window.addMetaData(1, 2, fasttalk.encode([data.data])))
-				break;
-			case "serverStartText":
-				window.loadingTextStatus = data.text
-				window.loadingTextTooltip = data.tip
-				break;
-		}
-	};
-}
+	let startPromise = new Promise((res, rej) => {
+		window.serverWorker.onmessage = function (msgEvent) {
+			const data = msgEvent.data;
+			switch (data.type) {
+				case "serverStarted":
+					res();
+					break;
+				case "clientMessage":
+					let peer = multiplayer.roomPeers.get(data.playerId);
+					if(!peer){
+						console.error(`Peer ${data.playerId} does not exist`)
+						return;
+					}
+					peer.send(fasttalk.encode(data.data));
+					break;
 
-window.WebSocket = (url, roomHost) => {
-	return {
-		set onmessage(v) {
-			window.clientMessage = v
-		},
-		set onopen(v) {
-			v()
-		},
-		send: (e) => {
-			window.roomManager.send(window.addMetaData(2, 0, fasttalk.encode(e)))
-		}
-	}
-}
-
-window.roomManager.onmessage = (ea) => {
-	let [type, subType, e] = window.getMetaData(ea.data);
-	e = fasttalk.decode(e)
-
-	switch (type) {
-		case 1: // WRM
-			switch (subType) {
-				case 1: // Room Update
-					window.onWRMRoomUpdate(JSON.parse(e[0]))
+				case "updatePlayers":
+					// WRM, RoomUpdatePlayers
+					multiplayer.roomWs.send(JSON.stringify({
+						players: data.data,
+						gamemodeCode:  gamemodeCode
+					}))
 					break;
-				case 2: // Room Created
-					window.selectedRoomId = e[0]
-					break;
-				case 3: // Room Joined
-					window.onRoomJoined()
-					break;
-				case 4: // Player Join
-					window.serverWorker.postMessage({ type: "playerJoin", playerId: e[0] })
-					break;
-				case 5: // Player disconnect
-					window.serverWorker.postMessage({ type: "playerDc", playerId: e[0] })
+				case "serverStartText":
+					window.loadingTextStatus = data.text
+					window.loadingTextTooltip = data.tip
 					break;
 			}
-			break;
-
-		case 2: // Server Message
-			window.serverWorker.postMessage({ type: "serverMessage", data: [subType, e] })
-			break;
-
-		case 3: // Client Message
-			window.clientMessage(e)
-			break;
-	}
+		};
+	})
+	return startPromise
 }
 
+export { multiplayer }

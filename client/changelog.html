@@ -71,6 +71,9 @@
             <li>setInvisible</li>
         </ul>
         <li>Client identification (that was meant to stop multi-tabbing)</li>
+        <li>TDM Gamemode</li>
+        <li>Blackout Voidwalkers gamemode</li>
+        <li>Testbed Event gamemode</li>
 
         <h3><b>Optimizations</b></h3>
         <li>Entities in the client are now mostly use a Map instead of an Array</li>
@@ -79,6 +82,8 @@
         <li>Path2Ds are now cached</li>
         <li>Gradient renders are now cached</li>
         <li>The main menu sizing no longer uses background performance</li>
+        <li>Replaced .children with .childrenMap</li>
+        <li>Repeated key presses are now limited to 1 per 100 ms to prevent packet-spam</li>
 
         <h3><b>Bug Fixes</b></h3>
         <li>Fixed a bug where traps would fling eachother</li>
@@ -115,6 +120,12 @@
         </ul>
         <li>Death Screen is now more transparent</li>
         <li>The achievements pop-out now scales better</li>
+        <li>Void walkers is now blackout by default</li>
+        <li>Holding level up levels you up faster now</li>
+        <li>Healthbars completely disappear on death</li>
+        <li>Redid the joining status messages</li>
+        <li>You can now only press enter on the main menu and join game screen once</li>
+        <li>Adjusted the damage flash</li>
 
         <h3><b>Additions</b></h3>
         <li>Mobile players can now swipe on skill upgrades to quickly invest points</li>
@@ -123,6 +134,7 @@
         <li>The mobile Rest Tank button now uses the 8 second one rather than the dev one</li>
         <li>Added a room join/creation screen</li>
         <li>Added a mod browser</li>
+        <li>Added a Movement Smoothing setting, a 0-1 scale for how much entity positions should be smoothed. The higher the faster, 1 being instant and 0 being no position updates.</li>
     </ul>
 </div>
 <div class="patchnoteSection">
