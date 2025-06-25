@@ -239,7 +239,7 @@ config.Woomy = (() => {
 	new Setting("darkBorders", "Dark Borders", "boolean", false);
 	new Setting("rgbBorders", "Rainbow Borders", "boolean", false);
 	new Setting("glassMode", "Glass Mode", "boolean", false);
-	new Setting("pointy", "Sharp Borders", "boolean", false);
+	new Setting("pointy", "Sharp Borders", "boolean", true);
 	new Setting("inverseBorderColor", "Inverse Border Color", "boolean", false);
 	new Setting("noBorders", "No Borders", "boolean", false);
 	new Setting("tintedDamage", "Red Damage", "boolean", true);

@@ -612,7 +612,7 @@ let socketInit = function () {
 						y: m[3],
 						FoV: m[4]
 					};
-					if (cam.time > global.player._lastUpdate) {
+					//if (cam.time > global.player._lastUpdate) { // Why is this here?
 						lag.add(getNow() - cam.time);
 						global.player._time = cam.time + lag.get();
 						metrics._rendergap = cam.time - global.player._lastUpdate;
@@ -621,8 +621,8 @@ let socketInit = function () {
 						convert.reader.set(m, 5);
 						convert.fastGui();
 						convert.data();
-						global.player._cx = cam.x;
-						global.player._cy = cam.y;
+						global.player._cx = lerp(global.player._cx, cam.x, config.movementSmoothing);
+						global.player._cy = lerp(global.player._cy, cam.y, config.movementSmoothing);
 						global.player._lastvx = global.player._vx;
 						global.player._lastvy = global.player._vy;
 						global.player._vx = global._died ? 0 : cam.vx;
@@ -633,7 +633,7 @@ let socketInit = function () {
 						if (isNaN(global.player._renderv) || global.player._renderv === 0) global.player._renderv = 2000;
 						metrics._lastlag = metrics._lag;
 						metrics._lastuplink = Date.now()
-					} //else logger.info("This is old data! Last given time: " + global.player._time + "; offered packet timestamp: " + cam.time + ".");
+					//} //else logger.info("This is old data! Last given time: " + global.player._time + "; offered packet timestamp: " + cam.time + ".");
 					socket.controls.talk();
 					updateTimes++;
 				}

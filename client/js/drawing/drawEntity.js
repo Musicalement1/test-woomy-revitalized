@@ -1807,7 +1807,9 @@ let drawEntity = function () {
 			finalColor = mixColors(getColor(instance.color), renderColor, renderBlend),
 			invulnTicker = instance.invuln && (Date.now() - instance.invuln) % 200 > 110;
 		if (invulnTicker) finalColor = mixColors(finalColor, color.vlgrey, .5);
-		context.lineWidth = ratio * config.borderChunk
+		if(fade !== 1) ctx.filter = `grayscale(${100-(fade*100)}%)` // grey death
+		if(fade !== 1) rot += (((90*Math.PI)/180)*(1-fade))*Math.sign(rot)
+		context.lineWidth = ratio * config.borderChunk * fade
 		if (scale < 1) { // big/messy mini-render fix
 			context.lineWidth *= scale
 		}
@@ -2047,6 +2049,7 @@ let drawEntity = function () {
 				m = origM
 			}
 		}
+		ctx.filter = "none"
 		ctx.globalAlpha = 1
 		if (gunCache.size > 4000) {
 			console.log("[LOG] Cleared client gunCache")

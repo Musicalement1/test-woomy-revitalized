@@ -8,7 +8,7 @@ let config = {
 	rgbBorders: false,
 	noBorders: 0,
 	colors: "classic",
-	pointy: false,
+	pointy: true,
 	resolutionScale: 1,
 	fontSizeBoost: 10,
 	movementSmoothing: .625,
