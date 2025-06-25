@@ -2468,8 +2468,7 @@ async function startServer(configSuffix, serverGamemode, defExports) {
 
                         // Cache and return
                         cachedMockups.set(entityIndex, mockup);
-                        entity.destroy();
-                        purgeEntities();
+                        entity.destroy(true);
 
                         return mockup;
                     } catch (err) {
@@ -4118,9 +4117,9 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                     }
                     this.body.kill();
                     let gun = this.body.master.guns[this.body.gunIndex];
-                    if (gun.countsOwnKids){
-                        for(let [k, v] of gun.childrenMap){
-                            if(v === this) gun.childrenMap.delete(k)
+                    if (gun.countsOwnKids) {
+                        for (let [k, v] of gun.childrenMap) {
+                            if (v === this) gun.childrenMap.delete(k)
                         }
                     }
                 }
@@ -10244,7 +10243,7 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                 this.damageReceived = this.health.max * 2;
                 this.health.amount = -1;
             }
-            destroy() {
+            destroy(skipEvents=false) {
                 if (this.hasDestroyed) {
                     return;
                 }
@@ -10333,14 +10332,16 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                     clearTimeout(this.evolutionTimeout)
                 }
                 // Explosions, phases and whatnot
-                if (this.onDead != null && !this.hasDoneOnDead) {
-                    this.hasDoneOnDead = true;
-                    this.onDead();
-                }
-                // Second function so onDead isn't overwritten by specific gamemode features
-                if (this.modeDead != null && !this.hasDoneModeDead) {
-                    this.hasDoneModeDead = true;
-                    this.modeDead();
+                if (skipEvents === false) {
+                    if (this.onDead != null && !this.hasDoneOnDead) {
+                        this.hasDoneOnDead = true;
+                        this.onDead();
+                    }
+                    // Second function so onDead isn't overwritten by specific gamemode features
+                    if (this.modeDead != null && !this.hasDoneModeDead) {
+                        this.hasDoneModeDead = true;
+                        this.modeDead();
+                    }
                 }
                 //entities.delete(this.id);
                 this.isGhost = true;
@@ -11359,7 +11360,7 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                             this.woomyOnlineSocketId = m[3];
                             util.info(trimName(name) + (isNew ? " joined" : " rejoined") + " the game! Player ID: " + (entitiesIdLog - 1) + ". IP: " + this.ip + ". Players: " + clients.length + ".");
 
-                            worker.postMessage({type: "updatePlayers", data: players.length })
+                            worker.postMessage({ type: "updatePlayers", data: players.length })
                             /*if (this.spawnCount > 0 && this.name != undefined && trimName(name) !== this.name) {
                                 this.error("spawn", "Unknown protocol error!");
                                 return;
