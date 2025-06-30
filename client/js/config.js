@@ -25,6 +25,7 @@ let config = {
 	filterType: "none",
 	tintedHealth: true,
 	coloredHealthBars: false,
+	deathAnimations: true,
 	memory: 60,
 	newPrediction: 0,
 	prediction: 2,

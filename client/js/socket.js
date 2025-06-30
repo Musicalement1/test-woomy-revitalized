@@ -118,7 +118,7 @@ function Status() {
 			}
 		},
 		getFade: function () {
-			return state === "killed" ? 1 - Math.min(1, (getNow() - time) / 300) : 1;
+			return state === "killed" ? (config.deathAnimations?1 - Math.min(1, (getNow() - time) / 300):0) : 1;
 		},
 		getColor: function () {
 			return config.tintedDamage ? mixColors(color.red, color.guiblack, 0.2) : "#FFFFFF";
@@ -583,12 +583,6 @@ let socketInit = function () {
 					global.message = "";
 				}
 					break;
-				case "c": {
-					global.player.x = global.player._renderx = m[0];
-					global.player.y = global.player._rendery = m[1];
-					global.player._view = global.player._renderv = m[2];
-				}
-					break;
 				case "m": {
 					global.messages.push({
 						text: m[0],
@@ -616,19 +610,16 @@ let socketInit = function () {
 						lag.add(getNow() - cam.time);
 						global.player._time = cam.time + lag.get();
 						metrics._rendergap = cam.time - global.player._lastUpdate;
-						if (metrics._rendergap <= 0) logger.warn("Yo some bullshit is up...");
 						global.player._lastUpdate = cam.time;
 						convert.reader.set(m, 5);
 						convert.fastGui();
 						convert.data();
-						global.player._cx = lerp(global.player._cx, cam.x, config.movementSmoothing);
-						global.player._cy = lerp(global.player._cy, cam.y, config.movementSmoothing);
+						global.player._cx = lerp(global.player._cx||cam.x, cam.x, config.movementSmoothing);
+						global.player._cy = lerp(global.player._cy||cam.y, cam.y, config.movementSmoothing);
 						global.player._lastvx = global.player._vx;
 						global.player._lastvy = global.player._vy;
 						global.player._vx = global._died ? 0 : cam.vx;
 						global.player._vy = global._died ? 0 : cam.vy;
-						if (isNaN(global.player._renderx)) global.player._renderx = global.player._cx;
-						if (isNaN(global.player._rendery)) global.player._rendery = global.player._cy;
 						global.player._view = cam.FoV;
 						if (isNaN(global.player._renderv) || global.player._renderv === 0) global.player._renderv = 2000;
 						metrics._lastlag = metrics._lag;

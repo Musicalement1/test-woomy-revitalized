@@ -19,7 +19,7 @@ const gameDrawDead = function () {
 			txt = "🔪 Succumbed to";
 			for (let i = 0; i < global.finalKillers.length; i++) txt += " " + util._addArticle(mockups.get(global.finalKillers[i]).name) + " and";
 			txt = txt.slice(0, -4) + ".";
-		} else txt += "🔪 Well that was kinda dumb, huh?";
+		} else txt += "🔪 :(";
 		return txt;
 	};
 	return function () {

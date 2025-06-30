@@ -136,11 +136,8 @@ const global = {
 		'Import "randomize"...'
 	],
 	_deathSplash: [
-		"You are dead, not big surprise.",
 		"All things must come to an end eventually.",
 		"That's unfortunate...",
-		"Your score was not in vain.",
-		"Everyone falls to death; the destroyer of worlds.",
 		"Tanks for playing!",
 		"Don't be mad because you died; Be happy that you got the score you did.",
 		"We interrupt this program to bring you this death screen.",
@@ -148,24 +145,29 @@ const global = {
 		"Success is not final, failure is not fatal: it is the courage to continue that counts.",
 		"Dread it. Run from it. Destiny arrives all the same.",
 		"F in the chat.",
-		"Going to suggest a nerf again?",
 		"Here lies your grave.",
 		"Game over.",
 		"Don't get mad, get even.",
-		"Try, try again!",
+		"Try, try again.",
 		"OOF",
 		"How much wood would a woodchuck chuck?",
-		"Did you really think that through?",
 		"Please refrain from abusing your computer.",
 		"Ouch. Just ouch.",
 		"Did you get a world record score?",
 		"Try another tank, maybe it'll work out.",
 		"Press Alt+F4 for godmode.",
 		"L",
-		"Cope",
-		"Seethe",
-		"Mald",
-		"YO WE GOT THAT IN VIDEOOOOOOOO"
+		"k",
+		"YO WE GOT THAT IN VIDEOOOOOOOO",
+		"Show em' who's boss!",
+		"MEDICCCC! MEDICCCCCCCC!",
+		"Quick! We're loosing them!",
+		"Out played.",
+		"OH GOD! HOW WILL THIS AFFECT THE TROUT POPULATION??",
+		"I heard trying again with zero changes works wonders..",
+		"All players stop just before their big run!",
+		"That's all folks!",
+		"*Crickets*"
 	],
 	_deathSplashOverride: 0,
 	_deathSplashChoice: 0,
@@ -223,7 +225,7 @@ global.canSkill = 0;
 global.message = "";
 global.time = 0;
 
-global.player = { // Why var?
+global.player = {
 	_x: 0,
 	y: 0,
 	_cx: 0,

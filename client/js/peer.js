@@ -57,14 +57,27 @@ class PeerWrapper {
 		});
 	}
 
-	send(data) {
-		if (this.conn?.open) {
-			this.conn.send(data);
-			//console.log(`[Peer ${this.id}] Sent:`, data);
-		} else {
-			console.warn(`[Peer ${this.id}] No open connection`);
-		}
+send(data) {
+	if (this.conn?.open) {
+		const dc = this.conn.dataChannel; // Access the raw WebRTC data channel
+		const highWaterMark = 4 * 1024 * 1024; // 4MB threshold
+		const checkInterval = 100; // ms
+
+		const trySend = () => {
+			if (dc.bufferedAmount < highWaterMark) {
+				this.conn.send(data);
+				// console.log(`[Peer ${this.id}] Sent:`, data);
+			} else {
+				setTimeout(trySend, checkInterval);
+			}
+		};
+
+		trySend();
+	} else {
+		console.warn(`[Peer ${this.id}] No open connection`);
 	}
+}
+
 
 	destroy() {
 		this.conn?.close();

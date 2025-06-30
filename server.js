@@ -1140,145 +1140,150 @@ async function startServer(configSuffix, serverGamemode, defExports) {
         }
     })();
     const util = require("./lib/util");
-    function Chainf() {
-        this.chain = Object.create(null); // Using null prototype avoids prototype chain lookups
-        this.length = 0;
-        this._keys = []; // Cache keys for faster iteration
-    }
+    /**
+ * Expert-level, high-performance collection optimized for ultra-hot paths.
+ *
+ * It achieves O(1) for get, set, and delete operations by making a critical trade-off:
+ * IT DOES NOT PRESERVE INSERTION ORDER.
+ *
+ * - Uses a dense array for data storage, enabling the fastest possible iteration.
+ * - Uses an index map for O(1) key-to-position lookups.
+ * - Uses the "swap and pop" pattern for O(1) deletion.
+ *
+ * This is for workloads where performance is the only priority and order is irrelevant.
+ */
+function Chainf() {
+    this._entries = []; // Dense array of [key, value] pairs for fast iteration
+    this._keyToIndex = new Map(); // The index: key -> array index
+}
 
-    Chainf.prototype.set = function (key, value) {
-        // Only increment length if it's a new key
-        if (!Object.hasOwn(this.chain, key)) {
-            this._keys.push(key);
-            this.length++;
-        }
-        this.chain[key] = value;
-        return this; // Enable chaining
-    }
+Object.defineProperty(Chainf.prototype, 'length', {
+    get: function() { return this._entries.length; },
+    enumerable: true,
+    configurable: true
+});
 
-    Chainf.prototype.get = function (key) {
-        return this.chain[key];
+Chainf.prototype.set = function (key, value) {
+    const index = this._keyToIndex.get(key);
+    if (index !== undefined) {
+        // Key already exists, just update the value. O(1)
+        this._entries[index][1] = value;
+    } else {
+        // New key. Add to the end. O(1)
+        const newIndex = this._entries.length;
+        this._entries.push([key, value]);
+        this._keyToIndex.set(key, newIndex);
     }
+    return this;
+}
 
-    Chainf.prototype.has = function (key) {
-        return Object.hasOwn(this.chain, key); // Faster than hasOwnProperty
+Chainf.prototype.get = function (key) {
+    const index = this._keyToIndex.get(key);
+    if (index !== undefined) {
+        return this._entries[index][1];
     }
+    return undefined;
+}
 
-    Chainf.prototype.delete = function (key) {
-        if (Object.hasOwn(this.chain, key)) {
-            delete this.chain[key];
-            // Update keys array efficiently
-            const keyIndex = this._keys.indexOf(key);
-            if (keyIndex !== -1) {
-                this._keys.splice(keyIndex, 1);
-            }
-            this.length--;
-            return true;
-        }
+Chainf.prototype.has = function (key) {
+    return this._keyToIndex.has(key);
+}
+
+// THE CROWN JEWEL: O(1) DELETION
+Chainf.prototype.delete = function (key) {
+    const indexToDelete = this._keyToIndex.get(key);
+
+    // Key not found, nothing to do.
+    if (indexToDelete === undefined) {
         return false;
     }
 
-    Chainf.prototype.clear = function () {
-        this.chain = Object.create(null);
-        this._keys = [];
-        this.length = 0;
-        return this; // Enable chaining
-    }
+    // 1. Get the last entry in the array.
+    const lastEntry = this._entries[this._entries.length - 1];
+    const lastKey = lastEntry[0];
 
-    Chainf.prototype.forEach = function (callback) {
-        const keys = this._keys;
-        const chain = this.chain;
-        for (let i = 0; i < keys.length; i++) {
-            const key = keys[i];
-            callback(chain[key], key, i);
-        }
-        return this; // Enable chaining
-    }
+    // 2. Move the last entry into the place of the one being deleted.
+    this._entries[indexToDelete] = lastEntry;
 
-    Chainf.prototype.map = function (callback) {
-        const result = [];
-        const keys = this._keys;
-        const chain = this.chain;
-        for (let i = 0; i < keys.length; i++) {
-            const key = keys[i];
-            result.push(callback(chain[key], key, i));
-        }
-        return result;
-    }
+    // 3. Update the index map for the moved entry.
+    this._keyToIndex.set(lastKey, indexToDelete);
 
-    Chainf.prototype.mapToChain = function (callback) {
-        const keys = this._keys;
-        const chain = this.chain;
-        for (let i = 0; i < keys.length; i++) {
-            const key = keys[i];
-            chain[key] = callback(chain[key], key, i);
-        }
-        return this;
-    }
+    // 4. Remove the key being deleted from the index.
+    this._keyToIndex.delete(key);
 
-    Chainf.prototype.filter = function (callback) {
-        const result = [];
-        const keys = this._keys;
-        const chain = this.chain;
-        for (let i = 0; i < keys.length; i++) {
-            const key = keys[i];
-            const value = chain[key];
-            if (callback(value, key, i)) {
-                result.push(value);
+    // 5. Pop the last entry (which is now a duplicate). This is O(1).
+    this._entries.pop();
+
+    return true;
+}
+
+Chainf.prototype.clear = function () {
+    this._entries = [];
+    this._keyToIndex.clear();
+    return this;
+}
+
+// Iteration methods now benefit from the dense array structure.
+// They are as fast as they can possibly be.
+
+Chainf.prototype.forEach = function (callback) {
+    const entries = this._entries;
+    for (let i = 0, len = entries.length; i < len; i++) {
+        const entry = entries[i];
+        callback(entry[1], entry[0], i); // callback(value, key, i)
+    }
+    return this;
+}
+
+Chainf.prototype.map = function (callback) {
+    const results = [];
+    const entries = this._entries;
+    for (let i = 0, len = entries.length; i < len; i++) {
+        const entry = entries[i];
+        results.push(callback(entry[1], entry[0], i));
+    }
+    return results;
+}
+
+Chainf.prototype.filterToChain = function (callback) {
+    const entries = this._entries;
+    const keyToIndex = this._keyToIndex;
+    // Iterate backwards when deleting to avoid index-shifting issues
+    for (let i = entries.length - 1; i >= 0; i--) {
+        const entry = entries[i];
+        if (!callback(entry[1], entry[0], i)) {
+            // Since we're iterating backwards, the last element is at `entries.length - 1`.
+            // The "swap and pop" logic simplifies.
+            const lastEntry = entries.pop(); // O(1)
+            const lastKey = lastEntry[0];
+            const currentKey = entry[0];
+
+            // If the element to delete wasn't the last one...
+            if (i < entries.length) {
+                entries[i] = lastEntry; // Move last into current spot
+                keyToIndex.set(lastKey, i); // Update index for moved entry
             }
+            keyToIndex.delete(currentKey); // Delete the original key
         }
-        return result;
     }
+    return this;
+}
 
-    Chainf.prototype.filterToChain = function (callback) {
-        const keys = this._keys;
-        const chain = this.chain;
-        for (let i = keys.length - 1; i >= 0; i--) {
-            const key = keys[i];
-            if (!callback(chain[key], key, i)) {
-                delete chain[key];
-                keys.splice(i, 1);
-                this.length--;
+Chainf.prototype[Symbol.iterator] = function () {
+    let index = 0;
+    const entries = this._entries;
+    return {
+        next: function () {
+            if (index < entries.length) {
+                // Return just the value, as is standard for collection iterators
+                return { value: entries[index++][1], done: false };
             }
+            return { value: undefined, done: true };
         }
-        return this;
-    }
+    };
+}
 
-    Chainf.prototype.keys = function () {
-        return [...this._keys];
-    }
-
-    Chainf.prototype.values = function () {
-        const values = [];
-        const keys = this._keys;
-        const chain = this.chain;
-        for (let i = 0; i < keys.length; i++) {
-            values.push(chain[keys[i]]);
-        }
-        return values;
-    }
-
-    Chainf.prototype[Symbol.iterator] = function () {
-        let index = 0;
-        const keys = this._keys;
-        const chain = this.chain;
-        const length = keys.length;
-
-        return {
-            next: function () {
-                if (index < length) {
-                    const key = keys[index++];
-                    return {
-                        value: chain[key],
-                        done: false
-                    };
-                }
-                return { done: true };
-            }
-        };
-    }
-
-    const Chain = Chainf;
+const Chain = Chainf;
     for (let key of ["log", "warn", "info", "spawn", "error"]) {
         const _oldUtilLog = util[key];
         util[key] = function (text, force) {
@@ -1623,7 +1628,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                     //finalTank.MOTION_TYPE = 'motor'
                     //finalTank.FACING_TYPE = 'toTarget'
                     finalTank.SANCTUARY_TYPE = 'None'
-                    finalTank.BOSS_TYPE = 'None'
                     finalTank.RANDOM_TYPE = 'None'
                     finalTank.MISC_IDENTIFIER = "None"
                     finalTank.MAX_CHILDREN = (CONFIG.usedTanks * CONFIG.gunsPerTank * CONFIG.maxChildren) * 0.5
@@ -1636,7 +1640,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
             global.gamemodeCode = { generateNewTank: getCrptFunction() }
         }
         webhooks.log("Server initializing!");
-        const defsPrefix = "";//process.argv[3] || "";
         const ran = require("./lib/random");
         global.sandboxRooms = [];
         Array.prototype.remove = index => {
@@ -1648,7 +1651,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
             }
         };
 
-        let rankedRoomTicker = 0, rankedRooms = {};
         function* chunkar(array, int) {
             for (let i = 0; i < array.length; i += int) {
                 yield array.slice(i, i + int);
@@ -5472,16 +5474,18 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                 let speed = (this.negRecoil ? -1 : 1) * this.settings.speed * c.runSpeed * sk.spd * (1 + ss);
                 let s = new Vector(speed * Math.cos(this.angle + this.body.facing + sd), speed * Math.sin(this.angle + this.body.facing + sd));
                 if (this.body.velocity.length) {
-                    let extraBoost = Math.max(0, s.x * this.body.velocity.x + s.y * this.body.velocity.y) / this.body.velocity.length / s.length;
+                    let extraBoost = Math.max(1, s.x * this.body.velocity.x + s.y * this.body.velocity.y) / this.body.velocity.length / s.length;
                     if (extraBoost) {
                         let len = s.length;
                         s.x += this.body.velocity.length * extraBoost * s.x / len;
                         s.y += this.body.velocity.length * extraBoost * s.y / len;
                     }
                 }
+				// Client lerp makes it look like bullets dont come from barrels
+				const lerpComp = .75; // % of barrel length to spawn bullet (1-2)
                 let o = new Entity({
-                    x: this.body.x + this.body.size * gx - .75 * this.length * s.x,
-                    y: this.body.y + this.body.size * gy - .75 * this.length * s.y
+                    x: this.body.x + this.body.size * gx - (this.length*s.x) * lerpComp,
+                    y: this.body.y + this.body.size * gy - (this.length*s.y) * lerpComp
                 }, this.master.master);
                 o.roomId = this.body.roomId;
                 o.velocity = s;
@@ -5537,7 +5541,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                 }
                 this.body.childrenMap.set(o.id, o);
                 o.facing = o.velocity.direction;
-                let oo = o;
                 o.gunIndex = this.gunIndex;
                 o.refreshBodyAttributes();
                 o.life();
@@ -5954,7 +5957,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                 this.tank = "basic";
                 this.nameColor = "#FFFFFF";
                 this.rainbowSpeed = 30;
-                this.onDead = null;
                 this.canUseQ = true;
                 this.multibox = {
                     enabled: false,
@@ -6296,8 +6298,7 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                     if (set.TRAVERSE_SPEED != null) this.turretTraverseSpeed = set.TRAVERSE_SPEED;
                     if (set.RIGHT_CLICK_TURRET != null) this.turretRightClick = set.RIGHT_CLICK_TURRET;
                     if (set.index != null) this.index = set.index;
-                    if (set.NAME != null) this.name = set.NAME;
-                    if (set.TRANSFORM_EXPORT != null) this.transformExport = set.transformExport;
+                    this.name = set.NAME||"";
                     if (set.HITS_OWN_TEAM != null) this.hitsOwnTeam = set.HITS_OWN_TEAM;
                     if (set.LABEL != null) this.label = set.LABEL;
                     this.labelOverride = "";
@@ -6359,7 +6360,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                     if (set.INTANGIBLE != null) this.intangibility = set.INTANGIBLE;
                     if (set.AI != null) this.aiSettings = set.AI;
                     if (set.DANGER != null) this.dangerValue = set.DANGER;
-                    if (set.TARGET_PLANES != null) this.settings.targetPlanes = set.TARGET_PLANES;
                     if (set.VARIES_IN_SIZE != null) {
                         this.settings.variesInSize = set.VARIES_IN_SIZE;
                         this.squiggle = this.settings.variesInSize ? ran.randomRange(.8, 1.2) : 1;
@@ -6379,8 +6379,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                         if (set.INVISIBLE.length !== 3) throw ("Invalid invisibility values!");
                         this.invisible = set.INVISIBLE;
                     } else this.invisible = [0, 0, 0];
-                    if (set.IS_PLANE != null) this.isPlane = set.IS_PLANE;
-                    if (set.TARGET_PLANES != null) this.settings.targetPlanes = set.TARGET_PLANES;
                     if (set.SEE_INVISIBLE != null) this.seeInvisible = set.SEE_INVISIBLE;
                     this.displayText = set.DISPLAY_TEXT || "";
                     this.displayTextColor = set.DISPLAY_TEXT_COLOR || "#FFFFFF"
@@ -6404,273 +6402,11 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                     this.onAlt = set.ON_ALT || null;
                     this.onQ = set.ON_Q || null
                     this.onNotAlt = set.ON_NOT_ALT || null;
+					this.onDead = set.ON_DEAD || null
                     this.isObserver = set.IS_OBSERVER;
                     this.onOverride = set.ON_OVERRIDE;
                     this.isSentry = set.IS_SENTRY || null
                     if (set.BOSS_TYPE !== "None") switch (set.BOSS_TYPE) {
-                        case "Constellation":
-                            this.onDead = () => {
-                                sockets.broadcast("A Constellation boss may have been defeated, but the battle is not won yet...");
-                                let x = this.x,
-                                    y = this.y;
-                                setTimeout(() => {
-                                    sockets.broadcast("Constellation Shards have spawned to avenge the Constellation!");
-                                    let positions = [
-                                        [x + 110, y, -110, 0],
-                                        [x - 110, y, 110, 0],
-                                        [x, y + 110, 0, -110],
-                                        [x, y - 110, 0, 110]
-                                    ],
-                                        names = ran.chooseBossName("a", 5);
-                                    for (let i = 0; i < 4; i++) {
-                                        let shard = new Entity({
-                                            x: positions[i][0],
-                                            y: positions[i][1]
-                                        });
-                                        shard.team = -100;
-                                        shard.control.target.x = positions[i][2];
-                                        shard.control.target.y = positions[i][3];
-                                        shard.define(Class.constShard);
-                                        shard.name = names[i];
-                                        shard.settings.broadcastMessage = "A Constellation Shard has been defeated!";
-                                    }
-                                    let core = new Entity({
-                                        x: x,
-                                        y: y
-                                    });
-                                    core.team = -100;
-                                    core.control.target.x = core.control.target.y = 100;
-                                    core.define(Class.constCore);
-                                    core.name = names[4];
-                                    core.settings.broadcastMessage = "A Constellation Core has been defeated!";
-                                }, 7500);
-                            };
-                            break;
-                        case "polyamorous":
-                            this.onDead = () => {
-                                sockets.broadcast("It will stop at nothing to seek what it came for, not even its own grave...");
-                                let x = this.x,
-                                    y = this.y;
-                                setTimeout(() => {
-                                    sockets.broadcast("The Mysticals have arrived!");
-                                    let positions = [
-                                        [x + 110, y, -110, 0],
-                                        [x - 110, y, 110, 0],
-                                        [x, y + 110, 0, -110],
-                                        [x, y - 110, 0, 110]
-                                    ];
-                                    for (let i = 0; i < 4; i++) {
-                                        let mystical = new Entity({
-                                            x: positions[i][0],
-                                            y: positions[i][1]
-                                        });
-                                        mystical.team = this.team;
-                                        mystical.control.target.x = positions[i][2];
-                                        mystical.control.target.y = positions[i][3];
-                                        mystical.define([Class.sorcererAI, Class.summonerAI, Class.enchantressAI, Class.exorcistorAI][i]);
-                                    }
-                                }, 4000);
-                            };
-                            break;
-                        case "Bow":
-                            this.onDead = () => {
-                                sockets.broadcast("A Bow may have been defeated, but the battle is not over yet...");
-                                let x = this.x,
-                                    y = this.y;
-                                setTimeout(() => {
-                                    sockets.broadcast("Bow Shards have spawned to avenge the Bow!");
-                                    let positions = [
-                                        [x + 100, y, 100, 0],
-                                        [x - 100, y, -100, 0]
-                                    ],
-                                        names = ran.chooseBossName("a", 3);
-                                    for (let i = 0; i < 2; i++) {
-                                        let shard = new Entity({
-                                            x: positions[i][0],
-                                            y: positions[i][1]
-                                        });
-                                        shard.team = -100;
-                                        shard.control.target.x = positions[i][2];
-                                        shard.control.target.y = positions[i][3];
-                                        shard.define(Class.bowShard);
-                                        shard.name = names[i];
-                                        shard.settings.broadcastMessage = "A Bow Shard has been defeated!";
-                                    }
-                                    let core = new Entity({
-                                        x: x,
-                                        y: y
-                                    });
-                                    core.team = -100;
-                                    core.control.target.x = core.control.target.y = 100;
-                                    core.define(Class.bowCore);
-                                    core.name = names[2];
-                                    core.settings.broadcastMessage = "A Bow Core has been defeated!";
-                                }, 5000);
-                            };
-                            break;
-                        case "Bow":
-                            this.onDead = () => {
-                                sockets.broadcast("A Bow may have been defeated, but the battle is not over yet...");
-                                let x = this.x,
-                                    y = this.y;
-                                setTimeout(() => {
-                                    sockets.broadcast("Bow Shards have spawned to avenge the Bow!");
-                                    let positions = [
-                                        [x + 100, y, 100, 0],
-                                        [x - 100, y, -100, 0]
-                                    ],
-                                        names = ran.chooseBossName("a", 3);
-                                    for (let i = 0; i < 2; i++) {
-                                        let shard = new Entity({
-                                            x: positions[i][0],
-                                            y: positions[i][1]
-                                        });
-                                        shard.team = -100;
-                                        shard.control.target.x = positions[i][2];
-                                        shard.control.target.y = positions[i][3];
-                                        shard.define(Class.bowShard);
-                                        shard.name = names[i];
-                                        shard.settings.broadcastMessage = "A Bow Shard has been defeated!";
-                                    }
-                                    let core = new Entity({
-                                        x: x,
-                                        y: y
-                                    });
-                                    core.team = -100;
-                                    core.control.target.x = core.control.target.y = 100;
-                                    core.define(Class.bowCore);
-                                    core.name = names[2];
-                                    core.settings.broadcastMessage = "A Bow Core has been defeated!";
-                                }, 5000);
-                            };
-                            break;
-
-                        case "splitterSummoner":
-                            this.settings.broadcastMessage = "A Splitter Summoner has shattered!";
-                            this.onDead = () => {
-                                let x = this.x,
-                                    y = this.y;
-                                let positions = [
-                                    [30, 30],
-                                    [-30, -30],
-                                    [30, -30],
-                                    [-30, 30]
-                                ],
-                                    names = ran.chooseBossName("a", 4);
-
-                                // Core
-                                let core = new Entity({
-                                    x: x,
-                                    y: y
-                                });
-                                core.team = -100;
-                                core.define(Class.splitSummonerCore);
-                                core.name = names[4];
-                                core.settings.broadcastMessage = "A Super Splitter Core has been defeated!";
-
-                                // Summoners
-                                for (let i = 0; i < 4; i++) {
-                                    let shard = new Entity({
-                                        x: this.x + positions[i][0],
-                                        y: this.y + positions[i][1]
-                                    });
-                                    shard.team = -100;
-                                    shard.define(Class.summonerAI);
-                                    shard.name = names[i];
-                                    shard.settings.broadcastMessage = "A Summoner has been defeated!";
-                                    shard.onDead = () => {
-                                        for (let i = 0; i < 4; i++) {
-                                            let e = new Entity({ x: shard.x + positions[i][0], y: shard.y + positions[i][0] })
-                                            e.define(Class.splitterSplitterSquare)
-                                            e.ACCELERATION = .015 / (e.size * 0.2);
-                                            let max = 20
-                                            let min = -20
-                                            e.velocity.x = Math.floor(Math.random() * (max - min + 1)) + min;
-                                            e.velocity.y = Math.floor(Math.random() * (max - min + 1)) + min;
-                                            e.team = -100
-                                        }
-                                    }
-                                }
-                            }
-                            break;
-
-                        case "superSplitterSummoner":
-                            this.settings.broadcastMessage = "A Splitter Summoner has shattered!";
-                            this.onDead = () => {
-                                let x = this.x,
-                                    y = this.y;
-                                let positions = [
-                                    [30, 30],
-                                    [-30, -30],
-                                    [30, -30],
-                                    [-30, 30]
-                                ],
-                                    names = ran.chooseBossName("a", 4);
-
-                                // Core
-                                let core = new Entity({
-                                    x: x,
-                                    y: y
-                                });
-                                core.team = -100;
-                                core.define(Class.superSplitSummonerCore);
-                                core.name = names[4];
-                                core.settings.broadcastMessage = "A Splitter Core has been defeated!";
-
-                                // Summoners
-                                for (let i = 0; i < 4; i++) {
-                                    let shard = new Entity({
-                                        x: this.x + positions[i][0],
-                                        y: this.y + positions[i][1]
-                                    });
-                                    shard.team = -100;
-                                    shard.define(Class.splitterSummoner);
-                                    shard.name = names[i];
-                                    shard.settings.broadcastMessage = "A Splitter Summoner has been defeated!";
-                                }
-                            }
-                            break;
-
-                        case "Snowflake":
-                            this.onDead = () => {
-                                sockets.broadcast("A Snowflake may have been defeated, but the battle is not over yet...");
-                                let x = this.x,
-                                    y = this.y;
-                                setTimeout(() => {
-                                    sockets.broadcast("Snowflake Shards have spawned to avenge the Snowflake!");
-                                    let positions = [
-                                        [x, y + 100, 0, 100],
-                                        [x + 86.602, y + 50, 86.602, 50],
-                                        [x + 86.602, y - 50, 86.602, -50],
-                                        [x, y - 100, 0, -100],
-                                        [x - 86.602, y - 50, -86.602, -50],
-                                        [x - 86.602, y + 50, -86.602, 50]
-                                    ],
-                                        names = ran.chooseBossName("a", 7);
-                                    for (let i = 0; i < 6; i++) {
-                                        let shard = new Entity({
-                                            x: positions[i][0],
-                                            y: positions[i][1]
-                                        });
-                                        shard.team = -100;
-                                        shard.control.target.x = positions[i][2];
-                                        shard.control.target.y = positions[i][3];
-                                        shard.define(Class.snowflakeShard);
-                                        shard.name = names[i];
-                                        shard.settings.broadcastMessage = "A Snowflake Shard has been defeated!";
-                                    }
-                                    let core = new Entity({
-                                        x: x,
-                                        y: y
-                                    });
-                                    core.team = -100;
-                                    core.control.target.x = core.control.target.y = 100;
-                                    core.define(Class.snowflakeCore);
-                                    core.settings.broadcastMessage = "A Snowflake Core has been defeated!";
-                                    core.name = names[2];
-                                }, 7500);
-                            };
-                            break;
                         case "triguard":
                             this.onDead = () => {
                                 sockets.broadcast("A Triguardian has been defeated, but the battle is not over yet...");
@@ -10080,7 +9816,7 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                     // Explosions, phases and whatnot
                     if (this.onDead != null && !this.hasDoneOnDead) {
                         this.hasDoneOnDead = true;
-                        this.onDead();
+                        this.onDead({sockets, ran, Entity});
                     }
                     // Second function so onDead isn't overwritten by specific gamemode features
                     if (this.modeDead != null && !this.hasDoneModeDead) {
@@ -10335,7 +10071,7 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                 if (skipEvents === false) {
                     if (this.onDead != null && !this.hasDoneOnDead) {
                         this.hasDoneOnDead = true;
-                        this.onDead();
+                        this.onDead({sockets, ran, Entity});
                     }
                     // Second function so onDead isn't overwritten by specific gamemode features
                     if (this.modeDead != null && !this.hasDoneModeDead) {
@@ -10430,26 +10166,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                 player.body.kill();
             }
             runAnimations(gun) {
-                let onShoot = gun.onShoot;
-                if (gun.onShoot && gun.onShoot.animation) {
-                    const frames = gun.onShoot.frames;
-                    for (let i = 1; i <= frames; i++) setTimeout(() => {
-                        if (gun.body.health.amount <= 0) {
-                            return;
-                        }
-                        if (gun.onShoot.end && i === frames) {
-                            gun.body.master.upgrades = [];
-                        }
-                        const id = `${gun.onShoot.transformExport}${gun.onShoot.end ? frames - i : i}`;
-                        try {
-                            gun.body.master.define(Class[id]);
-                        } catch (e) {
-                            console.log(id);
-                        }
-                    }, 20 * i);
-                    return;
-                }
-
                 switch (onShoot) {
                     case "log":
                         console.log("LOG");
@@ -10684,72 +10400,89 @@ async function startServer(configSuffix, serverGamemode, defExports) {
             };
         })();
 
-        function flatten(data) {
-            const output = [data.type];
+function flatten(data, out, playerContext = null) {
+    out.push(data.type);
 
-            if (data.type & 0x01) {
-                output.push(+(data.facing).toFixed(2), data.layer);
-            } else {
-                // Pre-calculate values that are used multiple times
-                const x = (data.x + .5) | 0;
-                const y = (data.y + .5) | 0;
-                const size = (data.size + .5) | 0;
-                const facing = +(data.facing).toFixed(2);
+    if (data.type & 0x01) { // Turret specific data
+        out.push(+(data.facing).toFixed(2), data.layer);
+    } else { // Full entity data
+        // Pre-calculate values
+        const x = (data.x + .5) | 0;
+        const y = (data.y + .5) | 0;
+        const size = (data.size + .5) | 0;
+        const facing = +(data.facing).toFixed(2);
 
-                // Create flags as a number instead of building it incrementally
-                let flags = 0;
-                flags |= data.twiggle ? 1 : 0;
-                flags |= data.layer !== 0 ? 2 : 0;
-                flags |= data.health < .975 ? 4 : 0;
-                flags |= data.shield < .975 ? 8 : 0;
-                flags |= data.alpha < .975 ? 16 : 0;
-                flags |= data.seeInvisible ? 32 : 0;
-                flags |= data.nameColor !== "#FFFFFF" ? 64 : 0;
-                flags |= data.label ? 128 : 0;
-                flags |= data.sizeRatio[0] !== 1 ? 256 : 0;
-                flags |= data.sizeRatio[1] !== 1 ? 512 : 0;
+        // --- Perspective Logic ---
+        let finalTwiggle = data.twiggle;
+        let finalColor = data.color ?? 0;
 
-                // Add common elements
-                output.push(data.id, flags, data.index, x, y, size, facing);
-
-                // Add conditional elements based on flags
-                if (flags & 2) output.push(data.layer);
-                output.push(data.color ?? 0, data.team);
-                if (flags & 4) output.push(Math.ceil(255 * data.health));
-                if (flags & 8) output.push(Math.ceil(255 * data.shield));
-                if (flags & 16) output.push(Math.ceil(255 * data.alpha));
-                if (flags & 64) output.push(data.nameColor);
-                if (flags & 128) output.push(data.label);
-                if (flags & 256) output.push(data.sizeRatio[0]);
-                if (flags & 512) output.push(data.sizeRatio[1]);
-
-                // Add type-specific elements
-                if (data.type & 0x04) {
-                    output.push(data.name || "", data.score || 0, data.messages ? JSON.stringify(data.messages) : "[]");
-                }
+        if (playerContext) {
+            // Perspective #1: Autospin
+            // If the viewing player has autospin on, the twiggle flag is forced true.
+            if (playerContext.command.autospin) {
+                finalTwiggle = true;
             }
-
-            // Add gun data
-            const gunCount = data.guns.length;
-            output.push(gunCount);
-
-            // Unroll loop for guns
-            for (let i = 0; i < gunCount; i++) {
-                const gun = data.guns[i];
-                output.push((gun.time + .5) | 0, (gun.power + .5) | 0);
+            
+            // Perspective #2: FFA Color Override
+            // In FFA, if a player's body color is 'FFA_RED', they see their own bullets as their team color.
+            if (playerContext.gameMode === "ffa" && playerContext.bodyColor === "FFA_RED") {
+                finalColor = playerContext.teamColor ?? 0;
             }
-
-            // Add turret data
-            const turretCount = data.turrets.length;
-            output.push(turretCount);
-
-            // Process turrets
-            for (let i = 0; i < turretCount; i++) {
-                output.push.apply(output, flatten(data.turrets[i]));
-            }
-
-            return output;
         }
+        // --- End of Perspective Logic ---
+
+        // Create flags bitmask
+        let flags = 0;
+        flags |= finalTwiggle ? 1 : 0;
+        flags |= data.layer !== 0 ? 2 : 0;
+        flags |= data.health < .975 ? 4 : 0;
+        flags |= data.shield < .975 ? 8 : 0;
+        flags |= data.alpha < .975 ? 16 : 0;
+        flags |= data.seeInvisible ? 32 : 0;
+        flags |= data.nameColor !== "#FFFFFF" ? 64 : 0;
+        flags |= data.label ? 128 : 0;
+        flags |= data.sizeRatio[0] !== 1 ? 256 : 0;
+        flags |= data.sizeRatio[1] !== 1 ? 512 : 0;
+
+        // Push core data
+        out.push(data.id, flags, data.index, x, y, size, facing);
+
+        // Push conditional data based on flags
+        if (flags & 2) out.push(data.layer);
+        
+        // Push the finalColor, which may have been modified by perspective logic
+        out.push(finalColor, data.team);
+        
+        if (flags & 4) out.push(Math.ceil(255 * data.health));
+        if (flags & 8) out.push(Math.ceil(255 * data.shield));
+        if (flags & 16) out.push(Math.ceil(255 * data.alpha));
+        if (flags & 64) out.push(data.nameColor);
+        if (flags & 128) out.push(data.label);
+        if (flags & 256) out.push(data.sizeRatio[0]);
+        if (flags & 512) out.push(data.sizeRatio[1]);
+
+        // Push player-specific data
+        if (data.type & 0x04) {
+            out.push(data.name || "", data.score || 0, data.messages ? JSON.stringify(data.messages) : "[]");
+        }
+    }
+
+    // Push gun data
+    const gunCount = data.guns.length;
+    out.push(gunCount);
+    for (let i = 0; i < gunCount; i++) {
+        const gun = data.guns[i];
+        out.push((gun.time + .5) | 0, (gun.power + .5) | 0);
+    }
+
+    // Push turret data (recursively, passing context)
+    const turretCount = data.turrets.length;
+    out.push(turretCount);
+    for (let i = 0; i < turretCount; i++) {
+        // The recursive call now passes the playerContext through
+        flatten(data.turrets[i], out, playerContext);
+    }
+}
 
         function perspective(e, player, data) {
             if (player.body != null && player.body.id === e.master.id) {
@@ -12212,7 +11945,7 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                                         if (!body.multibox.enabled) return this.talk("Z", "[ERROR] Multiboxing is already disabled for you.");
                                         this.talk("Z", "[INFO] You have disabled multiboxing for yourself.");
                                         body.multibox.enabled = false;
-                                        body.onDead();
+                                        body.onDead({sockets, ran, Entity});
                                         return body.onDead = null;
                                     }
                                     this.talk("Z", "[INFO] You are now controlling " + m[1] + " new " + (m[1] > 1 ? "entities" : "entity") + ".");
@@ -12593,7 +12326,6 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                         body.sendMessage(`You will remain invulnerable until you move, shoot, or your timer runs out.`);
                         body.sendMessage("You have spawned! Welcome to the game. Hold N to level up.");
                     }
-                    this.talk("c", this.camera.x, this.camera.y, this.camera.fov);
                     return player;
                 }
             }
@@ -14586,9 +14318,9 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                     o.team = -100;
                     o.facing = ran.randomAngle()
                     let ogOnDead = o.onDead
-                    o.onDead = () => {
+                    o.onDead = (arg) => {
                         sancCooldown = Date.now()
-                        ogOnDead()
+                        ogOnDead(arg)
                     }
                     o.sandboxId = id
                 }
@@ -15154,6 +14886,12 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                 let camera = socket.camera; // The camera state
                 let body = player.body; // The player's body, might be null if dead
                 let photo = body ? body.camera() : {}
+    const playerContext = body ? {
+        command: player.command,
+        bodyColor: body.color,
+        teamColor: player.teamColor,
+        gameMode: room.gameMode
+    } : null;
 
                 let fov = 1000; // Default FOV
                 if (body != null && body.isAlive()) {
@@ -15177,6 +14915,7 @@ async function startServer(configSuffix, serverGamemode, defExports) {
 
 
                 let visible = [];
+                let numberInView = 0;
 
                 // Query the grid for entities whose AABBs overlap with the search area.
                 // This gives us a list of entities that are *potentially* visible.
@@ -15200,18 +14939,13 @@ async function startServer(configSuffix, serverGamemode, defExports) {
                         socket.animationsToDo.set(entity.id, entity.animation);
                     }
 
+					numberInView++
                     if (body && body.id === entity.id) {
-                        return visible.push(perspective(entity, player, flatten(photo)))
+                        return flatten(photo, visible, playerContext)
                     }
 
-                    let output = perspective(entity, player, flatten(entity.camera(entity.isTurret))); // perspective applies team color overrides etc.
-
-                    if (output) { // Add the processed data to the visible list
-                        visible.push(output);
-                    }
+        			flatten(entity.camera(entity.isTurret), visible, playerContext);
                 })
-
-                let numberInView = visible.length;
 
                 if (body != null && body.displayText !== socket.oldDisplayText) {
                     socket.oldDisplayText = body.displayText;

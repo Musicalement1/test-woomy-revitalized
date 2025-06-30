@@ -245,6 +245,7 @@ config.Woomy = (() => {
 	new Setting("tintedDamage", "Red Damage", "boolean", true);
 	new Setting("tintedHealth", "Tinted Health Bars", "boolean", true);
 	new Setting("coloredHealthBars", "Colored Health Bars", "boolean", false);
+	new Setting("deathAnimations", "Death Animations", "boolean", true);
 	new Setting("shieldbars", "Split Health Bars", "boolean", false);
 	new Setting("roundUpgrades", "Round Upgrades", "boolean", false);
 	new Setting("disableMessages", "Disable Messages", "boolean", false);
