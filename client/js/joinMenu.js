@@ -157,28 +157,28 @@ listFilter.onclick = roomFilterClick.bind("gallery");
 const defaultGamemodes = [
 	{
 		name: "2 TDM",
-		image: "",
+		image: "/resources/gamemodes/2tdm.webp",
 		description: "Fight in an all out war against another team!",
 		players: 0,
 		code: "2tdm.json"
 	},
 	{
 		name: "2 TDM Domination",
-		image: "",
+		image: "/resources/gamemodes/2tdm_dom.webp",
 		description: "Fight on one of two teams to capture all the dominators first!",
 		players: 0,
 		code: "2dom.js"
 	},
 	{
 		name: "2 TDM Tag",
-		image: "",
+		image: "/resources/gamemodes/2tdm_tag.webp",
 		description: "Kill other players on the other team to recruit them to your team.",
 		players: 0,
 		code: "2tag.json"
 	},
 	{
 		name: "2 TDM Mothership",
-		image: "",
+		image: "/resources/gamemodes/2tdm_mot.webp",
 		description: "Fight on one of two teams to kill the other team's mothership!",
 		players: 0,
 		code: "2mot.json"
@@ -188,39 +188,39 @@ const defaultGamemodes = [
 		image: "",
 		description: "Fight on one of two teams to kill the other team's mothership: Now with portals!",
 		players: 0,
-		code: "2pmot.json"
+		code: "p2mot.json"
 	},
 	{
 		name: "4 TDM",
-		image: "",
+		image: "/resources/gamemodes/4tdm.webp",
 		description: "Fight in an all out war against three other teams!",
 		players: 0,
 		code: "4tdm.json"
 	},
 	{
 		name: "4 TDM Blackout",
-		image: "",
+		image: "/resources/gamemodes/4tdm_blackout.webp",
 		description: "Fight in an all out war against three other teams while in the dark...",
 		players: 0,
 		code: "blackout4tdm.json"
 	},
 	{
 		name: "4 TDM Domination",
-		image: "",
+		image: "/resources/gamemodes/4tdm_dom.webp",
 		description: "Fight on one of four teams to capture all the dominators first!",
 		players: 0,
 		code: "4dom.json"
 	},
 	{
 		name: "4 TDM Tag",
-		image: "",
+		image: "/resources/gamemodes/4tdm_tag.webp",
 		description: "Kill other players on the other three teams to recruit them to your team.",
 		players: 0,
 		code: "4tag.json"
 	},
 	{
 		name: "4 TDM Mothership",
-		image: "",
+		image: "/resources/gamemodes/4tdm_mot.webp",
 		description: "Fight on one of four teams to destroy all of the other teams' motherships!",
 		players: 0,
 		code: "4mot.json"
@@ -234,14 +234,14 @@ const defaultGamemodes = [
 	},
 	{
 		name: "Maze TDM",
-		image: "",
+		image: "/resources/gamemodes/maze_tdm.webp",
 		description: "Fight against other teams inside of a maze!",
 		players: 0,
 		code: "mazetdm.js"
 	},
 	{
 		name: "Maze TDM Blackout",
-		image: "",
+		image: "/resources/gamemodes/mazetdm_blackout.webp",
 		description: "Fight against other teams inside of a maze while in the dark...",
 		players: 0,
 		code: "blackoutmazetdm.js"
@@ -255,14 +255,14 @@ const defaultGamemodes = [
 	},
 	{
 		name: "Cave TDM",
-		image: "",
+		image: "/resources/gamemodes/cavetdm.webp",
 		description: "Fight against other teams inside of a cave system!",
 		players: 0,
 		code: "cavetdm.js"
 	},
 	{
 		name: "Cave TDM Blackout",
-		image: "",
+		image: "/resources/gamemodes/cavetdm_blackout.webp",
 		description: "Fight against other teams inside of a cave system while in the dark...",
 		players: 0,
 		code: "blackoutcavetdm.js"
@@ -304,7 +304,7 @@ const defaultGamemodes = [
 	},
 	{
 		name: "Boss Rush",
-		image: "",
+		image: "/resources/gamemodes/bossrush.webp",
 		description: "Defeat 75 waves of bosses. Think you or your computer can take it? Good luck!",
 		players: 0,
 		code: "boss.json"
@@ -314,7 +314,7 @@ const defaultGamemodes = [
 		image: "",
 		description: "Defend your sanctuaries from the horde of bosses!",
 		players: 0,
-		code: "siege.json"
+		code: "siege.js"
 	},
 	{
 		name: "Sandbox",
@@ -325,7 +325,7 @@ const defaultGamemodes = [
 	},
 	{
 		name: "Hangout",
-		image: "",
+		image: "/resources/gamemodes/hangout.webp",
 		description: "Everyone is on the same team. Sit around and chat.",
 		players: 0,
 		code: "hangout.js"

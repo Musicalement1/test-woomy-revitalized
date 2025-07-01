@@ -136,7 +136,7 @@ let gameDraw = function (ratio) {
 		ctx.globalAlpha = 1;
 		instance.render.size = config.lerpSize ? lerp(instance.render.size, instance.size, 0.3) : instance.size;
 		// Empty bars
-		if (instance.render.status.getFade() !== 1) {
+		if (instance.render.status.getFade(instance.size) !== 1) {
 			instance.render.health.set(0);
 			instance.render.shield.set(0);
 		}
@@ -171,7 +171,7 @@ let gameDraw = function (ratio) {
 			let instance = entityArr[i],
 				x = ratio * instance.render.x - px,
 				y = ratio * instance.render.y - py,
-				fade = instance.render.status.getFade(),
+				fade = instance.render.status.getFade(instance.size),
 				size = (((Math.min(120 + instance.size * 5, instance.size + 280)) * fade) * ratio / divisor)*1.25,
 				darknessGrad = getGradient(getColor(entityArr[i].color))
 
@@ -233,7 +233,7 @@ let gameDraw = function (ratio) {
 		}
 		ctx.imageSmoothingEnabled = false;
 		ctx.globalCompositeOperation = "multiply";
-		ctx.drawImage(darknessCanvas, 0, 0, window.innerWidth, window.innerHeight);
+		ctx.drawImage(darknessCanvas, 0, 0, ctx.canvas.width, ctx.canvas.height);
 		ctx.globalCompositeOperation = "source-over";
 		ctx.restore();
 	}
@@ -252,7 +252,7 @@ let gameDraw = function (ratio) {
 	let alcoveSize = 200 / ratio; // / drawRatio * global.screenWidth;
 	let spacing = 20;
 	if (!config.screenshotMode) {
-		scaleScreenRatio(ratio * 1, true);
+		scaleScreenRatio(ratio, true);
 		_gui._skill.update();
 		{
 			if (!global.mobile) {

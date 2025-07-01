@@ -117,7 +117,7 @@ function Status() {
 				state = val;
 			}
 		},
-		getFade: function () {
+		getFade: function (entitySize) {
 			return state === "killed" ? (config.deathAnimations?1 - Math.min(1, (getNow() - time) / 300):0) : 1;
 		},
 		getColor: function () {
@@ -183,7 +183,7 @@ const process = function () {
 					entity.shield = (flags & 8) ? (convert.reader.next() / 255) : 1;
 					if (entity.health < hh || entity.shield < ss) {
 						entity.render.status.set("injured");
-					} else if (entity.render.status.getFade() !== 1) {
+					} else if (entity.render.status.getFade(entity.size) !== 1) {
 						entity.render.status.set("normal");
 					}
 				}
@@ -306,7 +306,7 @@ function convertData() {
 
 		// Check conditions for removing the entity from the client
 		// (either its death animation finished, or it's out of view).
-		if (e.render.status.getFade() === 0 ||
+		if (e.render.status.getFade(e.size) === 0 ||
 			!isInView(e.render.x - global.player._renderx, e.render.y - global.player._rendery, e.size, 1)) {
 			entityMap.delete(id);
 			continue;

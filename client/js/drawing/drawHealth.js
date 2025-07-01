@@ -19,7 +19,7 @@ import { config } from "../config.js";
 
 
 function drawHealth(x, y, instance, ratio, alpha) {
-	let fade = instance.render.status.getFade();
+	let fade = instance.render.status.getFade(instance.size);
 	ctx.globalAlpha = 1 * fade;
 	let size = instance.render.size * ratio,
 		m = mockups.get(instance.index),

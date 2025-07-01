@@ -19,7 +19,7 @@ window["help"] = function () {
 	logger.norm(" � setInvisible(fadeInValue, fadeOutValue, limit)");
 	logger.norm(" � setFOV(fov)");
 	logger.norm(" � setSpinSpeed(speed)");
-	logger.norm(" � setEntity('exportName, size, isMinion = false')");
+	logger.norm(" � setEntity('exportName, spawnAmount, size, isMinion = false')");
 	logger.norm(" � clearChildren()");
 	logger.norm(" � setTeam(teamID)");
 	logger.norm(" � skillSet(atk, hlt, spd, str, pen, dam, rld, rgn, shi)");
@@ -117,10 +117,10 @@ window["setSpinSpeed"] = function (speed) {
 	socket.talk("D", 12, speed);
 	logger.info("Set your autospin speed to " + speed + ".");
 };
-window["setEntity"] = function (entity, size = 0, isMinion = false) {
+window["setEntity"] = function (entity, spawnAmount=1, size = 0, isMinion = false) {
 	if (!entity || !isNaN(entity)) return logger.warn("Please specify a valid entity!");
 	if (isNaN(size)) return logger.warn("Please specify a valid size, or do not provide one at all.");
-	socket.talk("D", 13, entity, size, isMinion);
+	socket.talk("D", 13, entity, spawnAmount, size, isMinion);
 	logger.info("Set the F key entity to " + entity + ".");
 };
 window["clearChildren"] = function () {

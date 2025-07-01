@@ -125,7 +125,7 @@ wss.on('connection', function connection(ws, req) {
 				try{
 					const { players, gamemodeCode } = JSON.parse(msg.toString());
 					room.players = Number(players) || 0
-					room.gamemodeCode = `${gamemodeCode}`.substring(0, 16)
+					room.gamemodeCode = `${gamemodeCode}`.substring(0, 25)
 				}catch(err){
 					console.log("Error updating room information", err)
 				}

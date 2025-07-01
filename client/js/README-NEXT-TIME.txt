@@ -1,5 +1,0 @@
-- Server selection
-	- Requires content packs to be done
-- Sockets
-- implement _anim
-- Rework some of the ui, mostly scaling

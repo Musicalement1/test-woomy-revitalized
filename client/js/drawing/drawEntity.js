@@ -2,7 +2,7 @@ import { ctx, getGradient } from "./canvas.js";
 import { mockups } from "../mockups.js";
 import { config } from "../config.js";
 import { mixColors, getColor, color, setColors, setColorsUnmixB, setColorsUnmix, specialColors } from "../colors.js"
-import { lerpAngle, lerp } from "../lerp.js"
+import { lerpAngle, lerp, expLerp } from "../lerp.js"
 import { imageCache } from "../assets.js";
 import { global } from "../global.js";
 
@@ -1716,7 +1716,7 @@ let drawEntity = function () {
 			turretInfo = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : 0,
 			render = arguments.length > 10 && arguments[10] !== undefined ? arguments[10] : instance.render,
 			context = assignedContext || ctx,
-			fade = turretInfo ? 1 : render.status.getFade(),
+			fade = turretInfo ? 1 : render.status.getFade(instance.size),
 			drawSize = scale * ratio * (turretInfo ? instance.size : render.size),
 			m = mockups.get(instance.index),
 			xx = x,
@@ -1725,7 +1725,7 @@ let drawEntity = function () {
 			shadowRelativeColor = false;
 		if (config.hideMiniRenders === true && !render.real) return;
 		if (fade === 0 || alpha === 0) return;
-		if (config.lerpSize) drawSize *= fade;
+		if (config.lerpSize) drawSize = drawSize*fade;
 		ctx.globalAlpha = (config.glassMode ? .7 : 1) * alpha * fade
 		context.lineCap = "round";
 		context.lineJoin = config.pointy ? "miter" : "round";

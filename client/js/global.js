@@ -473,6 +473,7 @@ function resizeEvent() {
 	global._canvas._cv.height = global._screenHeight = window.innerHeight * scale;
 	global._ratio = scale;
 	if (!global.mobile) document.getElementById('gameCanvas').focus();
+	console.log("Focusing")
 	global._screenSize = Math.min(1920, Math.max(window.innerWidth, 1280));
 }
 
