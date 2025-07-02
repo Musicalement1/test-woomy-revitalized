@@ -14,11 +14,11 @@ const gameDrawDead = function () {
 		return (0 === b ? "🌼" : 4 > b ? "🎯" : 8 > b ? "💥" : 15 > b ? "💢" : 25 > b ? "🔥" : 50 > b ? "💣" : 75 > b ? "👺" : 100 > b ? "🌶️" : "💯") + (finalKills[0] || finalKills[1] || finalKills[2] ? " " + (finalKills[0] ? finalKills[0] + " kill" + (1 === finalKills[0] ? "" : "s") : "") + (finalKills[0] && finalKills[1] ? " and " : "") + (finalKills[1] ? finalKills[1] + " assist" + (1 === finalKills[1] ? "" : "s") : "") + ((finalKills[0] || finalKills[1]) && finalKills[2] ? " and " : "") + (finalKills[2] ? finalKills[2] + " boss" + (1 === finalKills[2] ? "" : "es") + " defeated" : "") : " A true pacifist") + ".";
 	};
 	let getDeathIcon = function getDeath() {
-		let txt = "🔪 Succumbed to ";
+		let txt = "🔪 Succumbed to";
 		if (global.finalKillers.length) {
 			for (let i = 0; i < global.finalKillers.length; i++) txt += " " + util._addArticle(mockups.get(global.finalKillers[i]).name) + " and";
 			txt = txt.slice(0, -4) + ".";
-		} else txt += "natural causes";
+		} else txt += " natural causes";
 		return txt;
 	};
 	return function () {

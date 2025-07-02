@@ -1,12 +1,6 @@
 <div class="patchnoteSection">
     <p class="patchnoteTitle">Woomy Rehydrated<span class="patchnoteTime">May ?, 2025</span></p>
     <ul class="patchnoteBody">
-        <h3><b>Note</b></h3>
-        <li>This is one part of a larger series of changes (although, this is probably the biggest one). The main goal is to clean up all of Woomy's code, seperate the game from the game engine, and expand modding support/capabilities.
-        A large part of that is making sure the game can handle some crazy things (namely mega bosses).</li>
-        <li>This first part is a massive overhaul of the client which has been the main bottleneck.</li>
-        <li>You might notice some things no longer in the game and things appearing different than you're used to. In most of these cases it's unavoidable and marginal compared to the performance and organizational improvements.</li>
-
         <h3><b>Removals</b></h3>
         <li>Remnants of the ad system</li>
         <li>Main menu background animations</li>
@@ -75,6 +69,7 @@
         <li>TDM Gamemode</li>
         <li>Blackout Voidwalkers gamemode</li>
         <li>Testbed Event gamemode</li>
+		<li>Reworked entity activation/views</li>
 
         <h3><b>Optimizations</b></h3>
         <li>Entities in the client are now mostly use a Map instead of an Array</li>
@@ -95,6 +90,10 @@
         <li>Fixed various mobile bugs</li>
         <li>Treatment tanks' prop outline no longer stays green after using it</li>
 		<li>Projectiles will no longer occasionally freeze when being fired</li>
+		<li>Fixed guided tanks having a range</li>
+		<li>Fixed base drones in growth following you (scary...)</li>
+		<li>Fixed a bug with facing types sometimes returning NaN</li>
+		<li>Put a band-aid on the vector issue for now</li>
 
         <h3><b>Changes</b></h3>
         <li>Went through all of the code and refactored almost everything</li>
@@ -131,6 +130,19 @@
         <li>Adjusted the damage flash</li>
 		<li>Removed and added some of death splashed</li>
 		<li>Changed setEntity console command: (entity, spawn amount, size, controllable)</li>
+		<li>nearestDifferentMaster</li>
+		<ul>
+			<li>This is the thing that controls most AI in the game, from drones to bots.</li>
+			<li>Removed the FARMER ai setting. AIs will now target shapes by default and prioritize the highest danger value, unless IGNORE_SHAPES is true.</li>
+			<li>Removed the CHASE ai setting. It was insignificant.</li>
+			<li>The SKYNET setting now uses the entities own range/position instead of the master's. This means it will be able to travel freely.</li>
+			<li>The BLIND ai setting has been removed</li>
+		</ul>
+		<li>Bots now level up faster</li>
+		<li>Bots now face the direction they're moving when wandering</li>
+		<li>Bots now face a random direction when spawning</li>
+		<li>Crashers now face a random direction when spawning</li>
+		<li>Everything with nearestDifferentMaster will now automatically target what damages it. Before this was reserved just for bots.</li>
 
         <h3><b>Additions</b></h3>
         <li>Mobile players can now swipe on skill upgrades to quickly invest points</li>
@@ -141,6 +153,7 @@
         <li>Added a mod browser</li>
         <li>Added a Movement Smoothing setting, a 0-1 scale for how much entity positions should be smoothed. The higher the faster, 1 being instant and 0 being no position updates.</li>
 		<li>Added ON_DEAD event</li>
+		<li>You can now spectate what killed you, and what killed them, and what killed them, and...</li>
 	</ul>
 </div>
 <div class="patchnoteSection">

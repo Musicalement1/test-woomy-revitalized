@@ -53,11 +53,11 @@ function drawHealth(x, y, instance, ratio, alpha) {
 
 	if (instance.nameplate) {
 		let fill = instance.nameColor;
-		let nameRatio = (ratio * instance.size) / 20;
+		let nameRatio = ((ratio * instance.size) / 20)*fade;
 		let imageRatio = 1;
 		let stroke = undefined;
 		let font = undefined;
-		ctx.globalAlpha = alpha;
+		ctx.globalAlpha = alpha * fade;
 		drawText(instance.score > 0 ? util._handleLargeNumber(instance.score) : "", x, y - realSize - 16 * nameRatio, 8 * nameRatio, "#E4EBE7", "center", false, 1, stroke, ctx, font);
 		switch (fill.charAt(0)) {
 			case "!":

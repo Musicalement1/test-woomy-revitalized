@@ -716,8 +716,8 @@ a:visited:hover {
 
 .gameEntryList{
     background: var(--backgroundLink);
-    background-size: cover;
-    background-position: center;
+    background-size: cover !important;
+    background-position: center !important;
     border-radius: 5px;
     width: 100%;
     height: 4vw;

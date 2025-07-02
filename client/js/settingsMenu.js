@@ -59,7 +59,7 @@ const initSettingsMenu = function () {
 			let setting = config.Woomy[_];
 			createInput(setting);
 		}
-		innerHTML += `</div><hr><br><button id="saveOptions">Save & Apply</button><button id="resetOptions">Reset Options</button><div style="float: right;"><button id="exportOptions">Export Options</button><button id="importOptions">Import Options</button></div> <br><input type="text" autofocus tabindex="0" spellcheck="false" placeholder="..." id="optionsResult"/><button id="entityEditor" style="display:none">Entity Editor (Beta)</button>`;
+		innerHTML += `</div><hr><br><button id="saveOptions">Save & Apply</button><button id="resetOptions">Reset Options</button><div style="float: right;"><button id="exportOptions">Export Options</button><button id="importOptions">Import Options</button></div> <br><input type="text" tabindex="0" spellcheck="false" placeholder="..." id="optionsResult"/><button id="entityEditor" style="display:none">Entity Editor (Beta)</button>`;
 		holder.innerHTML += innerHTML;
 		document.body.appendChild(holder);
 		document.getElementById("Woomy_theme").value = config.Woomy["Theme"].value;

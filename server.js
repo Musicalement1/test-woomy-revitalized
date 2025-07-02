@@ -333,13 +333,11 @@ workerWindow.require = function (thing) {
             }
             const gauss = (mean, deviation) => {
                 let x1, x2, w;
-                let i = 5;
                 do {
                     x1 = 2 * Math.random() - 1;
                     x2 = 2 * Math.random() - 1;
                     w = x1 * x1 + x2 * x2;
-                    i--;
-                } while ((0 == w || w >= 1) && i > 0);
+                } while ((0 == w || w >= 1));
 
                 w = Math.sqrt(-2 * Math.log(w) / w);
                 return mean + deviation * x1 * w;
@@ -1952,28 +1950,37 @@ const Chain = Chainf;
         }
         const room = new Room(c);
 
+		// This class is horrible
+		// Theres been a long standing NaN bug
+		// It naturally spreads
+		// Gameplay would be much worse without these safeguards
+		// The problem runs deeper than the time I have available
         class Vector {
             constructor(x, y) {
-                this.X = x;
-                this.Y = y;
+                this.x = x;
+                this.y = y;
             }
             get x() {
-                if (isNaN(this.X)) this.X = c.MIN_SPEED;
                 return this.X;
             }
             get y() {
-                if (isNaN(this.Y)) this.Y = c.MIN_SPEED;
-                return this.Y;
+                return this.Y
             }
             set x(value) {
-                this.X = value;
+				if(isNaN(value)||value===Infinity||value===-Infinity){
+					return;
+				}
+                this.X = value||c.MIN_SPEED;;
             }
             set y(value) {
-                this.Y = value;
+				if(isNaN(value)||value===Infinity||value===-Infinity){
+					return;
+				}
+                this.Y = value||c.MIN_SPEED;;
             }
             null() {
-                this.X = 0;
-                this.Y = 0;
+                this.X = c.MIN_SPEED;
+                this.Y = c.MIN_SPEED;
             }
             update() {
                 this.len = this.length;
@@ -1983,9 +1990,7 @@ const Chain = Chainf;
                 return this.x * this.x + this.y * this.y <= d * d;
             }
             unit() {
-                let length = this.length;
-                if (length === 0) return new Vector(1, 0);
-                return new Vector(this.x / length, this.y / length);
+                return new Vector(this.x / this.length, this.y / this.length);
             }
             get length() {
                 return Math.sqrt(this.x * this.x + this.y * this.y);
@@ -2547,33 +2552,6 @@ const Chain = Chainf;
             }
         }
 
-        function nearest(array, location, test) {
-            if (!array.length) return;
-            let priority = Infinity,
-                lowest;
-            if (test) {
-                for (let i = 0, l = array.length; i < l; i++) {
-                    let x = array[i].x - location.x,
-                        y = array[i].y - location.y,
-                        d = x * x + y * y;
-                    if (d < priority && test(array[i], d)) {
-                        priority = d;
-                        lowest = array[i];
-                    }
-                }
-            } else {
-                for (let i = 0, l = array.length; i < l; i++) {
-                    let x = array[i].x - location.x,
-                        y = array[i].y - location.y,
-                        d = x * x + y * y;
-                    if (d < priority) {
-                        priority = d;
-                        lowest = array[i];
-                    }
-                }
-            }
-            return lowest;
-        }
 
         function timeOfImpact(p, v, s) {
             // Requires relative position and velocity to aiming point
@@ -2721,7 +2699,7 @@ const Chain = Chainf;
                     return value
                 }));
                 o.controllers.push(new ioTypes.roamWhenIdle(o));
-            }, 7500);
+            }, 5000);
             if (room.maxBots > 0) bots.push(o);
             return o;
         };
@@ -3818,9 +3796,6 @@ const Chain = Chainf;
                         target: {
                             x: x, y: y
                         },
-                        _target: {
-                            x: x, y: y
-                        },
                         goal: {
                             x: this.body.x + x * !this.body.invuln,
                             y: this.body.y + y * !this.body.invuln
@@ -3840,7 +3815,6 @@ const Chain = Chainf;
                 }
                 return {
                     target: targ,
-                    _target: targ,
                     goal: {
                         x: this.body.x + (this.player.command.right - this.player.command.left),
                         y: this.body.y + (this.player.command.down - this.player.command.up)
@@ -3915,6 +3889,7 @@ const Chain = Chainf;
             }
             think(input) {
                 this.body.isGuided = true
+				this.body.aiSettings.SKYNET = true;
                 let main = undefined;
                 for (let [key, child] of this.master.childrenMap) {
                     if (!child.isGuided) continue;
@@ -3924,7 +3899,12 @@ const Chain = Chainf;
                 if (!main || !this.master.socket) {
                     return
                 }
-                this.master.altCameraSource = [main.x, main.y]
+                if(!this.master.altCameraSource){
+					this.master.altCameraSource = [main.x, main.y]
+				}else{
+					this.master.altCameraSource[0] = main.x;
+					this.master.altCameraSource[1] = main.y;
+				}
             }
         }
         ioTypes.boomerang = class extends IO {
@@ -4227,218 +4207,148 @@ const Chain = Chainf;
                 }
             }
         }
-        ioTypes.nearestDifferentMaster = class extends IO {
-            constructor(body) {
-                super(body);
-                this.target = null;
-                this.tick = 0;
-                this.lead = 0;
-                this.validTargets = [];
-                this.oldHealth = body.health.display();
-                this.targetLock = undefined;
-            }
+		ioTypes.nearestDifferentMaster = class extends IO {
+			constructor(body) {
+				super(body);
+				this.tick = 0;       // Frame counter for throttling expensive operations.
+				this.lead = 0;       // Calculated lead time for predictive aiming.
+				this.oldHealth = body.health.display();
+				this.targetLock = null;
 
-            findTargets(range) {
-                // Precalculate frequently used values
-                const pos = this.body.aiSettings.SKYNET ? this.body.master.master : this.body;
-                const baseRange = this.body.aiSettings.SKYNET ? range * Math.sqrt(4 / 3) : range;
-                const myTeam = this.body.master.master.team;
-                const aiSettings = this.body.aiSettings;
-                const bodySettings = this.body.settings;
-                const seeInvisible = this.body.seeInvisible;
-                const isArenaCloser = this.body.isArenaCloser;
-                const firingArc = this.body.firingArc;
-                const view360 = aiSettings.view360;
+				// Reusable output to avoid GC pressure in `think()`.
+				this.output = {
+					target: { x: 0, y: 0 },
+					fire: false,
+					main: false,
+				};
 
-                // Create bounding box for hashgrid query
-                const searchAABB = {
-                    _AABB: {
-                        x1: pos.x - baseRange,
-                        y1: pos.y - baseRange,
-                        x2: pos.x + baseRange,
-                        y2: pos.y + baseRange,
-                        currentQuery: -1
-                    }
-                };
+				// Pre-calculate cosine for fast dot-product checks in the firing arc.
+				if (this.body.firingArc) {
+					this.firingArcCos = Math.cos(this.body.firingArc[1]);
+				}
+			}
 
-                // Use HashGrid to get potential targets
-                const potentialTargets = grid.getCollisions(searchAABB);
+			findTarget(range) {
+				// Hoist properties to local variables for faster access in the hot loop.
+				const body = this.body;
+				const master = body.master.master;
+				const pos = body.aiSettings.SKYNET ? body : master;
+				const myTeam = master.team;
+				const { FARMER, IGNORE_SHAPES, view360 } = body.aiSettings;
+				const { seeInvisible, isArenaCloser, firingArc } = body;
+				const canSeeInvis = seeInvisible || isArenaCloser;
 
-                let highestDanger = 0;
-                let output = [];
+				// Bounding box for the spatial hashgrid query.
+				const searchAABB = {
+					_AABB: {
+						x1: pos.x - range, y1: pos.y - range,
+						x2: pos.x + range, y2: pos.y + range,
+						currentQuery: -1
+					}
+				};
 
-                // Early-exit checks as constants
-                const checkRanked = c.RANKED_BATTLE;
-                const checkSandbox = c.SANDBOX;
-                const ignoreShapes = aiSettings.IGNORE_SHAPES;
+				let bestTarget = null;
+				let maxDanger = -Infinity;
+				let foundLockedTarget = false;
 
-                // Use Set features for faster lookups if targetLock exists
-                const targetLockId = this.targetLock?.id;
+				// HOT PATH: This callback runs for every potential target.
+				grid.getCollisions(searchAABB, (entity) => {
+					if (foundLockedTarget) return;
 
-                for (const entity of potentialTargets) {
-                    // Skip invalid entities
-                    if (entity.master.master.team == myTeam || entity.team === -101 // Teams
-                        || entity.isDead() || entity.passive || entity.invuln || (!isArenaCloser && !seeInvisible && entity.alpha <= .5) || // Statuses
-                        !Number.isFinite(entity.dangerValue) || entity.dangerValue < 0 || // Danger
-                        (checkRanked && entity.roomId !== this.body.roomId) || (checkSandbox && entity.sandboxId !== this.body.sandboxId) // Room
-                    ) continue;
+					// Filter chain ordered from cheapest to most expensive checks to fail fast.
+					if (entity.master.master.team === myTeam || entity.team === -101) return;
+					if (entity.isDead() || entity.passive || entity.invuln) return;
+					if (!FARMER && entity.dangerValue < 0) return;
+					if (entity.dangerValue < maxDanger) return;
+					if (entity.alpha < 0.5 && !canSeeInvis) return;
+					if (c.SANDBOX && entity.sandboxId !== body.sandboxId) return;
 
-                    // Type checks
-                    const entityType = entity.type;
-                    if ((entityType === "miniboss" || entityType === "tank" || entityType === "crasher" || (!ignoreShapes && entityType === 'food')) === false) continue;
+					switch (entity.type) {
+						case 'tank': case 'miniboss': case 'crasher': break;
+						case 'food': if (IGNORE_SHAPES) return; break;
+						default: return;
+					}
 
-                    // Skip farming logic if not dangerous enough
-                    if (!aiSettings.farm && entity.dangerValue < highestDanger) continue;
+					// Firing arc check using dot product; much faster than `atan2`.
+					if (firingArc && !view360) {
+						const angleToTarget = { x: entity.x - body.x, y: entity.y - body.y };
+						const dot = angleToTarget.x * Math.cos(firingArc[0]) + angleToTarget.y * Math.sin(firingArc[0]);
+						if (dot < 0) return;
 
-                    // Position checks - more precise distance check
-                    /*if (!aiSettings.BLIND) {
-                        const dx = entity.x - myPos.x;
-                        const dy = entity.y - myPos.y;
-                        if (dx * dx + dy * dy >= sqrRange) continue;
-                    }*/
+						const angleToTargetMag = Math.sqrt(angleToTarget.x * angleToTarget.x + angleToTarget.y * angleToTarget.y);
+						if (angleToTargetMag === 0) return;
 
-                    // Firing arc check
-                    if (firingArc != null && !view360) {
-                        const angleDiff = Math.abs(util.angleDifference(
-                            util.getDirection(this.body, entity),
-                            firingArc[0]
-                        ));
-                        if (angleDiff >= firingArc[1]) continue;
-                    }
+						if ((dot / angleToTargetMag) < this.firingArcCos) return;
+					}
 
-                    // If we got here, entity is valid
-                    highestDanger = Math.max(highestDanger, entity.dangerValue);
-                    output.push(entity);
+					if(maxDanger < entity.dangerValue || (maxDanger === entity.dangerValue && Math.random()>.5)){
+						bestTarget = entity;
+						maxDanger = entity.dangerValue;
+					}
+					if (this.targetLock === entity) {
+						foundLockedTarget = true;
+					}
+				});
 
-                    // Early return if we found our locked target
-                    if (targetLockId && entity.id === targetLockId) {
-                        return [entity]; // Return just the locked target
-                    }
-                }
+				this.targetLock = foundLockedTarget ? this.targetLock : bestTarget;
+			}
 
-                return output;
-            }
+			think(input) {
+				// Cede control to the player by returning an empty object.
+				if (input.main || input.alt ||
+					this.body.master.autoOverride ||
+					this.body.master.master.passive ||
+					this.body.master.master.invuln) {
+					return {};
+				}
 
-            think(input) {
-                // Early returns for manual control
-                if (input.main || input.alt ||
-                    this.body.master.autoOverride ||
-                    this.body.master.master.passive ||
-                    this.body.master.master.invuln) {
-                    this.targetLock = undefined;
-                    return {};
-                }
+				// Bot-specific logic to retaliate on damage.
+				const damageRef = this.body.bond || this.body;
+				const currentHealth = damageRef.health.display();
+				if (damageRef.collisionArray.length && currentHealth < this.oldHealth) {
+					this.oldHealth = currentHealth;
+					const collider = damageRef.collisionArray[0];
+					this.targetLock = (collider.master.id === -1) ? collider.source : collider.master;
+				}
 
+				// Throttle expensive target acquisition.
+				if (++this.tick > 15) {
+					this.tick = 0;
+					const range = this.body.aiSettings.SKYNET ? this.body.fov : this.body.master.fov;
+					this.findTarget(range);
+				}
 
-                // Calculate tracking and range once
-                let tracking = this.body.topSpeed;
-                let range = this.body.aiSettings.SKYNET ? this.body.master.fov : this.body.fov;
+				// Idle if no valid target.
+				if (!this.targetLock || this.targetLock.isDead()) {
+					this.targetLock = null;
+					this.output.main = false;
+					this.output.fire = false;
+					return this.output;
+				}
 
-                // Optimize gun loop - only need first shootable gun
-                const guns = this.body.guns;
-                for (let i = 0, l = guns.length; i < l; i++) {
-                    const gun = guns[i];
-                    if (gun.canShoot) {
-                        const v = gun.getTracking();
-                        tracking = v.speed;
+				const target = this.targetLock;
+				const diffX = target.x - this.body.x;
+				const diffY = target.y - this.body.y;
 
-                        if (this.isBot) {
-                            if (this.body.fov < range) range = this.body.fov;
-                        } else {
-                            const rangeEstimate = (v.speed || 1.5) *
-                                (v.range < (this.body.size * 2) ? this.body.fov : v.range);
-                            if (rangeEstimate < range) range = rangeEstimate;
-                        }
-                        break;
-                    }
-                }
+				// Throttle lead calculation.
+				if (this.tick % 5 === 0) {
+					const tracking = this.body.topSpeed;
+					this.lead = timeOfImpact({ x: diffX, y: diffY }, target.velocity, tracking);
+				}
 
-                // Range sanity check
-                if (range < this.body.size || !Number.isFinite(range)) {
-                    range = this.body.fov;
-                }
+				// Mutate and return the pre-allocated output object.
+				this.output.target.x = diffX + this.lead * target.velocity.x;
+				this.output.target.y = diffY + this.lead * target.velocity.y;
+				this.output.fire = true;
+				this.output.main = true;
 
-                if (!Number.isFinite(tracking)) {
-                    tracking = this.body.topSpeed;
-                }
-
-                // Target processing timer
-                if (++this.tick > 15) {
-                    this.tick = 0;
-
-                    // Bot range adjustment
-                    let adjustedRange = (this.body.isBot || this.body.isMothership) ? range * 0.65 : range;
-                    this.validTargets = this.findTargets(adjustedRange);
-
-
-                    // Check if current target is still valid
-                    if (this.targetLock && this.validTargets.indexOf(this.targetLock) === -1) {
-                        this.targetLock = undefined;
-                    }
-
-                    // Select new target if needed
-                    if (this.targetLock === undefined && this.validTargets.length) {
-                        this.targetLock = (this.validTargets.length === 1) ?
-                            this.validTargets[0] :
-                            nearest(this.validTargets, { x: this.body.x, y: this.body.y });
-                        this.tick = -5;
-                    }
-                }
-
-                // Bot damage response logic
-                if (this.body.isBot) {
-                    const damageRef = this.body.bond || this.body;
-                    const currentHealth = damageRef.health.display();
-
-                    if (damageRef.collisionArray.length && currentHealth < this.oldHealth) {
-                        this.oldHealth = currentHealth;
-                        const collider = damageRef.collisionArray[0];
-
-                        if (this.validTargets.indexOf(collider) === -1) {
-                            this.targetLock = collider.master.id === -1 ?
-                                collider.source : collider.master;
-                        }
-                    }
-                }
-
-                // Target tracking logic
-                if (this.targetLock !== undefined) {
-                    const radial = this.targetLock.velocity;
-                    const diff = {
-                        x: this.targetLock.x - this.body.x,
-                        y: this.targetLock.y - this.body.y,
-                    };
-
-                    // Calculate lead on even ticks
-                    if (this.tick % 2 === 0) {
-                        this.lead = 0;
-                        if (!this.body.aiSettings.CHASE) {
-                            this.lead = timeOfImpact(diff, radial, tracking);
-                        }
-                    }
-
-                    // Lead sanity check
-                    if (!Number.isFinite(this.lead)) {
-                        this.lead = 0;
-                    }
-
-                    return {
-                        target: {
-                            x: diff.x + this.lead * radial.x,
-                            y: diff.y + this.lead * radial.y,
-                        },
-                        fire: true,
-                        main: true
-                    };
-                }
-
-                return {};
-            }
-        };
+				return this.output;
+			}
+		};
         ioTypes.roamWhenIdle = class extends IO {
             constructor(body) {
                 super(body);
-                this.goal = room.randomType("norm");;
+                this.goal = room.randomType("norm");
             }
             think(input) {
                 if (input.main || input.alt || this.body.master.autoOverride) {
@@ -4447,14 +4357,12 @@ const Chain = Chainf;
                 while (util.getDistance(this.goal, this.body) < this.body.SIZE * 2) {
                     this.goal = room.randomType(Math.random() > .8 ? "nest" : "norm");
                 }
-                if (this.body.aiSettings.isDigger) return {
-                    goal: this.goal, target: {
+               	return {
+                    goal: this.goal,
+					target: {
                         x: -(this.body.x - this.goal.x),
                         y: -(this.body.y - this.goal.y)
                     }
-                };
-                else return {
-                    goal: this.goal
                 };
             }
         }
@@ -5268,7 +5176,6 @@ const Chain = Chainf;
                 this.childrenMap = new Map();
                 this.control = {
                     target: new Vector(0, 0),
-                    _target: new Vector(0, 0),
                     goal: new Vector(0, 0),
                     main: false,
                     alt: false,
@@ -5357,8 +5264,8 @@ const Chain = Chainf;
             }
             newRecoil() {
                 let recoilForce = this.settings.recoil * 2 / room.speed;
-                this.body.accel.x -= recoilForce * Math.cos(this.recoilDir ?? 0);
-                this.body.accel.y -= recoilForce * Math.sin(this.recoilDir ?? 0);
+                this.body.accel.x -= recoilForce * Math.cos(this.recoilDir || 0);
+                this.body.accel.y -= recoilForce * Math.sin(this.recoilDir || 0);
             }
             getSkillRaw() {
                 return [ // Not this one
@@ -5637,8 +5544,7 @@ const Chain = Chainf;
                 this.dip = info.DIP === undefined ? 1 : info.DIP;
             }
         }
-        let views = [],
-            bots = [],
+        let bots = [],
             entitiesToAvoid = [],
             entities = new Chain(),
             bot = null,
@@ -5784,6 +5690,7 @@ const Chain = Chainf;
         class Entity {
             constructor(position, master = this) {
                 this.isGhost = false;
+				this.spectating = null;
                 this.killCount = {
                     solo: 0,
                     assists: 0,
@@ -5797,8 +5704,7 @@ const Chain = Chainf;
                 this.parent = this;
                 this.roomId = master.roomId;
                 this.control = {
-                    target: new Vector(0, 0),
-                    _target: new Vector(0, 0),
+                    target: new Vector(position.x + (1000*Math.random()-500), position.y + (1000*Math.random()-500)),
                     goal: new Vector(0, 0),
                     main: false,
                     alt: false,
@@ -5911,18 +5817,12 @@ const Chain = Chainf;
                 this.rainbowLoop = this.rainbowLoop.bind(this);
                 this.keyFEntity = ["square", 5, 0, false];
                 this.isActive = false
-                this.activation = (() => {
-                    let timer = 0;
-                    return () => {
-                        if (timer--, timer < 0 && (timer = 30)) {
-                            this.isActive = this.alwaysActive ||
-                                this.isPlayer ||
-                                (this.source && this.source.isPlayer) ||
-                                (this.master !== this && this.master.isActive) ||
-                                views.some(a => a.check(this, .6));
-                        }
-                    };
-                })();
+				this.deactivationTimer = 30
+                this.deactivation = function(){
+                    if (this.deactivationTimer--, this.deactivationTimer < 0 && (this.deactivationTimer = 30)) {
+                        this.isActive = this.alwaysActive || this.isPlayer || (this.source && this.source.isPlayer)
+                    }
+                };
                 /*this.activation = (() => {
                     let active = true,//((this.master == this) ? false : this.master.source.isActive) || this.alwaysActive || this.isPlayer || (this.source && this.source.isPlayer) || views.some(a => a.check(this, .6)),
                         tick = 25;
@@ -6296,7 +6196,7 @@ const Chain = Chainf;
                     if (set.TRAVERSE_SPEED != null) this.turretTraverseSpeed = set.TRAVERSE_SPEED;
                     if (set.RIGHT_CLICK_TURRET != null) this.turretRightClick = set.RIGHT_CLICK_TURRET;
                     if (set.index != null) this.index = set.index;
-                    this.name = set.NAME||"";
+                    this.name = set.NAME||this.socket?.name||"";
                     if (set.HITS_OWN_TEAM != null) this.hitsOwnTeam = set.HITS_OWN_TEAM;
                     if (set.LABEL != null) this.label = set.LABEL;
                     this.labelOverride = "";
@@ -6462,7 +6362,7 @@ const Chain = Chainf;
                         this.scoped = true,
                             this.scopedMult = set.CAMERA_TO_MOUSE[1] - 1
                     }
-                    this.altCameraSource = false
+                    this.altCameraSource = null
                     if (set.GUNS != null) {
                         let newGuns = [];
                         let i = 0;
@@ -6585,7 +6485,7 @@ const Chain = Chainf;
                 this.acceleration = c.runSpeed * this.ACCELERATION / speedReduce;
                 if (this.settings.reloadToAcceleration) this.acceleration *= this.skill.acl;
                 this.topSpeed = c.runSpeed * this.SPEED * this.skill.mob / speedReduce;
-                if (this.settings.reloadToAcceleration) this.topSpeed /= Math.sqrt(this.skill.acl);
+                if (this.settings.reloadToAcceleration) this.topSpeed /= Math.sqrt(this.skill.acl)||c.MIN_SPEED;
                 this.health.set(((this.settings.healthWithLevel ? 1.5 /* 1.8 */ * this.skill.level : 0) + this.HEALTH) * (this.settings.reloadToAcceleration ? this.skill.hlt * 0.95 /*1.025*/ : this.skill.hlt));
                 this.health.resist = 1 - 1 / (Math.max(1, this.RESIST + this.skill.brst) / 1.15);
                 this.shield.set(((this.settings.healthWithLevel ? .6 * this.skill.level : 0) + this.SHIELD) * this.skill.shi * (this.settings.reloadToAcceleration ? .85 : 1), Math.max(0, (((this.settings.healthWithLevel ? .006 * this.skill.level : 0) + 1) * this.REGEN) * this.skill.rgn) * (this.settings.reloadToAcceleration ? 0.9 : 1));
@@ -6650,8 +6550,8 @@ const Chain = Chainf;
                     index: this.index,
                     x: this.x,
                     y: this.y,
-                    cx: this.x,
-                    cy: this.y,
+                    cx: this.altCameraSource?this.altCameraSource[0]:this.x,
+                    cy: this.altCameraSource?this.altCameraSource[1]:this.y,
                     messages: this.messages,
                     vx: this.velocity.x,
                     vy: this.velocity.y,
@@ -6683,6 +6583,7 @@ const Chain = Chainf;
                             this.hasScoped = false
                         }
                         this.cameraShiftFacing = null;
+						this.altCameraSource = null;
                     } else {
                         this.cameraShiftFacing = true
                         if (!this.hasScoped) {
@@ -6690,13 +6591,10 @@ const Chain = Chainf;
                             this.fov = this.currentScopedFOV
                             this.hasScoped = true
                         }
-                        out.cx += this.fov * Math.cos(this.facing) / 3;
-                        out.cy += this.fov * Math.sin(this.facing) / 3;
+						if(!this.altCameraSource) this.altCameraSource = []
+                        this.altCameraSource[0] = this.x + this.fov * Math.cos(this.facing) / 3;
+                        this.altCameraSource[1] = this.y + this.fov * Math.sin(this.facing) / 3;
                     }
-                }
-                if (this.altCameraSource && Number(this.altCameraSource[0]) && Number(this.altCameraSource[0])) {
-                    out.cx = this.altCameraSource[0]
-                    out.cy = this.altCameraSource[1]
                 }
                 return out;
             }
@@ -6872,7 +6770,7 @@ const Chain = Chainf;
                                 x: 0,
                                 y: 0
                             }, g);
-                            if (l > this.size * 2) {
+                            if (true||l > this.size * 2) {
                                 this.maxSpeed = this.topSpeed;
                                 let desiredxspeed = this.topSpeed * g.x / l,
                                     desiredyspeed = this.topSpeed * g.y / l;
@@ -7128,6 +7026,7 @@ const Chain = Chainf;
                         this.color = 31;
                         break;
                 }
+				global.gaysex = [engine.x, this.control.power]
                 this.accel.x += engine.x * this.control.power;
                 this.accel.y += engine.y * this.control.power;
             }
@@ -7182,96 +7081,88 @@ const Chain = Chainf;
                         if (this.velocity.length > 0) this.facing = this.velocity.direction;
                         break;
                     case "smoothTargetOrSmoothhMotion":
-                        if (this.source.control.target.length === 0) {// no target: smooth with motion
-                            this.facing += util.loopSmooth(this.facing, this.velocity.direction, 4 / room.speed);
-                        } else { // target: smooth to target
-                            this.facing += util.loopSmooth(this.facing, Math.atan2(t.y, t.x), 4 / room.speed);
+                        if (this.source.control.target.length === 0) {
+                            this.facing += util.loopSmooth(this.facing, Math.atan2(this.velocity.y || c.MIN_SPEED, this.velocity.x || c.MIN_SPEED), 4 / room.speed);
+                        } else {
+                            this.facing += util.loopSmooth(this.facing, Math.atan2(t.y || c.MIN_SPEED, t.x || c.MIN_SPEED), 4 / room.speed);
                         }
                         break;
                     case "looseWithMotion":
                         if (!this.velocity.length) break;
                     case "smoothWithMotion":
-                        this.facing += util.loopSmooth(this.facing, this.velocity.direction, 4 / room.speed);
+                        this.facing += util.loopSmooth(this.facing, Math.atan2(this.velocity.y || c.MIN_SPEED, this.velocity.x || c.MIN_SPEED), 4 / room.speed);
                         break;
-                    case "sans": //ty misfit
-                        this.facing = Math.atan2(t.y, t.x); //Copied from toTarget
+                    case "sans":
+                        this.facing = Math.atan2(t.y || c.MIN_SPEED, t.x || c.MIN_SPEED);
                         entities.forEach((instance) => {
                             if (Math.abs(this.x - instance.x) < 70 && Math.abs(this.y - instance.y) < 70 && "bullet trap swarm drone minion tank miniboss crasher food".includes(instance.type) && instance.team != this.team) {
                                 this.velocity.x += 20 * Math.sin(instance.velocity.direction + (Math.PI / 2));
                                 this.velocity.y += 50 * Math.cos(instance.velocity.direction + (Math.PI / 2));
-
-                                this.facingType = "smoothWithMotion"; //Disables ability after dodging
+                                this.facingType = "smoothWithMotion";
                                 setTimeout(() => {
-                                    this.facingType = "sans"; //Re-enables ability after cooldown
+                                    this.facingType = "sans";
                                 }, 1);
                             }
-                        }
-                        );
+                        });
                         break;
-                    case "dodge": //ty misfit
-                        this.facing = Math.atan2(t.y, t.x); //Copied from toTarget
+                    case "dodge":
+                        this.facing = Math.atan2(t.y || c.MIN_SPEED, t.x || c.MIN_SPEED);
                         entities.forEach((instance) => {
                             if (Math.abs(this.x - instance.x) < 70 && Math.abs(this.y - instance.y) < 70 && "bullet trap swarm drone minion".includes(instance.type) && instance.team != this.team) {
                                 this.velocity.x += 50 * Math.sin(instance.velocity.direction + (Math.PI / 2));
                                 this.velocity.y += 50 * Math.cos(instance.velocity.direction + (Math.PI / 2));
-
-                                this.facingType = "smoothWithMotion"; //Disables ability after dodging
+                                this.facingType = "smoothWithMotion";
                                 setTimeout(() => {
-                                    this.facingType = "dodge"; //Re-enables ability after cooldown
-                                }, 1500); //1.5 sec dodge cooldown
+                                    this.facingType = "dodge";
+                                }, 1500);
                             }
-                        }
-                        );
+                        });
                         break;
-                    case "bossdodge": //ty misfit
-                        this.facing = Math.atan2(t.y, t.x); //Copied from toTarget
+                    case "bossdodge":
+                        this.facing = Math.atan2(t.y || c.MIN_SPEED, t.x || c.MIN_SPEED);
                         entities.forEach((instance) => {
                             if (Math.abs(this.x - instance.x) < 70 && Math.abs(this.y - instance.y) < 70 && "bullet trap swarm drone minion".includes(instance.type) && instance.team != this.team) {
                                 this.velocity.x += 150 * Math.sin(instance.velocity.direction + (Math.PI / 2));
                                 this.velocity.y += 150 * Math.cos(instance.velocity.direction + (Math.PI / 2));
-
-                                this.facingType = "smoothWithMotion"; //Disables ability after dodging
+                                this.facingType = "smoothWithMotion";
                                 setTimeout(() => {
-                                    this.facingType = "bossdodge"; //Re-enables ability after cooldown
-                                }, 10000); //10 sec dodge cooldown
+                                    this.facingType = "bossdodge";
+                                }, 10000);
                             }
-                        }
-                        );
+                        });
                         break;
-                    case "dronedodge": //ty misfit
-                        this.facing = Math.atan2(t.y, t.x); //Copied from toTarget
+                    case "dronedodge":
+                        this.facing = Math.atan2(t.y || c.MIN_SPEED, t.x || c.MIN_SPEED);
                         entities.forEach((instance) => {
                             if (Math.abs(this.x - instance.x) < 70 && Math.abs(this.y - instance.y) < 70 && "bullet trap swarm drone minion".includes(instance.type) && instance.team != this.team) {
                                 this.velocity.x += 50 * Math.sin(instance.velocity.direction + (Math.PI / 2));
                                 this.velocity.y += 50 * Math.cos(instance.velocity.direction + (Math.PI / 2));
-
-                                this.facingType = "smoothWithMotion"; //Disables ability after dodging
+                                this.facingType = "smoothWithMotion";
                                 setTimeout(() => {
-                                    this.facingType = "dronedodge"; //Re-enables ability after cooldown
-                                }, 2500); //2.5 sec dodge cooldown
+                                    this.facingType = "dronedodge";
+                                }, 2500);
                             }
-                        }
-                        );
+                        });
                         break;
                     case "toTarget":
-                        this.facing = Math.atan2(t.y, t.x);
+                        this.facing = Math.atan2(t.y || c.MIN_SPEED, t.x || c.MIN_SPEED);
                         break;
                     case "locksFacing":
-                        if (!this.control.alt) this.facing = Math.atan2(t.y, t.x);
+                        if (!this.control.alt) this.facing = Math.atan2(t.y || c.MIN_SPEED, t.x || c.MIN_SPEED);
                         break;
                     case "altLocksFacing":
-                        if (!this.control.fire) this.facing = Math.atan2(t.y, t.x);
+                        if (!this.control.fire) this.facing = Math.atan2(t.y || c.MIN_SPEED, t.x || c.MIN_SPEED);
                         break;
                     case "smoothToTarget":
-                        this.facing += util.loopSmooth(this.facing, Math.atan2(t.y, t.x), 4 / room.speed);
+                        this.facing += util.loopSmooth(this.facing, Math.atan2(t.y || c.MIN_SPEED, t.x || c.MIN_SPEED), 4 / room.speed);
                         break;
                     case "slowToTarget":
-                        this.facing += util.loopSmooth(this.facing, Math.atan2(t.y, t.x), 8 / room.speed);
+                        this.facing += util.loopSmooth(this.facing, Math.atan2(t.y || c.MIN_SPEED, t.x || c.MIN_SPEED), 8 / room.speed);
                         break;
                     case "bound":
                         let givenAngle;
                         if (this.turretRightClick ? this.control.alt : this.control.main) {
-                            givenAngle = Math.atan2(t.y, t.x);
+                            givenAngle = Math.atan2(t.y || c.MIN_SPEED, t.x || c.MIN_SPEED);
                             let diff = util.angleDifference(givenAngle, this.firingArc[0]);
                             if (Math.abs(diff) >= this.firingArc[1]) givenAngle = this.firingArc[0];
                         } else givenAngle = this.firingArc[0];
@@ -7688,7 +7579,7 @@ const Chain = Chainf;
                             if (o.onKill) {
                                 o.onKill(o, this);
                             }
-                            this.killCount.killers.push(o.index);
+                            this.killCount.killers.push(o);
                             if (this.type === "tank") {
                                 if (killers.length > 1) {
                                     o.killCount.assists++;
@@ -7877,7 +7768,7 @@ const Chain = Chainf;
                 });*/
 
                 if (this.isGuided && this.master.altCameraSource) {
-                    this.master.altCameraSource = false
+                    this.master.altCameraSource = null
                 }
 
                 this.removeFromGrid();
@@ -8320,7 +8211,9 @@ function flatten(data, out, playerContext = null) {
             }
             let id = 0;
 
-            const checkInView = (camera, obj) => Math.abs(obj.x - camera.x) < camera.fov * .6 + 1.5 * (obj.size * (obj.width || 1)) + 100 && Math.abs(obj.y - camera.y) < camera.fov * .6 * .5625 + 1.5 * (obj.size * (obj.height || 1)) + 100;
+            const checkInView = (camera, obj) => {
+				return (Math.abs(obj.x - camera.x) < camera.fov + (obj.size * (obj.width || 1))) && (Math.abs(obj.y - camera.y) < camera.fov + (obj.size * (obj.height || 1)));
+			}
             const traffic = socket => {
                 let strikes = 0;
                 return () => {
@@ -8524,7 +8417,6 @@ function flatten(data, out, playerContext = null) {
                             }
                         };
                     })();
-                    this.makeView();
                     this.spawnCount = 0;
                     this.name = undefined;
                     this.inactivityTimeout = null;
@@ -8657,7 +8549,6 @@ function flatten(data, out, playerContext = null) {
                     })
                     players = players.filter(player => player.id !== this.id);
                     clients = clients.filter(client => client.id !== this.id);
-                    views = views.filter(view => view.id !== this.id);
                     clearInterval(this.animationsInterval);
                     worker.postMessage({ type: "updatePlayers", data: players.length })
                 }
@@ -8758,13 +8649,6 @@ function flatten(data, out, playerContext = null) {
                         }
                         return output;
                     }
-                }
-                makeView() {
-                    this.view = {
-                        id: this.id,
-                        check: object => checkInView(this.camera, object),
-                    };
-                    views.push(this.view);
                 }
                 async incoming(message) {
                     this.receivedPackets++
@@ -8890,10 +8774,6 @@ function flatten(data, out, playerContext = null) {
                             }
                             this.status.deceased = false;
                             if (players.indexOf(this.player) !== -1) util.remove(players, players.indexOf(this.player));
-                            if (views.indexOf(this.view) !== -1) {
-                                util.remove(views, views.indexOf(this.view));
-                                this.makeView();
-                            }
                             this.player = this.spawn(name);
                             if (isNew) {
                                 this.talk("R", room.width, room.height, JSON.stringify(c.ROOM_SETUP), JSON.stringify(util.serverStartTime), this.player.body.label, room.speed, +c.ARENA_TYPE, c.BLACKOUT);
@@ -8988,7 +8868,7 @@ function flatten(data, out, playerContext = null) {
                                 x: m[0],
                                 y: m[1],
                             },
-                                commands = m[2]
+                            commands = m[2]
                             // Verify data
                             if (typeof target.x !== 'number' || typeof target.y !== 'number' || isNaN(target.x) || isNaN(target.y) || typeof commands !== 'number') {
                                 this.kick('Weird downlink.');
@@ -10114,7 +9994,7 @@ function flatten(data, out, playerContext = null) {
                             player.body.killCount.solo,
                             player.body.killCount.assists,
                             player.body.killCount.bosses,
-                            player.body.killCount.killers.length, ...player.body.killCount.killers,
+                            player.body.killCount.killers.length, ...player.body.killCount.killers.map(e=>e.index),
                             this.usingAdBlocker
                         ];
                     })();
@@ -11377,7 +11257,7 @@ function flatten(data, out, playerContext = null) {
                 });
 
                 entities.forEach(entity => {
-                    entity.activation();
+                    entity.deactivation();
                     if (entity.isActive) {
                         entitiesLiveLoop(entity)
                         entity.collisionArray.length = 0;
@@ -12209,6 +12089,7 @@ function flatten(data, out, playerContext = null) {
                             o.dangerValue = 3 + Math.random() * 3 | 0;
                         }
                         o.sandboxId = id
+						o.facing = ran.randomAngle();
                     }
                 }
             };
@@ -12692,56 +12573,83 @@ function flatten(data, out, playerContext = null) {
         setInterval(function () {
             for (let instance of clients) {
                 // Only process players who have successfully spawned and have a view
-                if (!instance.status.hasSpawned || !instance.view || !instance.open) continue;
+                if (!instance.status.hasSpawned || !instance.open) continue;
 
                 let player = instance.player;
                 let socket = instance;
                 let camera = socket.camera; // The camera state
                 let body = player.body; // The player's body, might be null if dead
                 let photo = body ? body.camera() : {}
-    const playerContext = body ? {
-        command: player.command,
-        body: body,
-        teamColor: player.teamColor,
-        gameMode: room.gameMode
-    } : null;
+				const playerContext = body ? {
+					command: player.command,
+					body: body,
+					teamColor: player.teamColor,
+					gameMode: room.gameMode
+				} : null;
+
 
                 let fov = 1000; // Default FOV
-                if (body != null && body.isAlive()) {
-                    camera.x = photo.cx;
-                    camera.y = photo.cy;
+                if (body != null && body.isAlive()) { // We are alive
+                    camera.x = body.altCameraSource?body.altCameraSource[0]:photo.cx;
+                    camera.y = body.altCameraSource?body.altCameraSource[1]:photo.cy;
                     camera.vx = photo.vx;
                     camera.vy = photo.vy;
                     fov = body.fov;
-                }
-                camera.fov = fov;
+                }else{ // We are dead/spectating
+					if(body.spectating){
+						if(!body.spectating.isAlive()){
+							if(body.spectating.killCount.killers[0] !== undefined){
+								body.spectating = body.spectating.killCount.killers[0]
+							}else{
+								body.spectating = null;
+							}
+						}else{
+							const spectatePhoto = body.spectating.camera()
+							camera.x = spectatePhoto.x;
+							camera.y = spectatePhoto.y;
+							camera.vx = spectatePhoto.vx;
+							camera.vy = spectatePhoto.vy;
+							fov = body.spectating.fov;
+						}
+					}
+				}
                 // Define a search area (AABB) based on the camera's position and FOV.
                 // We create a temporary object with the structure the grid's getAABB expects.
+				const width = fov * .6; // .6-.5=.1 padding
+				const height = fov * .6 * .5625 // .5625 = 9/19 = aspect ratio
                 const searchArea = {
-                    _AABB: grid.getAABB({
-                        x: camera.x,
-                        y: camera.y,
-                        size: camera.fov * 0.6 // Approximate the view range for the grid query
-                    })
+                    _AABB: {
+						x1: camera.x - width,
+                		y1: camera.y - height,
+                		x2: camera.x + width,
+                		y2: camera.y + height,
+                		currentQuery: -1
+					}
                 };
-
-
 
                 let visible = [];
                 let numberInView = 0;
 
+				// Manually include player
+				// Fixes guided tank targetting bug
+                if(body != null && body.isAlive()){
+					flatten(photo, visible, playerContext)
+					numberInView++
+				}
                 // Query the grid for entities whose AABBs overlap with the search area.
                 // This gives us a list of entities that are *potentially* visible.
-                grid.getCollisions(searchArea, (entity) => {
+				grid.getCollisions(searchArea, (entity) => {
+					entity.deactivationTimer = 30;
+					entity.isActive = true;
                     // Apply necessary checks from the original logic:
                     if (
-                        !entity.isActive ||
                         entity.isGhost ||
                         !entity.isAlive() ||
                         !entity.settings.drawShape ||
                         (c.SANDBOX && entity.sandboxId !== socket.sandboxId) ||
                         (c.RANKED_BATTLE && entity.roomId !== socket.roomId) ||
-                        (body && !body.seeInvisible && entity.alpha < 0.1)
+                        (body && !body.seeInvisible && entity.alpha < 0.1) ||
+						(body && entity.id === body.id) // exclude player, see above
                         // Note: The grid query already handled the main distance check.
                         // If more precise frustum culling is needed, add a check here, but AABB is usually sufficient for performance gain.
                     ) {
@@ -12753,10 +12661,6 @@ function flatten(data, out, playerContext = null) {
                     }
 
 					numberInView++
-                    if (body && body.id === entity.id) {
-                        return flatten(photo, visible, playerContext)
-                    }
-
         			flatten(entity.camera(entity.isTurret), visible, playerContext);
                 })
 
@@ -12780,6 +12684,7 @@ function flatten(data, out, playerContext = null) {
 
                 // Existing dead player message logic (keep this as is)
                 if (body != null && body.isDead() && !socket.status.deceased) {
+					body.spectating = body.killCount.killers[0];
                     socket.status.deceased = true;
                     const records = player.records();
                     socket.status.previousScore = records[0];
@@ -12801,7 +12706,7 @@ function flatten(data, out, playerContext = null) {
                         }
                         socket.beginTimeout();
                     }
-                    player.body = null; // Dereference the dead body
+                    //player.body = null; // Dereference the dead body
                 }
 
 
