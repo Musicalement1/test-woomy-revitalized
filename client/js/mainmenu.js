@@ -88,6 +88,11 @@ function gotoWiki() {
 	window.open("https://woomyarrasio.fandom.com/wiki/", "_blank")
 }
 
+document.getElementById("historyAndCreditsButton").onclick = openHaCPage
+function openHaCPage(){
+	window.open("/history-and-credits.html", "_blank")
+}
+
 document.getElementById("modBrowserButton").onclick = openModBrowser
 document.getElementById("modBrowserClose").onclick = openModBrowser
 function openModBrowser(close) {
