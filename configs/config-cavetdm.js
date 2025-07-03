@@ -88,6 +88,6 @@ let map = {
     "X_GRID": 18,
     "Y_GRID": 18,
     "FOOD_AMOUNT": 0.0334,
-    "BOTS": 6 * teams
+    "BOTS": 12 * teams
 };
 map

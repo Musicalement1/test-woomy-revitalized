@@ -1464,7 +1464,7 @@ const Chain = Chainf;
             "SKILL_CHEAT_CAP": 60,
             "SKILL_LEAK": 0,
             "STEALTH": 4,
-            "MIN_SPEED": 0.001,
+            "MIN_SPEED": 0.000001,
             "MIN_DAMAGE": 0,
             "MAX_FOOD": 400,
             "MAX_NEST_FOOD": 30,
@@ -1682,6 +1682,7 @@ const Chain = Chainf;
                 this.maxSancs = config.MAX_SANCS;
                 this.skillBoost = config.SKILL_BOOST;
                 this.topPlayerID = -1;
+				this.displayName = "";
                 this.arenaClosed = false;
                 this.teamAmount = c.TEAM_AMOUNT;
                 this.modelMode = c.modelMode;
@@ -5817,10 +5818,12 @@ const Chain = Chainf;
                 this.rainbowLoop = this.rainbowLoop.bind(this);
                 this.keyFEntity = ["square", 5, 0, false];
                 this.isActive = false
-				this.deactivationTimer = 30
+				this.deactivationTimer = -1;
                 this.deactivation = function(){
-                    if (this.deactivationTimer--, this.deactivationTimer < 0 && (this.deactivationTimer = 30)) {
-                        this.isActive = this.alwaysActive || this.isPlayer || (this.source && this.source.isPlayer)
+					this.deactivationTimer -= 1;
+                    if (this.deactivationTimer < 0) {
+						this.deactivationTimer = 30;
+                        this.isActive = this.alwaysActive || this.isPlayer || (this.source && this.source.isActive) || (this.bond && this.bond.isActive) || false
                     }
                 };
                 /*this.activation = (() => {
@@ -8541,16 +8544,10 @@ function flatten(data, out, playerContext = null) {
                     }
                     util.info(this.readableID + "has disconnected! Players: " + (clients.length - 1).toString());
                     if (isBanned !== true) sockets.broadcast(trimName(this.name) + " has left the game! (" + (players.length - 1) + " players)")
-                    api.apiConnection.talk({
-                        type: "updatePlayerCount",
-                        data: {
-                            count: clients.length - 1
-                        }
-                    })
                     players = players.filter(player => player.id !== this.id);
                     clients = clients.filter(client => client.id !== this.id);
                     clearInterval(this.animationsInterval);
-                    worker.postMessage({ type: "updatePlayers", data: players.length })
+                    worker.postMessage({ type: "updatePlayers", players: players.length, gamemode: room.displayName })
                 }
                 closeWithReason(reason) {
                     this.talk("P", reason);
@@ -8782,7 +8779,7 @@ function flatten(data, out, playerContext = null) {
                             this.woomyOnlineSocketId = m[3];
                             util.info(trimName(name) + (isNew ? " joined" : " rejoined") + " the game! Player ID: " + (entitiesIdLog - 1) + ". IP: " + this.ip + ". Players: " + clients.length + ".");
 
-                            worker.postMessage({ type: "updatePlayers", data: players.length })
+                   			worker.postMessage({ type: "updatePlayers", players: players.length, gamemode: room.displayName })
                             /*if (this.spawnCount > 0 && this.name != undefined && trimName(name) !== this.name) {
                                 this.error("spawn", "Unknown protocol error!");
                                 return;

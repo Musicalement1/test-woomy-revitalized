@@ -45,7 +45,7 @@ let map = {
     ["bosp","bosp","bosp","bosp","bosp","bosp","bosp","bosp","bas2","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm"],
     ["bosp","bosp","bosp","bosp","bosp","bosp","bosp","bosp","bas2","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm","norm"],
     ],
-    "BOTS": 20,
+    "BOTS": 25,
     "BORDER_FORCE": 0.025,
     "MAXBOSSES": 20,
     "MINBOSSES": 10,

@@ -78,6 +78,6 @@ let map = {
     })(),
     "X_GRID": 12,
     "Y_GRID": 12,
-    "BOTS": 5 * teams
+    "BOTS": 12 * teams
 }
 map

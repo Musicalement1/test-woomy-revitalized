@@ -144,8 +144,8 @@ multiplayer.startServerWorker = async function (gamemodeCode, gamemodeName) {
 				case "updatePlayers":
 					// WRM, RoomUpdatePlayers
 					multiplayer.roomWs.send(JSON.stringify({
-						players: data.data,
-						gamemodeCode:  gamemodeCode
+						players: data.players,
+						gamemodeCode:  data.gamemode||gamemodeCode
 					}))
 					break;
 				case "serverStartText":

@@ -70,7 +70,7 @@ let map = {
     "X_GRID": 16,
     "Y_GRID": 16,
     "FOOD_AMOUNT": 0.0334,
-    "BOTS": 6 * teams,
+    "BOTS": 12 * teams,
     "BLACKOUT": true
 };
 map

@@ -185,10 +185,17 @@ const defaultGamemodes = [
 	},
 	{
 		name: "2 TDM Portal Mothership",
-		image: "",
+		image: "/resources/gamemodes/2potmot.webp",
 		description: "Fight on one of two teams to kill the other team's mothership: Now with portals!",
 		players: 0,
 		code: "p2mot.json"
+	},
+	{
+		name: "2 TDM Hell",
+		image: "/resources/gamemodes/2tdmhell.webp",
+		description: "Fight against the other team's army with your own! Each side has 25 bots.",
+		players: 0,
+		code: "2tdmhell.json"
 	},
 	{
 		name: "4 TDM",
@@ -227,7 +234,7 @@ const defaultGamemodes = [
 	},
 	{
 		name: "Maze",
-		image: "",
+		image: "/resources/gamemodes/maze.webp",
 		description: "Free for all inside a maze!",
 		players: 0,
 		code: "maze.js"
@@ -248,7 +255,7 @@ const defaultGamemodes = [
 	},
 	{
 		name: "Cave",
-		image: "",
+		image: "/resources/gamemodes/cave.webp",
 		description: "Free for all inside of a cave system! Close quarters!",
 		players: 0,
 		code: "cave.json"
@@ -269,35 +276,35 @@ const defaultGamemodes = [
 	},
 	{
 		name: "FFA",
-		image: "",
+		image: "/resources/gamemodes/ffa.webp",
 		description: "Everyone for themselves!",
 		players: 0,
 		code: "ffa.json"
 	},
 	{
 		name: "Portal FFA",
-		image: "",
+		image: "/resources/gamemodes/potffa.webp",
 		description: "Everyone for themselves: Now with portals!",
 		players: 0,
 		code: "pffa.json"
 	},
 	{
 		name: "Space",
-		image: "",
+		image: "/resources/gamemodes/space.webp",
 		description: "Everyone for themselves: Now in space!",
 		players: 0,
 		code: "space.json"
 	},
 	{
 		name: "Survival",
-		image: "",
+		image: "/resources/gamemodes/survival.webp",
 		description: "Everyone for themselves but, you can't automatically level up. You gotta grind.",
 		players: 0,
 		code: "srvivl.json"
 	},
 	{
 		name: "Growth",
-		image: "",
+		image: "/resources/gamemodes/growth.webp",
 		description: "Everyone for themselves! The more score you have the larger and stronger you get. Get to 2 million score to unlock dreadnaughts.",
 		players: 0,
 		code: "growth.json"
@@ -311,14 +318,14 @@ const defaultGamemodes = [
 	},
 	{
 		name: "Siege",
-		image: "",
+		image: "/resources/gamemodes/siege.webp",
 		description: "Defend your sanctuaries from the horde of bosses!",
 		players: 0,
 		code: "siege.js"
 	},
 	{
 		name: "Sandbox",
-		image: "",
+		image: "/resources/gamemodes/sandbox.webp",
 		description: "Each player has their own arena. Test different combos here.",
 		players: 0,
 		code: "sbx.json"
@@ -332,43 +339,43 @@ const defaultGamemodes = [
 	},
 	{
 		name: "Corrupt Tanks",
-		image: "",
+		image: "/resources/gamemodes/corrupted_tanks.webp",
 		description: "See the unholy horrors that lay deep within the code.",
 		players: 0,
 		code: "crptTanks.json"
 	},
 	{
 		name: "Void Walkers",
-		image: "",
+		image: "/resources/gamemodes/voidwalk.webp",
 		description: "Travel into the beyond, past the boarders of the map. Beware the danger entities that lie far out.",
 		players: 0,
-		code: "crptTanks.json"
+		code: "vwalk.js"
 	},
 	{
 		name: "Murica",
-		image: "",
-		description: "WHAT THE FUCK IS A KILOMETER RAHHH: Now with Ford F-150s!",
+		image: "/resources/gamemodes/murica.webp",
+		description: "WHAT THE FUCK IS A KILOMETER RAHHH 🦅🦅💥💥💥",
 		players: 0,
 		code: "murica.json"
 	},
 	{
 		name: "Soccer",
-		image: "",
+		image: "/resources/gamemodes/soccer.webp",
 		description: "Player soccer on one of two teams.",
 		players: 0,
 		code: "soccer.json"
 	},
 	{
 		name: "Squidwards Tiki Island",
-		image: "",
-		description: "vacation yayy",
+		image: "/resources/gamemodes/tiki.webp",
+		description: "Vacation yayy",
 		players: 0,
 		code: "tiki.json"
 	},
 	{
 		name: "Custom",
-		image: "",
-		description: "This is a special gamemode only available to modders to distinguish their rooms. (Its just a normal ffa map by default)",
+		image: "/resources/gamemodes/custom.webp",
+		description: "A special gamemode reserved for modders to distinguish their rooms. By default, its a normal ffa map. Join the discord and ask for help learning to mod the game!",
 		players: 0,
 		code: "custom.js"
 	},
@@ -509,7 +516,7 @@ joinSearch.oninput = async function () {
 		hostFilter.click();
 		clearRooms();
 		showGamemodes();
-		gamemodeEles[5].click() // Host default gamemode: 4tdm
+		gamemodeEles[6].click() // Host default gamemode: 4tdm
 	}
 })();
 

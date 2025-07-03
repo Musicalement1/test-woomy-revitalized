@@ -33,6 +33,7 @@ let map = {
         //"connectionLimit": 999,
         "MODE": "ffa",
         //"serverName": "Free For All",
+		"displayName": "", // Replaces the gamemode name on the website (25 Character limit)
         "TEAM_AMOUNT": 2,
         "RANDOM_COLORS": false,
         "BOSS_SPAWN_TIMER": 2000, // Infinity disables bosses
@@ -123,7 +124,7 @@ let map = {
         "SIEGE": false,
         "DISABLE_LEADERBOARD": false,
         "BLACKOUT": false,
-        //"GAMEMODE_JS": "", // DOES WORk, Changing this will enable the void walkers code. See server.js to add your own.
+        //"GAMEMODE_JS": "", // DOES WORK, Changing this will enable the void walkers code. See server.js to add your own.
         //"KILL_SCORE_FORMULA": "Math.min(x, 2_500_000) * 7 / 8" // DOES WORK, optional, taken from growth
 }
 map

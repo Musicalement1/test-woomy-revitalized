@@ -26,7 +26,7 @@
     ],
     "X_GRID": 20,
     "Y_GRID": 20,
-    "BOTS": 10,
+    "BOTS": 50,
     "BOSS_SPAWN_TIMER": 200,
     "BORDER_FORCE": 0
 }

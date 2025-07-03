@@ -23,6 +23,6 @@
     ],
     "X_GRID": 18,
     "Y_GRID": 18,
-    "BOTS": 10,
+    "BOTS": 25,
     "GAMEMODE_JS": "./server/gamemodes/corruptedTanks.js"
 }

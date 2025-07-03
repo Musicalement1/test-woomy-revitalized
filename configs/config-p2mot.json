@@ -21,7 +21,7 @@
     ],
     "X_GRID": 30,
     "Y_GRID": 13,
-    "BOTS": 12,
+    "BOTS": 25,
     "PORTALS": {
         "ENABLED": true,
         "THRESHOLD": 500,
