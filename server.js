@@ -9474,6 +9474,8 @@ function flatten(data, out, playerContext = null) {
                                     }
                                 } break;
                                 case 13:
+									console.log("Non-working for the time being")
+									return;
                                     for (let instance of entities.filter(e => e.bound == null && e !== body)) {
                                         if (util.getDistance(instance, {
                                             x: body.x + body.control.target.x,
@@ -9510,6 +9512,8 @@ function flatten(data, out, playerContext = null) {
                                     }
                                     break;
                                 case 14:
+									console.log("Non-working for the time being")
+									return
                                     for (let instance of entities.filter(e => e.bound == null && e !== body)) {
                                         if (util.getDistance(instance, {
                                             x: body.x + body.control.target.x,
