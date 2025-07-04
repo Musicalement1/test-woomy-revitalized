@@ -82,7 +82,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(3002, () => {
-	console.log("Room Manager server listening on http://localhost:3002");
+	console.log("Room Manager server listening on port 3002");
 });
 
 
