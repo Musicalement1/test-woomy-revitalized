@@ -53,7 +53,7 @@ function handleReq(req, res) {
   });
 }
 
-const port = 3000;
+const port = 80;
 server.listen(port, () => {
   console.log(`Server running on port ${port}`);
   console.log(`Serving files from: ${__dirname}`); // Confirms the directory being served

@@ -61,9 +61,13 @@ multiplayer.wrmHost = async function () {
 			console.error(err)
 		}
 	}
-	this.roomWs.onclose = () => {
-		console.log("Room socket closed with room manager")
-		alert("Lost connection with the room manager. You can still play, however more people cannot join.")
+	this.roomWs.onclose = async () => {
+		console.log("Room socket closed with room manager. Retrying in 5 seconds.")
+		setTimeout(async ()=>{
+			console.log("Retrying WRM connection...")
+			await multiplayer.wrmHost();
+			window.selectedRoomId = await multiplayer.getHostRoomId();
+		}, 5000)
 	}
 	return openPromise
 }
@@ -103,7 +107,7 @@ multiplayer.joinRoom = async function (roomId) {
     	window.loadingTextStatus = "Connection Failed"
     	window.loadingTextTooltip = "Please reload your tab"
 		alert(`${resText}\nYour tab will now reload`)
-		//window.location.href = window.location.href;
+		window.location.href = window.location.href;
 		return;
 	}
 	console.log("...Join request sent", res)
