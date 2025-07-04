@@ -3,7 +3,7 @@ import { PeerWrapper } from "./peer.js";
 
 window.connectedToWRM = false
 
-const WRM = "74.208.44.199:3002"
+const WRM = "woomy.online" // change this to localhost if local
 const wsUrl = window.location.protocol === "http:" ? "ws://" : "wss://"
 const httpUrl = window.location.protocol === "http:" ? "http://" : "https://"
 const WRM_WS = `${wsUrl}${WRM}`
@@ -94,7 +94,7 @@ multiplayer.joinRoom = async function (roomId) {
     window.loadingTextStatus = "Establishing connection..."
     window.loadingTextTooltip = ""
 	console.log("Sending join request...")
-	let res = await fetch(`${WRM_HTTP}/join`, {
+	let res = await fetch(`${WRM_HTTP}/api/join`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({
@@ -117,7 +117,7 @@ multiplayer.joinRoom = async function (roomId) {
 	}
 }
 multiplayer.getRooms = async function (){
-	let res = await fetch(`${WRM_HTTP}/list`)
+	let res = await fetch(`${WRM_HTTP}/api/list`)
 	res = await res.json()
 	return res;
 }
