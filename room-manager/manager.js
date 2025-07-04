@@ -2,7 +2,7 @@ const wsLib = require("ws");
 const http = require("http")
 
 const server = http.createServer((req, res) => {
-	res.setHeader("Access-Control-Allow-Origin", "http://dev.localhost:3000");
+	res.setHeader("Access-Control-Allow-Origin", "*");
 	res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
 	res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 	// Handle preflight request
@@ -141,8 +141,3 @@ wss.on('connection', function connection(ws, req) {
 			break;
 	}
 })
-
-process.on('SIGTERM', () => {
-	rooms.forEach((room) => room.shutDown("There was an issue with the room manager. Error message: " + shutdownMessage))
-	process.exit();
-});
