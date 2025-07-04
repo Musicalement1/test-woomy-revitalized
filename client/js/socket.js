@@ -749,7 +749,7 @@ let socketInit = function () {
 		socket.onopen = function () {
 			socket.open = 1;
 			global.message = "Please wait while a connection attempt is being made.";
-			socket.talk("k", document.getElementById("tokenInput").value || "", 0, "its local", false);
+			socket.talk("k", config.CLIENT_PROTOCOL_VERSION, document.getElementById("tokenInput").value || "", 0, "its local", false);
 			logger.info("Token submitted to the server for validation.");
 			socket.ping = function () {
 				socket.talk("p");

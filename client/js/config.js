@@ -1,4 +1,5 @@
 let config = {
+	CLIENT_PROTOCOL_VERSION: 1,
 	expectedMaxSkillLevel: 9,
 	screenshotMode: 0,
 	borderChunk: 5,

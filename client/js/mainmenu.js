@@ -90,7 +90,7 @@ function gotoWiki() {
 
 document.getElementById("historyAndCreditsButton").onclick = openHaCPage
 function openHaCPage(){
-	window.open("/history-and-credits.html", "_blank")
+	window.location.pathname = "/history-and-credits.html"
 }
 
 document.getElementById("modBrowserButton").onclick = openModBrowser

@@ -43,6 +43,7 @@ function handleReq(req, res) {
         case '.png': contentType = 'image/png'; break;
         case '.jpg': contentType = 'image/jpg'; break;
         case '.gif': contentType = 'image/gif'; break;
+		case '.svg': contentType = 'image/svg+xml'; break;
         // Add more cases for other file types as needed
       }
 

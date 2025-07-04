@@ -12,6 +12,7 @@ workerWindow.process = {
     argv: []
 };
 
+const SERVER_PROTOCOL_VERSION = 1;
 
 // MULTIPLAYER //
 const userSockets = new Map()
@@ -8670,14 +8671,19 @@ function flatten(data, out, playerContext = null) {
                     switch (index) {
                         case "k": { // Verify Key
                             if (room.arenaClosed) return;
-                            if (m.length !== 4) {
+							if(m[0] !== SERVER_PROTOCOL_VERSION){
+								this.closeWithReason(`Your client is incompatible with this sever. Server: v${SERVER_PROTOCOL_VERSION} Client: v${m[0]}`);
+								return;
+							}
+
+							if (m.length !== 5) {
                                 this.error("token verification", "Ill-sized token request", true);
                                 return 1;
                             }
-                            if (typeof m[2] !== "string") {
-                                this.error("token verification", "Non-string rivet player id was offered: " + typeof m[2])
+                            if (typeof m[3] !== "string") {
+                                this.error("token verification", "Non-string rivet player id was offered: " + typeof m[3])
                             }
-                            let key = m[0];
+                            let key = m[1];
                             if (key.length > 124) {
                                 this.error("token verification", "Overly-long token offered");
                                 return 1;
@@ -8706,7 +8712,7 @@ function flatten(data, out, playerContext = null) {
                                 this.closeWithReason("Please only use one tab at once!");
                                 return 1;
                             }*/
-                            this.usingAdBlocker = m[3]
+                            this.usingAdBlocker = m[4]
                             //                      if (c.serverName.includes("Sandbox") && this.betaData.permissions === 0) this.betaData.permissions = 1; 
                             if (key) {
                                 util.info("A socket was verified with the token: " + key);
