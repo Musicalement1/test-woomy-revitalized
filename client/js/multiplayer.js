@@ -35,7 +35,7 @@ multiplayer.wrmHost = async function () {
 				// Add timeout if its a fake request
 				case "playerJoin":
 					console.log("Accepting new peer connection")
-					let peer = new PeerWrapper()
+					let peer = new PeerWrapper(await window.iceServers.fetchTurnCredentials)
 					console.log("Initializing new peer connection")
 					await peer.initialized;
 					console.log("New peer connection initialized")
@@ -85,7 +85,7 @@ multiplayer.getHostRoomId = async function(){
 	})
 }
 multiplayer.joinRoom = async function (roomId) {
-	this.playerPeer = new PeerWrapper()
+	this.playerPeer = new PeerWrapper(await window.iceServers.fetchTurnCredentials)
 	window.loadingTextStatus = "Initalizing connection..."
     window.loadingTextTooltip = ""
 	console.log("Initialzing player peer")

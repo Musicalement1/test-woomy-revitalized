@@ -1,6 +1,27 @@
+window.iceServers = [
+	{ url: 'stun:stun.l.google.com:19302' },
+];
+window.iceServers.fetchTurnCredentials = async function() {
+  try {
+    const response = await fetch('/api/get-turn-credentials');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch TURN credentials: ${response.statusText}`);
+    }
+    const turnConfig = await response.json();
+    console.log("Successfully fetched TURN credentials.");
+    return [turnConfig];
+  } catch (error) {
+    console.error("Could not get TURN credentials, continuing without them.", error);
+    return []; // Return null so the connection can proceed without TURN
+  }
+}
 class PeerWrapper {
-	constructor(peerId) {
-		this.peer = new Peer();
+	constructor(iceServersParam) {
+		const servers = window.iceServers.concat(iceServersParam)
+		this.peer = new Peer({config:{
+			iceServers: servers,
+			iceTransportPolicy: "relay"
+		}});
 		this.conn = null;
 		this.id = null;
 		this.onmessage = undefined;
