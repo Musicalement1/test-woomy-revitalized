@@ -12762,6 +12762,7 @@ function flatten(data, out, playerContext = null) {
         }, 1000);*/
 
         if (room.maxBots > 0) setTimeout(() => util.log(`Spawned ${room.maxBots} AI bot${room.maxBots > 1 ? "s." : "."}`), 350);
+        worker.postMessage({ type: "updatePlayers", players: players.length, name: room.displayName, desc: room.displayDesc })
         worker.postMessage({ type: "serverStarted" })
     })();
 }
