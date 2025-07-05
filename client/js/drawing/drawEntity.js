@@ -1382,11 +1382,11 @@ let drawEntity = function () {
 				context.lineTo(length, h[0]);
 				context.lineTo(-length, h[1]);
 				context.lineTo(-length, -h[1]);
-				context.lineTo(length * 2, -h[0] * 0.5);
+				context.lineTo(length * 2, -h[0]);
 				break;
 
 			case 10: // L Triangle 2
-				context.lineTo(length * 2, h[0] * 0.5);
+				context.lineTo(length * 2, h[0]);
 				context.lineTo(-length, h[1]);
 				context.lineTo(-length, -h[1]);
 				context.lineTo(length, -h[0]);
