@@ -235,7 +235,7 @@ wss.on('connection', function connection(ws, req) {
 					if (ping === true) return;
 					if (players !== undefined) room.players = Number(players) || 0;
 					if (name) room.gamemodeCode = `${name}`.substring(0, 25);
-					if (desc) room.desc = desc;
+					if (desc) room.desc = `${desc}`.substring(0, 100);;
 				} catch (err) {
 					console.log("Error updating room information:", err);
 				}
