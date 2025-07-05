@@ -94,7 +94,7 @@ const handleRequest = (req, res) => {
 			res.writeHead(200, { "Content-Type": "application/json" });
 			const list = [];
 			for (let [id, room] of rooms) {
-				list.push({ id: id, gamemodeCode: room.gamemodeCode, desc: "", players: room.players });
+				list.push({ id: id, gamemodeCode: room.gamemodeCode, desc: room.desc||"", players: room.players });
 			}
 			res.end(JSON.stringify(list));
 			return;

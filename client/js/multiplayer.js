@@ -152,7 +152,7 @@ multiplayer.startServerWorker = async function (gamemodeCode, gamemodeName) {
 					// WRM, RoomUpdatePlayers
 					multiplayer.roomWs.send(JSON.stringify({
 						players: data.players,
-						gamemodeCode:  data.name||gamemodeCode,
+						name:  data.name||gamemodeCode,
 						desc: data.desc
 					}))
 					break;
