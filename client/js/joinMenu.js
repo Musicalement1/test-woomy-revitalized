@@ -427,7 +427,6 @@ function clearRooms() {
 async function showRooms() {
 	let rooms = await multiplayer.getRooms()
 	for (let room of rooms) {
-		let custom = false;
 		let template = roomFilter === "gallery" ? roomGalleryTemplate : roomListTemplate
 		let ele = template.cloneNode(true)
 		ele.style.display = "block";
@@ -440,13 +439,12 @@ async function showRooms() {
 			}
 		}
 		if(gamemodeInfo === null){
-			custom = true;
 			gamemodeInfo ??= room.gamemodeCode
 		}
 
 		// Background/image
-		if (gamemodeInfo.image||custom) {
-			ele.style.background = custom?defaultGamemodes[defaultGamemodes.length-1].image:`url(${gamemodeInfo.image})`
+		if (gamemodeInfo.image) {
+			ele.style.background = `url(${gamemodeInfo.image})`
 		}
 
 		// Gamemode 
