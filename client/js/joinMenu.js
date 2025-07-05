@@ -427,7 +427,6 @@ function clearRooms() {
 async function showRooms() {
 	let rooms = await multiplayer.getRooms()
 	for (let room of rooms) {
-		let custom = false;
 		let template = roomFilter === "gallery" ? roomGalleryTemplate : roomListTemplate
 		let ele = template.cloneNode(true)
 		ele.style.display = "block";
