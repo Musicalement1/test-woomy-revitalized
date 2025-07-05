@@ -58,7 +58,6 @@ multiplayer.wrmHost = async function () {
 					break;
 				case "ping":
 					this.roomWs.send(JSON.stringify({ping:true}))
-					console.log("ping")
 					break;
 			}
 		} catch (err) {
