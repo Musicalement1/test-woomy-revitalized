@@ -1,5 +1,9 @@
 window.iceServers = [
 	{ url: 'stun:stun.l.google.com:19302' },
+	{ url: 'stun:stun1.l.google.com:19302' },
+	{ url: 'stun:stun2.l.google.com:19302' },
+	{ url: 'stun:stun3.l.google.com:19302' },
+	{ url: 'stun:stun4.l.google.com:19302' },
 ];
 window.iceServers.fetchTurnCredentials = async function() {
   try {
@@ -9,7 +13,11 @@ window.iceServers.fetchTurnCredentials = async function() {
     }
     const turnConfig = await response.json();
     console.log("Successfully fetched TURN credentials.");
-    return [turnConfig];
+    return [{
+		urls: turnConfig.urls,
+		username: turnConfig.username,
+		credential: turnConfig.password
+	}];
   } catch (error) {
     console.error("Could not get TURN credentials, continuing without them.", error);
     return []; // Return null so the connection can proceed without TURN
@@ -18,9 +26,9 @@ window.iceServers.fetchTurnCredentials = async function() {
 class PeerWrapper {
 	constructor(iceServersParam) {
 		const servers = window.iceServers.concat(iceServersParam)
+		console.log(servers)
 		this.peer = new Peer({config:{
-			iceServers: servers,
-			iceTransportPolicy: "relay"
+			iceServers: servers
 		}});
 		this.conn = null;
 		this.id = null;
