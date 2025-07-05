@@ -51,7 +51,7 @@ class Room {
 function getTurnCredentials(username) {
   // Credentials will be valid for 1 hour (3600 seconds)
   const expiry = Math.floor(Date.now() / 1000) + 3600;
-  const turnUsername = `${expiry}-${username}`;
+  const turnUsername = `${expiry}:${username}`;
 
   // Create the HMAC-SHA1 signature (the temporary password) using the shared secret
   const hmac = crypto.createHmac('sha1', TURN_SECRET);
