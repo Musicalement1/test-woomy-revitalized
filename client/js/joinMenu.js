@@ -435,13 +435,13 @@ async function showRooms() {
 		let gamemodeInfo = null;
 		for (let gamemode of defaultGamemodes) {
 			if (room.gamemodeCode === gamemode.code) {
-				gamemodeInfo = gamemode.description;
+				gamemodeInfo = gamemode;
 				break;
 			}
 		}
 		if(gamemodeInfo === null){
 			custom = true;
-			gamemodeInfo ??= room.desc||room.gamemodeCode
+			gamemodeInfo ??= room.gamemodeCode
 		}
 
 		// Background/image
@@ -462,7 +462,7 @@ async function showRooms() {
 			playerCount = room.players;
 			gamemodeName = gamemodeInfo.name || gamemodeInfo;
 			gamemodeImage = gamemodeInfo.image || "";
-			gamemodeDescription = gamemodeInfo.description || gamemodeInfo;
+			gamemodeDescription = room.desc || gamemodeInfo.description || gamemodeInfo;
 			selectedRoomId = room.id;
 			updateRoomInfo()
 		}
