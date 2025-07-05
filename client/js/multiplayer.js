@@ -56,6 +56,10 @@ multiplayer.wrmHost = async function () {
 				case "hostRoomId":
 					this.hostRoomId = data
 					break;
+				case "ping":
+					this.roomWs.send(JSON.stringify({ping:true}))
+					console.log("ping")
+					break;
 			}
 		} catch (err) {
 			console.error(err)

@@ -217,10 +217,22 @@ wss.on('connection', function connection(ws, req) {
 			let room = new Room(ws);
 			console.log(`New room hosted with ID: ${room.id}`);
 
+			function sendHeartbeat(){
+				if(ws.readyState !== 1){
+					console.log(`Failed to send hearbeat to room ${room.id}`)
+				}else{
+					ws.send(JSON.stringify({type:"ping"}))
+					setTimeout(sendHeartbeat, 30000)
+				}
+			}
+			sendHeartbeat()
+
+
 			ws.on("close", room.removeFromRooms.bind(room));
 			ws.on("message", (msg) => {
 				try {
-					const { players, gamemodeCode } = JSON.parse(msg.toString());
+					const { players, gamemodeCode, ping } = JSON.parse(msg.toString());
+					if (ping === true) return;
 					if (players !== undefined) room.players = Number(players) || 0;
 					if (gamemodeCode) room.gamemodeCode = `${gamemodeCode}`.substring(0, 25);
 				} catch (err) {
