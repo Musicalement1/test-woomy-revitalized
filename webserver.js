@@ -51,7 +51,7 @@ class Room {
 function getTurnCredentials(username) {
   // Credentials will be valid for 1 hour (3600 seconds)
   const expiry = Math.floor(Date.now() / 1000) + 3600;
-  const turnUsername = `${expiry}:${username}`;
+  const turnUsername = `${expiry}-${username}`;
 
   // Create the HMAC-SHA1 signature (the temporary password) using the shared secret
   const hmac = crypto.createHmac('sha1', TURN_SECRET);
@@ -94,7 +94,7 @@ const handleRequest = (req, res) => {
 			res.writeHead(200, { "Content-Type": "application/json" });
 			const list = [];
 			for (let [id, room] of rooms) {
-				list.push({ id: id, gamemodeCode: room.gamemodeCode, players: room.players });
+				list.push({ id: id, gamemodeCode: room.gamemodeCode, desc: "", players: room.players });
 			}
 			res.end(JSON.stringify(list));
 			return;
@@ -231,10 +231,11 @@ wss.on('connection', function connection(ws, req) {
 			ws.on("close", room.removeFromRooms.bind(room));
 			ws.on("message", (msg) => {
 				try {
-					const { players, gamemodeCode, ping } = JSON.parse(msg.toString());
+					const { players, name, desc, ping } = JSON.parse(msg.toString());
 					if (ping === true) return;
 					if (players !== undefined) room.players = Number(players) || 0;
-					if (gamemodeCode) room.gamemodeCode = `${gamemodeCode}`.substring(0, 25);
+					if (name) room.gamemodeCode = `${name}`.substring(0, 25);
+					if (desc) room.desc = desc;
 				} catch (err) {
 					console.log("Error updating room information:", err);
 				}

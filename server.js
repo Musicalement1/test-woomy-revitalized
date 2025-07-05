@@ -1684,6 +1684,7 @@ const Chain = Chainf;
                 this.skillBoost = config.SKILL_BOOST;
                 this.topPlayerID = -1;
 				this.displayName = "";
+				this.displayDesc = "";
                 this.arenaClosed = false;
                 this.teamAmount = c.TEAM_AMOUNT;
                 this.modelMode = c.modelMode;
@@ -8548,7 +8549,7 @@ function flatten(data, out, playerContext = null) {
                     players = players.filter(player => player.id !== this.id);
                     clients = clients.filter(client => client.id !== this.id);
                     clearInterval(this.animationsInterval);
-                    worker.postMessage({ type: "updatePlayers", players: players.length, gamemode: room.displayName })
+                    		worker.postMessage({ type: "updatePlayers", players: players.length, name: room.displayName, desc: room.displayDesc })
                 }
                 closeWithReason(reason) {
                     this.talk("P", reason);
@@ -8785,7 +8786,7 @@ function flatten(data, out, playerContext = null) {
                             this.woomyOnlineSocketId = m[3];
                             util.info(trimName(name) + (isNew ? " joined" : " rejoined") + " the game! Player ID: " + (entitiesIdLog - 1) + ". IP: " + this.ip + ". Players: " + clients.length + ".");
 
-                   			worker.postMessage({ type: "updatePlayers", players: players.length, gamemode: room.displayName })
+                    		worker.postMessage({ type: "updatePlayers", players: players.length, name: room.displayName, desc: room.displayDesc })
                             /*if (this.spawnCount > 0 && this.name != undefined && trimName(name) !== this.name) {
                                 this.error("spawn", "Unknown protocol error!");
                                 return;
