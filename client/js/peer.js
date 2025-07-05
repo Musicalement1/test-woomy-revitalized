@@ -14,7 +14,7 @@ window.iceServers.fetchTurnCredentials = async function() {
     const turnConfig = await response.json();
     console.log("Successfully fetched TURN credentials.");
     return [{
-		urls: turnConfig.urls[0],
+		urls: turnConfig.urls[0]+"?transport=udp",
 		username: turnConfig.username,
 		credential: turnConfig.password
 	}];
