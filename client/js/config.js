@@ -14,7 +14,7 @@ let config = {
 	fontSizeBoost: 10,
 	movementSmoothing: .625,
 	fontStrokeRatio: 4.5,
-	uiScale: 1.25,
+	uiScale: 1.2,
 	neon: 0,
 	disableGameMessages: 0,
 	chatMessageDuration: 5,

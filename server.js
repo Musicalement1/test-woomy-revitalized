@@ -4257,7 +4257,9 @@ const Chain = Chainf;
 				};
 
 				let bestTarget = null;
-				let maxDanger = -Infinity;
+				// Renamed maxDanger to maxValue to reflect the new combined metric.
+				let maxValue = -Infinity; 
+				let maxDist = -Infinity
 				let foundLockedTarget = false;
 
 				// HOT PATH: This callback runs for every potential target.
@@ -4268,7 +4270,6 @@ const Chain = Chainf;
 					if (entity.master.master.team === myTeam || entity.team === -101) return;
 					if (entity.isDead() || entity.passive || entity.invuln) return;
 					if (!FARMER && entity.dangerValue < 0) return;
-					if (entity.dangerValue < maxDanger) return;
 					if (entity.alpha < 0.5 && !canSeeInvis) return;
 					if (c.SANDBOX && entity.sandboxId !== body.sandboxId) return;
 
@@ -4290,9 +4291,23 @@ const Chain = Chainf;
 						if ((dot / angleToTargetMag) < this.firingArcCos) return;
 					}
 
-					if(maxDanger < entity.dangerValue || (maxDanger === entity.dangerValue && Math.random()>.5)){
+					// Calculate distance between the current body and the potential target entity.
+					const dx = entity.x - body.x;
+					const dy = entity.y - body.y;
+					const distance = Math.sqrt(dx * dx + dy * dy);
+
+					// Calculate the effective value, incorporating distance as 1/3 as valuable as danger.
+					// This means distance applies a buff: (distance / 3) increases the dangerValue.
+					const effectiveValue = (entity.dangerValue||1) * distance;
+
+					// If the current target's effective value is less than the best found so far, skip it.
+					if (effectiveValue < maxValue) return;
+
+					// Update the best target if the current one has a higher effective value,
+					if(maxValue <= effectiveValue && maxDist < distance){
 						bestTarget = entity;
-						maxDanger = entity.dangerValue;
+						maxValue = effectiveValue;
+						maxDist = distance
 					}
 
 					if (this.targetLock === entity) {
@@ -4322,14 +4337,14 @@ const Chain = Chainf;
 				}
 
 				// Throttle expensive target acquisition.
-				if (++this.tick > 15) {
+				if (++this.tick > 20) {
 					this.tick = 0;
 					let range = this.body.aiSettings.SKYNET ? this.body.fov : this.body.master.fov;
 					range *= this.body.aiSettings.BLIND ? 2/3 : 1
 					// The old calculation used a circle range so we approximate a square with similar coverage
-					// *.6 because people fall that the true FoV of things is too high...
+					// We nerf range slightly because players complain
 					this.findTarget(
-						(range-(range/Math.sqrt(2))/2)*.6
+						(range-(range/Math.sqrt(2))/2) * .7
 					);
 				}
 
@@ -4345,11 +4360,8 @@ const Chain = Chainf;
 				const diffX = target.x - this.body.x;
 				const diffY = target.y - this.body.y;
 
-				// Throttle lead calculation.
-				if (this.tick % 5 === 0) {
-					const tracking = this.body.topSpeed;
-					this.lead = timeOfImpact({ x: diffX, y: diffY }, target.velocity, tracking);
-				}
+				const tracking = this.body.topSpeed;
+				this.lead = timeOfImpact({ x: diffX, y: diffY }, target.velocity, tracking);
 
 				// Mutate and return the pre-allocated output object.
 				this.output.target.x = diffX + this.lead * target.velocity.x;
