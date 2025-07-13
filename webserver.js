@@ -16,7 +16,7 @@ const PORT = 80;
 const TURN_SECRET = "51d0b940-05cb-41d7-95c9-16d9845b4a19";
 
 // IMPORTANT: Set this to the public IP or domain of your TURN server
-const TURN_SERVER_URI = "turn:74.208.44.199:3478";
+const TURN_SERVER_URI = "turn:73.211.177.153:3478";
 
 
 // =================================================================
