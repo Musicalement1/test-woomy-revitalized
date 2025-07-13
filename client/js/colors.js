@@ -2,6 +2,7 @@ import { global } from "./global.js"
 import { config } from "/js/config.js"
 import { lerp } from "/js/lerp.js"
 import { imageCache } from "./assets.js";
+import { util } from "./util.js";
 
 let color = {
 	"teal": "#7ADBBC",
@@ -998,7 +999,7 @@ function getColor(colorID) {
 		case 242:
 			return "#A177FC";
 		case 243:
-			return _util._HSL2COLOR((Date.now() % 2520) / 7, 100, 50);
+			return util._HSL2COLOR((Date.now() % 2520) / 7, 100, 50);
 		case 244:
 			return "#3D79EF";
 		case 245:

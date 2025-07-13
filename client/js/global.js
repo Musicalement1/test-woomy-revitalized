@@ -217,6 +217,7 @@ global._sendMessageToClient = (msg, c = "black") => global.messages.push({
 	time: Date.now(),
 	color: color[c]
 });
+global.chatMessages = new Map();
 global.clearUpgrades = function () {
 	_gui._upgrades = [];
 };

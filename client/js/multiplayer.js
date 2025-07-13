@@ -66,10 +66,11 @@ multiplayer.wrmHost = async function () {
 	}
 	this.roomWs.onclose = async () => {
 		console.log("Room socket closed with room manager. Retrying in 5 seconds.")
+		this.hostRoomId = undefined
 		setTimeout(async ()=>{
 			console.log("Retrying WRM connection...")
 			await multiplayer.wrmHost();
-			window.selectedRoomId = await multiplayer.getHostRoomId();
+			await multiplayer.getHostRoomId();
 		}, 5000)
 	}
 	return openPromise
@@ -84,6 +85,10 @@ multiplayer.getHostRoomId = async function(){
 			res(this.hostRoomId)
 			clearInterval(interval)
 			console.log("...Got host room id")
+			window.serverWorker.postMessage({
+				type: "roomId",
+				id: this.hostRoomId
+			})
 		})
 	})
 }
@@ -118,6 +123,11 @@ multiplayer.joinRoom = async function (roomId) {
 	this.playerPeer.onmessage = (msg) => { 
 		if(window.clientMessage) window.clientMessage(msg)
 	}
+	this.playerPeer.onclose = function(){
+		if(window.confirm("Lost connection to the host.\nClick \"OK\" to reload the page.")){
+			window.location.href = window.location.href
+		}
+	}
 }
 multiplayer.getRooms = async function (){
 	let res = await fetch(`${WRM_HTTP}/api/list`)
@@ -150,6 +160,7 @@ multiplayer.startServerWorker = async function (gamemodeCode, gamemodeName) {
 
 				case "updatePlayers":
 					// WRM, RoomUpdatePlayers
+					if(multiplayer.roomWs === undefined || multiplayer.roomWs.readyState !== 1) return
 					multiplayer.roomWs.send(JSON.stringify({
 						players: data.players,
 						name:  data.name||gamemodeCode,

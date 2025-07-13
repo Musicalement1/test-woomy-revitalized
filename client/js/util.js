@@ -96,7 +96,7 @@ util._pullJSON = async function (filename, responseType = "json", filetypeOverri
 	});
 };
 util._getRatio = () => Math.max(global._screenWidth, 16 * global._screenHeight / 9) / _player._renderv;
-util._getScreenRatio = () => (global._screenHeight / global._screenSize) * 1.3;
+util._getScreenRatio = () => (global._screenHeight / global._screenSize) * 1.5;
 util._getSpecialNameInfoById = id => [
 	["#2e6d9b", "#579acb", `'Merienda', cursive`, 1],
 	["#E673C4", "#ff00d0", `"Courier New", Courier, monospace`, 1],

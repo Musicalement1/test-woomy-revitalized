@@ -13,34 +13,35 @@ let drawEntity = function () {
 		let angle = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : 0,
 			fill = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : 1;
 		if (sides === -4000) return 0;
-					if (typeof sides === "object") {
-						if (!sides[2]) {console.log(sides[0])//if there is only 2 parameters, its a svg, if there is more its a dot-to-dot path (there is no point in making dot-to-dot with < 2 parameters right?)
-						let radiusDiv = sides[1] || 1//svg stuff below
-						let path = new Path2D(sides[0])
-						radius /= radiusDiv;
-						context.save();
-						context.translate(centerX, centerY);
-						context.scale(radius, radius);
-						context.lineWidth /= radius;
-						context.rotate(angle);
-						context.stroke(path);
-						if (fill) context.fill(path);
-						context.restore();
-						return} else{//dot-to-dot stuff
-							context.save()
-							context.beginPath();
-							let xDirection = Math.cos(angle),
-                            	yDirection = Math.sin(angle);
-                        	for (let [x, y] of sides) {
-                            	context.lineTo(centerX + radius * (x * xDirection - y * yDirection), centerY + radius * (y * xDirection + x * yDirection));
-                        	}
-						context.closePath()
-						context.stroke()
-						context.fill()
-                        context.restore();
-							return;
-						}
-					}
+		if (typeof sides === "object") {
+			if (!sides[2]) { // svg
+				let radiusDiv = sides[1] || 1
+				let path = new Path2D(sides[0])
+				radius /= radiusDiv;
+				context.save();
+				context.translate(centerX, centerY);
+				context.scale(radius, radius);
+				context.lineWidth /= radius;
+				context.rotate(angle);
+				context.stroke(path);
+				if (fill) context.fill(path);
+				context.restore();
+				return
+			} else {// dot-to-dot
+				context.save()
+				context.beginPath();
+				let xDirection = Math.cos(angle),
+					yDirection = Math.sin(angle);
+				for (let [x, y] of sides) {
+					context.lineTo(centerX + radius * (x * xDirection - y * yDirection), centerY + radius * (y * xDirection + x * yDirection));
+				}
+				context.closePath()
+				context.stroke()
+				context.fill()
+				context.restore();
+				return;
+			}
+		}
 		if (!Array.isArray(sides)) angle += sides % 2 ? 0 : Math.PI / sides;
 		context.beginPath();
 		switch (sides) {
@@ -809,21 +810,6 @@ let drawEntity = function () {
 					}
 					context.restore();
 				} else if (sides > 200) {
-					/*//Old Code
-					if (typeof path === "object") {
-						radiusDiv = path.radiusDiv
-						path = path.path
-						radius /= radiusDiv;
-						context.save();
-						context.translate(centerX, centerY);
-						context.scale(radius, radius);
-						context.lineWidth /= radius;
-						context.rotate(angle);
-						context.stroke(path);
-						if (fill) context.fill(path);
-						context.restore();
-						break;
-					}*/
 					let path = path2dCache.get(sides) || 2 * Math.PI,
 					radiusDiv = 1;
 					switch (sides) {
@@ -1489,45 +1475,7 @@ let drawEntity = function () {
 			case 100: // Tachyon
 				break;
 			default:
-				if (typeof skin == "string") {
-					const allowedFunctions = new Set([
-						"arc", "arcTo", "beginPath", "bezierCurveTo", "clearRect", "clip",
-						"closePath", "createConicGradient", "createImageData", "createLinearGradient",
-						"createPattern", "createRadialGradient", "drawFocusIfNeeded", "drawImage",
-						"ellipse", "fill", "fillRect", "fillText", "getContextAttributes", "getImageData",
-						"getLineDash", "getTransform", "isContextLost", "isPointInPath", "isPointInStroke",
-						"lineTo", "measureText", "moveTo", "putImageData", "quadraticCurveTo", "rect", "reset",
-						"resetTransform", "restore", "rotate", "roundRect", "save", "scale", "setLineDash",
-						"setTransform", "stroke", "strokeRect", "strokeText", "transform", "translate",
-						//custom stuff
-						"shapedBarrel"
-					]);//basically every method possible on canvasRenderingContext2D (to make sure he doesn't use context with malicious code)
-					let skinPurged = skin.replaceAll(";", "\n");//this normalizes the code so you can't do in-block code to trick
-					//adding context. before every line if not already, yup
-					let transformedCode = skinPurged.replace(/(?<![\w.])([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g, (match, fnName) => {
-						return `context.${fnName}(`;
-					});
-					//find all function calls prefixed with context. and see if they are allowed
-					const calledFunctions = Array.from(transformedCode.matchAll(/context\.([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g)).map(m => m[1]);
-					const disallowed = calledFunctions.filter(fn => !allowedFunctions.has(fn));
-					if (disallowed.length > 0) {
-						throw new Error(`Disallowed functions used: ${disallowed.join(", ")}`);
-					}
-					//do custom shapedBarrel() stuff and whatnot in the future
-					transformedCode = transformedCode.replace(/context\.shapedBarrel\s*\(\s*(\d+)\s*\)/g, (match, numPoints) => {
-						return `
-							let numPoints = ${numPoints};
-							const angleStep = (2 * Math.PI) / numPoints;
-							context.moveTo(length * Math.cos(0), length * Math.sin(0));
-							for (let i = 1; i <= numPoints; i++) {
-								const theta = i * angleStep;
-								context.lineTo(length * Math.cos(theta), length * Math.sin(theta));
-							}
-						`;
-					})
-					//and finally execute it
-					eval(transformedCode)
-				}
+				console.error("Invalid gun skin: ", skin)
 			break;
 		}
 	}

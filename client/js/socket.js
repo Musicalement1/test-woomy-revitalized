@@ -65,15 +65,15 @@ const GunContainer = function () {
 	function physics(g) {
 		g.isUpdated = 1;
 		if (g.motion || g.position) {
-			g.motion -= 0.01
+			g.motion -= 0.005
 			g.position += g.motion;
 			if (g.position < 0) {
 				g.position = 0;
 				g.motion = -g.motion;
-			} else if (g.position > .5) {
-				g.position = .5
+			} else if (g.position > .3) {
+				g.position = .3
 			}
-			if (g.motion > 0) g.motion *= .7;
+			if (g.motion > 0) g.motion *= .68;
 		}
 	}
 	return function (n) {
@@ -198,7 +198,6 @@ const process = function () {
 				if (type & 0x04) {
 					entity.name = convert.reader.next();
 					entity.score = convert.reader.next();
-					entity.messages = convert.reader.next();
 				}
 				if (isNew) {
 					entity.render = {
@@ -592,6 +591,28 @@ let socketInit = function () {
 						color: m[1] || color.black
 					});
 				}
+					break;
+				case "cs": {
+					let arr = global.chatMessages.get(m[1])
+					if (arr === undefined) {
+						arr = [[m[0], Date.now()]]
+						global.chatMessages.set(m[1], arr)
+					} else {
+						arr.push([m[0], Date.now()])
+					}
+					function removeChatMessage() {
+						arr.shift();
+						if (arr.length === 0) {
+							global.chatMessages.delete(m[1])
+						} else {
+							setTimeout(removeChatMessage, config.chatMessageDuration * 1000)
+						}
+					}
+					setTimeout(removeChatMessage, config.chatMessageDuration * 1000)
+				}
+				break;
+				case "nrid": // new room id - happens bc host can dc from manager
+					window.selectedRoomId = m[0]
 					break;
 				case "Z": {
 					logger.norm(m[0]);

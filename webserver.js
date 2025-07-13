@@ -219,7 +219,7 @@ wss.on('connection', function connection(ws, req) {
 
 			function sendHeartbeat(){
 				if(ws.readyState !== 1){
-					console.log(`Failed to send hearbeat to room ${room.id}`)
+					console.log(`Failed to send hearbeat to room ${room.id} (readyState = ${ws.readyState})`)
 				}else{
 					ws.send(JSON.stringify({type:"ping"}))
 					setTimeout(sendHeartbeat, 30000)

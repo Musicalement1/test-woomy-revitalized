@@ -529,7 +529,7 @@ let gameDraw = function (ratio) {
 
 			// GAME/SYSTEM MESSAGES
 			{
-				if (!config.disableMessages) {
+				if (!config.disableGameMessages) {
 					let vspacing = 4,
 						height = 18,
 						x = global._screenWidth / 2,

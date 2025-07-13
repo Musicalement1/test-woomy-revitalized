@@ -43,6 +43,11 @@ worker.onmessage = function (msg) {
             userSockets.get(data.playerId).close()
             userSockets.delete(data.playerId)
             break;
+		case "roomId":
+			for(let [k,v] of userSockets){
+				v.talk("nrid", data.id)
+			}
+			break;
     }
 }
 
@@ -4263,7 +4268,7 @@ const Chain = Chainf;
 					if (entity.master.master.team === myTeam || entity.team === -101) return;
 					if (entity.isDead() || entity.passive || entity.invuln) return;
 					if (!FARMER && entity.dangerValue < 0) return;
-					if (entity.dangerValue <= maxDanger) return;
+					if (entity.dangerValue < maxDanger) return;
 					if (entity.alpha < 0.5 && !canSeeInvis) return;
 					if (c.SANDBOX && entity.sandboxId !== body.sandboxId) return;
 
@@ -4285,12 +4290,7 @@ const Chain = Chainf;
 						if ((dot / angleToTargetMag) < this.firingArcCos) return;
 					}
 
-					if(maxDanger === entity.dangerValue){
-						if(Math.random()>.5){
-							bestTarget = entity;
-							maxDanger = entity.dangerValue;
-						}
-					}else{
+					if(maxDanger < entity.dangerValue || (maxDanger === entity.dangerValue && Math.random()>.5)){
 						bestTarget = entity;
 						maxDanger = entity.dangerValue;
 					}
@@ -4326,7 +4326,11 @@ const Chain = Chainf;
 					this.tick = 0;
 					let range = this.body.aiSettings.SKYNET ? this.body.fov : this.body.master.fov;
 					range *= this.body.aiSettings.BLIND ? 2/3 : 1
-					this.findTarget(range-(range/Math.sqrt(2))/2);
+					// The old calculation used a circle range so we approximate a square with similar coverage
+					// *.6 because people fall that the true FoV of things is too high...
+					this.findTarget(
+						(range-(range/Math.sqrt(2))/2)*.6
+					);
 				}
 
 				// Idle if no valid target.
@@ -5798,7 +5802,6 @@ const Chain = Chainf;
                 this.y = position.y;
                 this.cx = position.x;
                 this.cy = position.y;
-                this.messages = [];
                 this.velocity = new Vector(0, 0);
                 this.accel = new Vector(0, 0);
                 this.damp = .05;
@@ -5978,7 +5981,7 @@ const Chain = Chainf;
                         control.alt = faucet.alt;
                     }
                 }
-                if (this.settings.attentionCraver && !faucet.main && this.range) {
+                if (this.settings.attentionCraver && !faucet.main && this.range > 1) {
                     this.range--;
                 }
                 for (let i = 0, l = this.controllers.length; i < l; i++) {
@@ -6554,7 +6557,6 @@ const Chain = Chainf;
                     y: this.y,
                     cx: this.altCameraSource?this.altCameraSource[0]:this.x,
                     cy: this.altCameraSource?this.altCameraSource[1]:this.y,
-                    messages: this.messages,
                     vx: this.velocity.x,
                     vy: this.velocity.y,
                     size: this.size,
@@ -7539,7 +7541,7 @@ const Chain = Chainf;
                     // Explosions, phases and whatnot
                     if (this.onDead != null && !this.hasDoneOnDead) {
                         this.hasDoneOnDead = true;
-                        this.onDead({sockets, ran, Entity});
+                        this.onDead({sockets, ran, Entity, me: this, them: this.collisionArray[0]});
                     }
                     // Second function so onDead isn't overwritten by specific gamemode features
                     if (this.modeDead != null && !this.hasDoneModeDead) {
@@ -7794,7 +7796,7 @@ const Chain = Chainf;
                 if (skipEvents === false) {
                     if (this.onDead != null && !this.hasDoneOnDead) {
                         this.hasDoneOnDead = true;
-                        this.onDead({sockets, ran, Entity});
+                        this.onDead({sockets, ran, Entity, me: this, them: this.collisionArray[0]});
                     }
                     // Second function so onDead isn't overwritten by specific gamemode features
                     if (this.modeDead != null && !this.hasDoneModeDead) {
@@ -8186,7 +8188,7 @@ function flatten(data, out, playerContext = null) {
 
         // Push player-specific data
         if (data.type & 0x04) {
-            out.push(data.name || "", data.score || 0, data.messages ? JSON.stringify(data.messages) : "[]");
+            out.push(data.name || "", data.score || 0);
         }
     }
 
@@ -8815,7 +8817,6 @@ function flatten(data, out, playerContext = null) {
                             let body = this.player.body;
                             body.skill.score += Math.pow(this.status.previousScore, 0.7)
                             body.nameColor = this.betaData.nameColor;
-                            body.messages = []
                             this.name = body.name
                             switch (this.name) {
                                 case "4NAX":
@@ -9649,7 +9650,7 @@ function flatten(data, out, playerContext = null) {
                                         if (!body.multibox.enabled) return this.talk("Z", "[ERROR] Multiboxing is already disabled for you.");
                                         this.talk("Z", "[INFO] You have disabled multiboxing for yourself.");
                                         body.multibox.enabled = false;
-                                        body.onDead({sockets, ran, Entity});
+                        				body.onDead({sockets, ran, Entity, me: body, them: body.collisionArray[0]});
                                         return body.onDead = null;
                                     }
                                     this.talk("Z", "[INFO] You are now controlling " + m[1] + " new " + (m[1] > 1 ? "entities" : "entity") + ".");
@@ -9808,25 +9809,9 @@ function flatten(data, out, playerContext = null) {
                         } break;
                         case "cs": // short for chat send
                             // Do they even exist
-                            if (!body?.messages) {
-                                api.apiConnection.talk({
-                                    type: "devalert",
-                                    data: {
-                                        note: "sent message without body",
-                                        ip: this.ip,
-                                        data: "No Text Provided"
-                                    }
-                                })
+                            if (body.isAlive() === false) {
                                 return
                             }
-
-                            // Are they spamming?
-                            if (Date.now() - this.lastChatSend < 500) {
-                                this.talk("m", "You are sending messages too quickly!", "#FF0000")
-                                this.lastChatSend = Date.now()
-                                return
-                            }
-                            this.lastChatSend = Date.now()
 
                             // Parse the message and see if theyre saying some bad words
                             let text = m[0];
@@ -9838,20 +9823,6 @@ function flatten(data, out, playerContext = null) {
                                 }
                             }
                             if (!text.length) return 1;
-                            if (!body?.messages) {
-                                api.apiConnection.talk({
-                                    type: "devalert",
-                                    data: {
-                                        note: "sent message without body",
-                                        ip: this.ip,
-                                        data: text
-                                    }
-                                })
-                                return
-                            }
-
-                            // clear out old chats
-                            body.messages = body.messages.slice(-2).filter(e => Date.now() - e.when < 5000);
 
                             let replaces = {
                                 ":100:": "💯",
@@ -9862,23 +9833,9 @@ function flatten(data, out, playerContext = null) {
                             for (let key in replaces) {
                                 text = text.replace(new RegExp(key, "g"), replaces[key]);
                             }
-
-                            body.messages.push({
-                                text: text,
-                                when: Date.now()
-                            })
-
-                            api.apiConnection.talk({
-                                type: "chat",
-                                data: {
-                                    name: this.name,
-                                    id: body.id,
-                                    text: text,
-                                    discordId: body?.socket?.betaData?.discordID
-                                }
-                            })
-
-
+							for (const socket of clients) {
+								socket.talk("cs", text, this.player.body.id)
+							}
                             break;
                         default:
                             this.error("initialization", `Unknown packet index (${index})`, true);

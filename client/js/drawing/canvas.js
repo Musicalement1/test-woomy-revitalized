@@ -1,4 +1,4 @@
-import { global } from "../global.js";
+import { global, resizeEvent } from "../global.js";
 import { config } from "../config.js";
 import { util, getWOSocketId } from "../util.js";
 import { socket } from "../socket.js";
@@ -35,6 +35,7 @@ global.mobileClickables = [function () { // Toggle menu
 		document.body.webkitRequestFullScreen();
 	else if (document.body.mozRequestFullScreen)
 		document.body.mozRequestFullScreen();
+	resizeEvent()
 }, function () { // Chat
 	let chatbox = document.getElementById("chatBox")
 	if (!chatbox) {
@@ -563,7 +564,7 @@ global._canvas = new (class Canvas {
 				} else {
 					mpos.x;
 					mpos.y;
-					let onLeft = mpos.x < this.parent._cv.width / 2;
+					let onLeft = mpos.x < global._screenWidth / 2;
 					if (this.parent.movementTouch === null && onLeft) {
 						this.parent.movementTouch = id;
 					} else if (this.parent.controlTouch === null && !onLeft) {
@@ -593,8 +594,8 @@ global._canvas = new (class Canvas {
 			} else if (global.clickables.skipUpgrades.check(mpos) !== -1) {
 				global.clearUpgrades();
 			} else if (_this.movementTouch === id) {
-				let x = mpos.x - _this._cv.width * 1 / 6;
-				let y = mpos.y - _this._cv.height * 2 / 3;
+				let x = mpos.x - global._screenWidth * 1 / 6;
+				let y = mpos.y - global._screenHeight * 2 / 3;
 				let norm = Math.sqrt(x * x + y * y);
 				x /= norm;
 				y /= norm;
@@ -604,8 +605,8 @@ global._canvas = new (class Canvas {
 				if ((x < -amount) !== _this.movementLeft) socket.controls.commands[2] = _this.movementLeft = Number(x < -amount);
 				if ((x > amount) !== _this.movementRight) socket.controls.commands[3] = _this.movementRight = Number(x > amount);
 			} else if (_this.controlTouch === id) {
-				global._target._x = (mpos.x - _this._cv.width * 5 / 6) * 4;
-				global._target._y = (mpos.y - _this._cv.height * 2 / 3) * 4;
+				global._target._x = (mpos.x - global._screenWidth * 5 / 6) * 4;
+				global._target._y = (mpos.y - global._screenHeight * 2 / 3) * 4;
 			}
 		}
 	}

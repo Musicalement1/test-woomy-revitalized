@@ -16,7 +16,7 @@ import {
 } from "../colors.js"
 import { util } from "../util.js";
 import { config } from "../config.js";
-
+import { global } from "../global.js";
 
 function drawHealth(x, y, instance, ratio, alpha) {
 	let fade = instance.render.status.getFade(instance.size);
@@ -74,43 +74,47 @@ function drawHealth(x, y, instance, ratio, alpha) {
 	}
 
 	// draw chat messages
-	let disappearTime = 5000
-	const messages = instance.messages ? JSON.parse(instance.messages).reverse()
-		.filter(msg => msg.when > Date.now() - disappearTime)
-		: [];
-
-	if (messages.length) {
-		let nameRatio = (ratio * instance.size) / 20;
-		let nameplateOffset = y - 30 * nameRatio - 12
+	let messages = global.chatMessages.get(instance.id)
+	const msgFadeTime = config.chatMessageDuration*1000*.025
+	if (messages) {
+		let nameRatio = ((ratio * instance.size) / 20)*fade;
+		let nameplateOffset = y - 6 - (instance.nameplate&&instance.name!==""?30 * nameRatio:0)
 		let stroke = undefined;
 		let font = undefined;
 		ctx.globalAlpha = alpha;
 		let offset = 1;
-		if (instance.id === _gui._playerid) {
-			nameplateOffset = 0
-		}
 		let padding = 5
 		let size = 20
 		let height = size * nameRatio;
 		let vspacing = padding + 3
-		for (let msg of messages) {
+		for (let i = 0; i < 3; i++ ) {
+			if(i === messages.length) return;
+			const msg = messages[messages.length-i-1]
 			offset++
-			msg.color = getColor(instance.color);
-			msg.len = measureText(msg.text, (size * nameRatio) - padding);
+			const color = getColor(instance.color);
+			const len = measureText(msg[0], (size * nameRatio) - padding);
 
-			ctx.globalAlpha = 0.5;
-			let fill = msg.color === "rainbow"
+			let msgFade = Date.now()-msg[1]
+			if(msgFade < msgFadeTime){
+				msgFade /= msgFadeTime
+			}else if((config.chatMessageDuration*1000)-msgFade < msgFadeTime ){
+				msgFade = ((config.chatMessageDuration*1000)-msgFade)/msgFadeTime
+			}else{
+				msgFade = 1
+			}
+			ctx.globalAlpha = 0.5*msgFade;
+			let fill = color === "rainbow"
 				? hslToColor((Date.now() % 2520) / 7, 100, 50)
-				: msg.color;
+				: color;
 			let barY = ((-height - vspacing) * offset + nameplateOffset + vspacing)
-			drawBar(x - msg.len / 2, x + msg.len / 2, barY, height, fill);
-			ctx.globalAlpha = .15
-			drawBar(x - msg.len / 2, x + msg.len / 2, barY, height, "#000000");
-			ctx.globalAlpha = 1
+			drawBar(x - len / 2, x + len / 2, barY, height, fill);
+			ctx.globalAlpha = .15*msgFade
+			drawBar(x - len / 2, x + len / 2, barY, height, "#000000");
+			ctx.globalAlpha = 1*msgFade
 
 
 			ctx.fillStyle = "#000000";
-			drawText(msg.text, x, barY + ((height - padding) * 0.35), (size * nameRatio) - padding, "#E4EBE7", "center", false, 1, stroke, ctx, font);
+			drawText(msg[0], x, barY + ((height - padding) * 0.35), (size * nameRatio) - padding, "#E4EBE7", "center", false, 1, stroke, ctx, font);
 
 			ctx.globalAlpha = 1;
 		}

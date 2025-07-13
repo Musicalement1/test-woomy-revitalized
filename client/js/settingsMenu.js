@@ -248,7 +248,7 @@ config.Woomy = (() => {
 	new Setting("deathAnimations", "Death Animations", "boolean", true);
 	new Setting("shieldbars", "Split Health Bars", "boolean", false);
 	new Setting("roundUpgrades", "Round Upgrades", "boolean", false);
-	new Setting("disableMessages", "Disable Messages", "boolean", false);
+	new Setting("disableGameMessages", "Disable Game Messages", "boolean", false);
 	new Setting("autoUpgrade", "Auto Level Up", "boolean", global.mobile);
 	new Setting("screenshotMode", "Screenshot Mode", "boolean", false);
 	new Setting("hideMiniRenders", "Hide Mini-Renders", "boolean", false);
@@ -272,6 +272,7 @@ config.Woomy = (() => {
 		}
 		setProperties(document.querySelector(":root").style);
 	});
+	new Setting("chatMessageDuration", "Chat Message Duration", "number", 5);
 	new Setting("uiScale", "UI Scale", "number", 1.1);
 	new Setting("fontStrokeRatio", "Font Stroke Ratio", "number", 7);
 	new Setting("borderChunk", "Border Width", "number", 3.5);
