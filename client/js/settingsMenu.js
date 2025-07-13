@@ -273,7 +273,7 @@ config.Woomy = (() => {
 		setProperties(document.querySelector(":root").style);
 	});
 	new Setting("chatMessageDuration", "Chat Message Duration", "number", 5);
-	new Setting("uiScale", "UI Scale", "number", 1.1);
+	new Setting("uiScale", "UI Scale", "number", 1.25);
 	new Setting("fontStrokeRatio", "Font Stroke Ratio", "number", 7);
 	new Setting("borderChunk", "Border Width", "number", 3.5);
 	new Setting("barChunk", "Bar Stroke Thickness", "number", 3);
