@@ -12,6 +12,14 @@ import { multiplayer } from "./multiplayer.js";
 import "./mainmenu.js";
 import "./joinMenu.js";
 
+if ('serviceWorker' in navigator) {
+	window.addEventListener('load', () => {
+		navigator.serviceWorker.register('/js/offline.js')
+			.then((reg) => console.log('Offline page registered:', reg))
+			.catch((err) => console.error('Offline page registration failed:', err));
+	});
+}
+
 // App.js
 function RememberScriptingIsBannable() {
     initSettingsMenu();
